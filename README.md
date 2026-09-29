@@ -91,7 +91,7 @@ The browser tool does not bypass CAPTCHAs, site access controls, or authenticati
 | Windsurf Cascade | [Guide](docs/agents/windsurf.md) | `mcp_config.json` |
 | VS Code / Copilot Chat | [Guide](docs/agents/vscode.md) | `.vscode/mcp.json` |
 | GitHub Copilot CLI | [Guide](docs/agents/copilot-cli.md) | `~/.copilot/mcp-config.json` |
-| Cline | [Guide](docs/agents/cline.md) | `~/.cline/mcp.json` or IDE settings |
+| Cline | [Guide](docs/agents/cline.md) | CLI MCP wizard or IDE settings |
 | OpenCode | [Guide](docs/agents/opencode.md) | `opencode.json` |
 
 All integrations use the standard MCP stdio transport. CI starts the actual CLI subprocess, discovers its MCP tools, and calls a local workflow tool; separate protocol tests cover the in-memory transport. In a local Windows check, Claude Code 2.1.218 reported the isolated server as connected; Codex CLI 0.154.0 loaded an isolated entry as enabled, but that check did not run an agent turn or tool call. The other vendor clients have not been runtime-tested here.

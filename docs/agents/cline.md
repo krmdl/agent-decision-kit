@@ -29,4 +29,4 @@ Keep `autoApprove` empty. Cline should ask before a tool call; inspect the argum
 
 **Try it:** “Use `context_prune` on the sample error log and preserve the exact file path and error text. Show me the retained text unchanged.”
 
-See Cline's [CLI MCP reference](https://github.com/cline/cline/blob/main/docs/cli/cli-reference.mdx#L1) for the management commands and its [MCP settings path resolver](https://github.com/cline/cline/blob/main/sdk/packages/shared/src/storage/paths.ts#L2797) for the current default and overrides. The IDE's configure action opens the active settings file, avoiding assumptions about extension storage paths.
+See Cline's [CLI MCP setup reference](https://github.com/cline/cline/blob/main/apps/cli/README.md#mcp-servers) for the management commands and its [MCP settings path resolver](https://github.com/cline/cline/blob/main/sdk/packages/shared/src/storage/paths.ts#L2797) for the current default and overrides. The IDE's configure action opens the active settings file, avoiding assumptions about extension storage paths.
