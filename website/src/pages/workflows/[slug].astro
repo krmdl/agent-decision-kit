@@ -1,11 +1,11 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
-import { workflows } from "../../data/topics.js";
+import { features, workflows } from "../../data/topics.js";
 import { siteBase } from "../../utils/site.js";
 export function getStaticPaths() { return workflows.map((workflow) => ({ params: { slug: workflow.slug }, props: { workflow } })); }
 const { workflow } = Astro.props;
 const faq = { "@context":"https://schema.org", "@type":"FAQPage", mainEntity:[{"@type":"Question", name:`Can ${workflow.short.toLowerCase()} prove that an agent's work is correct?`, acceptedAnswer:{"@type":"Answer",text:workflow.caveat}}] };
-const related = workflow.related.map((slug) => workflows.find((item) => item.slug === slug) ?? null).filter(Boolean);
+const related = workflow.related.map((slug) => [...features, ...workflows].find((item) => item.slug === slug) ?? null).filter(Boolean);
 ---
 <BaseLayout title={`${workflow.title} | Agent Decision Kit`} description={workflow.description} canonicalPath={workflow.canonicalPath}>
   <script type="application/ld+json" set:html={JSON.stringify(faq)} slot="head" />
@@ -16,7 +16,7 @@ const related = workflow.related.map((slug) => workflows.find((item) => item.slu
     <section class="method"><p class="eyebrow">HOW THIS TOOL WORKS</p><p>{workflow.method}</p></section>
     <section class="example"><p class="eyebrow">TRY IT</p><pre><code>{workflow.example}</code></pre></section>
     <section class="caveat"><p class="eyebrow">LIMITS</p><p>{workflow.caveat}</p></section>
-    <section class="related"><p class="eyebrow">RELATED WORKFLOWS</p><div>{related.map((item) => <a href={`${siteBase}${item.canonicalPath}`}><b>{item.title}</b><span>Read next →</span></a>)}</div><a class="all" href={`${siteBase}features/`}>Browse feature guides →</a></section>
+    <section class="related"><p class="eyebrow">RELATED GUIDES</p><div>{related.map((item) => <a href={`${siteBase}${item.canonicalPath}`}><b>{item.title}</b><span>Read next →</span></a>)}</div><a class="all" href={`${siteBase}features/`}>Browse feature guides →</a></section>
   </main>
 </BaseLayout>
 <style>

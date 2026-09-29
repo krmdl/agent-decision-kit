@@ -3,7 +3,7 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
 import { workflows } from "../../data/topics.js";
 import { siteBase } from "../../utils/site.js";
 ---
-<BaseLayout title="Coding Agent Workflow Guides | Agent Decision Kit" description="Practical guides for context pruning, model routing, repository navigation, diff risk pre-review, and completion evidence checks." canonicalPath="workflows/">
+<BaseLayout title="Coding Agent Workflow Guides | Agent Decision Kit" description="Practical guides for local Chrome tab selection, context pruning, model routing, repository navigation, diff risk review, and completion evidence checks." canonicalPath="workflows/">
   <main class="index-page"><p class="eyebrow">Workflow guides</p><h1>Use a small decision<br /><span>where it helps.</span></h1><p class="lead">These guides explain a focused agent workflow, show how its tool behaves, and spell out where its output is only a heuristic.</p>
     <div class="topic-list">{workflows.map((workflow) => <article><p class="eyebrow">CODING AGENT WORKFLOW</p><h2><a href={`${siteBase}${workflow.canonicalPath}`}>{workflow.title} →</a></h2><p>{workflow.description}</p><a href={`${siteBase}${workflow.canonicalPath}`}>Read the workflow guide</a></article>)}</div>
   </main>

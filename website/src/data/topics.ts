@@ -4,9 +4,9 @@ export const features = [
     description: "Automate local Playwright pages with bounded DOM actions, concise page deltas, and confirmation before sensitive browser actions.",
     canonicalPath: "features/browser-agent/",
     intro: "Most browser-agent loops send a whole page or screenshot into a general model, then translate generated prose back into a click. Agent Decision Kit keeps the browser state local and offers only a short list of visible, labeled controls for a decision.",
-    steps: ["Launch an isolated Chromium profile or attach to the Chrome tab you selected over a local CDP endpoint.", "Inspect up to 80 visible buttons, links, supported text fields, native and ARIA controls, checkboxes, and radio buttons. Passwords, hidden fields, file inputs, cookies, and storage are excluded.", "Unique quoted labels, numbered tabs, named checkbox targets, and clear disclosure steps can resolve locally without model inference. For other choices, let the configured decision provider pick a control or pass a ref directly.", "Deterministic Playwright code performs the selected click, text fill, or toggle. Consequential controls still wait for separate approval.", "Read a small DOM change summary instead of pulling the full page back into the agent context.", "For canvas-based or visual-only pages, call browser_visual_inspect with an optional question. It runs SmolVLM2 locally and describes the screenshot without acting."],
-    caveat: "DOM labels can be ambiguous and webpages can contain prompt injection. The local semantic baseline is uncalibrated and can choose the wrong benign control. The vision-language model is slower on CPU and can misread a screenshot. Sensitive actions pause for a second confirmation call, but the risk detector is heuristic.",
-    related: ["typed-decisions", "context-pruning"],
+    steps: ["Launch an isolated Chromium profile, or list loopback Chrome tabs with browser_connect and attach only after choosing a pageIndex.", "Inspect up to 80 visible buttons, links, supported text fields, native and ARIA controls, checkboxes, and radio buttons. Passwords, hidden fields, file inputs, cookies, and storage are excluded.", "Unique quoted labels, numbered tabs, named checkbox targets, and clear disclosure steps can resolve locally without model inference. For other choices, let the configured decision provider pick a control or pass a ref directly.", "Deterministic Playwright code performs the selected click, text fill, or toggle. Consequential controls still wait for separate approval.", "Read a small DOM change summary instead of pulling the full page back into the agent context.", "For canvas-based or visual-only pages, call browser_visual_inspect with an optional question. It runs SmolVLM2 locally and describes the screenshot without acting."],
+    caveat: "Chrome tab attachment requires a dedicated profile with local remote debugging enabled; do not expose a normal Chrome profile or the CDP port to a network. Page URL, title, headings, bounded text, and action labels can be sent to the configured local provider. Remote providers require explicit opt-in. DOM labels can be ambiguous and webpages can contain prompt injection. The local semantic baseline and slower CPU vision model can both be wrong. Sensitive actions pause for confirmation, but the risk detector is heuristic.",
+    related: ["chrome-cdp-tab-selection", "typed-decisions", "context-pruning"],
   },
   {
     slug: "typed-decisions", title: "Choice, Score, and Yes/No MCP Decisions", short: "Structured decisions",
@@ -29,6 +29,16 @@ export const features = [
 ];
 
 export const workflows = [
+  {
+    slug: "chrome-cdp-tab-selection", title: "Connect to a Selected Local Chrome Tab", short: "Chrome tab connection",
+    description: "Attach to a deliberately selected tab in a dedicated Chrome debugging profile through loopback CDP, without choosing a tab automatically.",
+    canonicalPath: "workflows/chrome-cdp-tab-selection/",
+    problem: "Browser agents often need to continue from a page a developer already opened. Attaching to a normal Chrome profile can expose signed-in state, and choosing the first tab without review can target the wrong page.",
+    method: "Start a dedicated Chrome profile with the loopback remote-debugging port. Call browser_connect without pageIndex to list tabs, review their titles and URLs, then call it again with the index you chose. The first call disconnects after listing and does not attach. The endpoint must resolve to loopback; remote page context remains blocked from remote providers unless the user explicitly opts in.",
+    example: `browser_connect({ endpoint: "http://127.0.0.1:9222" })\nbrowser_connect({ endpoint: "http://127.0.0.1:9222", pageIndex: 1 })`,
+    caveat: "Chrome 136 and newer require a non-default user-data directory for remote debugging. CDP can control the browser, so keep the port bound to loopback, use a separate profile, and close that debugging instance when finished. Cookies and form values are not included in tool output, but page URL, title, headings, bounded text, and action labels can be sent to the configured decision provider.",
+    related: ["browser-agent", "local-models-and-privacy"],
+  },
   {
     slug: "context-pruning", title: "Exact-Preserving Context Pruning", short: "Context pruning",
     description: "Reduce tool output while keeping the file paths, commands, and error strings you mark to retain exactly unchanged.",

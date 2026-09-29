@@ -42,20 +42,29 @@ export class BrowserManager {
     return this.describePage();
   }
 
-  async connect(endpoint: string, pageIndex = 0) {
-    const parsed = new URL(endpoint);
-    if (parsed.protocol !== "ws:" || !LOOPBACK_HOSTS.has(parsed.hostname)) throw new Error("Chrome CDP must use a ws:// loopback endpoint. Start Chrome with remote debugging enabled and select a local tab.");
-    this.browser = await chromium.connectOverCDP(endpoint);
-    const pages = this.browser.contexts().flatMap((context) => context.pages());
+  async connect(endpoint: string, pageIndex?: number) {
+    const cdpEndpoint = await resolveCdpWebSocketEndpoint(endpoint);
+    const browser = await chromium.connectOverCDP(cdpEndpoint);
+    const pages = browser.contexts().flatMap((context) => context.pages());
+    const tabs = await Promise.all(pages.map(async (page, index) => ({ index, title: await page.title().catch(() => ""), url: page.url() })));
+    if (pageIndex === undefined) {
+      await browser.close();
+      return {
+        connected: false,
+        selectedTabRequired: true,
+        tabs,
+        note: "Choose one listed tab index and call browser_connect again with pageIndex. Listing tabs does not attach or perform browser actions.",
+      };
+    }
     if (!Number.isInteger(pageIndex) || pageIndex < 0 || pageIndex >= pages.length) {
-      const tabs = await Promise.all(pages.map(async (page, index) => ({ index, title: await page.title().catch(() => ""), url: page.url() })));
-      await this.browser.close(); this.browser = undefined;
+      await browser.close();
       return { connected: false, error: "Selected tab index is not available", tabs };
     }
+    this.browser = browser;
     this.page = pages[pageIndex]!;
     this.context = this.page.context();
     this.ownsContext = false;
-    return { connected: true, page: await this.describePage(), note: "Attached to the selected existing Chrome tab. Its cookies and signed-in state stay in that browser; only bounded candidate labels are used for decisions." };
+    return { connected: true, page: await this.describePage(), note: "Attached to the selected local Chrome tab. Browser cookies and storage are not returned by the tools. Page URL, title, headings, a bounded text excerpt, and visible action labels can be sent to the configured local decision model; remote providers remain blocked unless explicitly enabled." };
   }
 
   async navigate(rawUrl: string) {
@@ -382,4 +391,37 @@ function pageIdentity(rawUrl: string) {
   const url = new URL(rawUrl);
   url.hash = "";
   return url.href;
+}
+
+async function resolveCdpWebSocketEndpoint(endpoint: string) {
+  const parsed = new URL(endpoint);
+  if (parsed.protocol === "ws:") {
+    if (!LOOPBACK_HOSTS.has(parsed.hostname)) throw new Error("Chrome CDP connections are restricted to a ws:// loopback endpoint.");
+    return parsed.href;
+  }
+  if (parsed.protocol !== "http:" || !LOOPBACK_HOSTS.has(parsed.hostname)) {
+    throw new Error("Chrome CDP must use a loopback http:// discovery URL or ws:// WebSocket URL.");
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(new URL("/json/version", parsed.origin), { redirect: "error", signal: AbortSignal.timeout(3_000) });
+  } catch {
+    throw new Error(`Could not reach Chrome's local DevTools endpoint at ${parsed.origin}. Start a dedicated Chrome profile with remote debugging enabled.`);
+  }
+  if (!response.ok) throw new Error(`Chrome's local DevTools endpoint returned HTTP ${response.status}.`);
+
+  let debuggerUrl: string | undefined;
+  try {
+    const version = await response.json() as { webSocketDebuggerUrl?: unknown };
+    if (typeof version.webSocketDebuggerUrl === "string") debuggerUrl = version.webSocketDebuggerUrl;
+  } catch {
+    // Report the same actionable error as a missing WebSocket address below.
+  }
+  if (!debuggerUrl) throw new Error("Chrome's DevTools version response did not include a WebSocket endpoint.");
+  const websocket = new URL(debuggerUrl);
+  if (websocket.protocol !== "ws:" || !LOOPBACK_HOSTS.has(websocket.hostname)) {
+    throw new Error("Chrome returned a non-loopback WebSocket endpoint; the connection was rejected.");
+  }
+  return websocket.href;
 }

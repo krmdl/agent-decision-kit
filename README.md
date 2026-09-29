@@ -22,7 +22,7 @@ It uses ordinary code to constrain choices and execute actions. Its default deci
 
 ## What it does
 
-- **Browser loop first.** Playwright inspects a bounded set of visible controls, chooses from those controls, and returns a short page delta. Launch an isolated profile or attach to a selected local Chrome tab over CDP.
+- **Browser loop first.** Playwright inspects a bounded set of visible controls, chooses from those controls, and returns a short page delta. Launch an isolated profile or [list and explicitly select a local Chrome tab](docs/browser-chrome.md) over loopback CDP.
 - **Approval for consequential actions.** Payment, sending, publishing, deletion, and form submission candidates pause for a distinct confirmation call. Password and file inputs are excluded. Text fields can be filled without submitting them.
 - **Structured decisions.** Batch up to eight `Choice`, `Score`, and yes/no (`noul`) questions in one request, with probability estimates and an explicit calibration label.
 - **Fast local browser paths.** Unique quoted labels, numbered tabs, named checkboxes, and clear expand-then-submit steps can resolve without model inference. These rule-based choices return no probability and keep sensitive actions behind the approval gate.
@@ -103,11 +103,11 @@ Claude Code users can also opt into the [prompt-routing hook](integrations/claud
 - The default provider sends state to the local Transformers.js model after its weights are downloaded. The optional local OpenAI-compatible adapter also defaults to loopback.
 - Remote OpenAI-compatible and Jev providers send the decision request to the configured provider. Browser context is separately blocked for remote providers unless explicitly opted in.
 - Jev is optional and can incur TypeSafe charges. Its API endpoint and request format follow [TypeSafe's API docs](https://api.typesafe.ai/docs). Jev outputs are not stored as training data, used to tune the local model, or used to build an imitator; review the [TypeSafe agreement](https://typesafe.ai/legal/mca) before enabling that adapter.
-- Chromium uses a separate persistent profile at `~/.agent-decision-kit/browser-profile`. Attaching through CDP does not read cookies into tool output. Closing an attached session disconnects instead of closing the selected Chrome context.
+- Chromium uses a separate persistent profile at `~/.agent-decision-kit/browser-profile`; set `AGENT_DECISION_BROWSER_DIR` to change it. CDP attachment uses a dedicated Chrome profile and explicit tab selection. Cookies and storage are not returned, but bounded page context is sent to the local decision provider; remote providers require explicit opt-in. Closing an attached session disconnects instead of closing the selected Chrome context.
 
 ## Benchmarks and honest claims
 
-`benchmarks/` contains labeled fixtures, an evaluation protocol, and metric definitions. Report decision accuracy, calibration, browser task success, action count, and latency separately. There are **no performance results in this release**. BrowserGym adapters and cross-agent runtime checks remain evaluation work; CI does not generate fabricated benchmark charts.
+`benchmarks/` contains labeled fixtures, an evaluation protocol, raw records, and metric definitions. One small CPU MiniWoB smoke run completed 7 of 8 tasks; it is not a representative quality or speed result. The separate 11-case decision fixture is not held out and its probability estimates are uncalibrated. Report decision accuracy, calibration, browser task success, action count, and latency separately. Broader WebArena/VisualWebArena evaluation and live cross-agent runtime checks remain evaluation work; CI does not generate fabricated benchmark charts.
 
 We do not claim the 500 ms p95 target, 7-second browsing demo, Jev equivalence, or any other speedup until a reproducible run is published with hardware, versions, sample counts, and raw results.
 

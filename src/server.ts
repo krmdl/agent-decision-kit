@@ -13,7 +13,7 @@ function asToolResult(value: unknown) {
 
 export function createServer() {
   const server = new McpServer({ name: "agent-decision-kit", version: "0.1.0-alpha.1" });
-  const browser = new BrowserManager();
+  const browser = new BrowserManager(process.env.AGENT_DECISION_BROWSER_DIR ? { profileDir: process.env.AGENT_DECISION_BROWSER_DIR } : {});
   const provider = createProvider();
 
   server.registerTool("decide", {
@@ -86,9 +86,9 @@ export function createServer() {
   }, async ({ url }) => asToolResult(await browser.launch(url)));
 
   server.registerTool("browser_connect", {
-    title: "Connect to selected Chrome tab",
-    description: "Attach to a user-selected local Chrome tab through its loopback CDP WebSocket endpoint.",
-    inputSchema: { endpoint: z.string().url(), pageIndex: z.number().int().min(0).default(0) },
+    title: "List or connect to a Chrome tab",
+    description: "List tabs exposed by local Chrome DevTools, then attach only after the caller explicitly selects a pageIndex. Loopback HTTP discovery URLs and loopback WebSocket endpoints are supported.",
+    inputSchema: { endpoint: z.string().url().default(process.env.AGENT_DECISION_CDP_URL ?? "http://127.0.0.1:9222"), pageIndex: z.number().int().min(0).optional() },
   }, async ({ endpoint, pageIndex }) => asToolResult(await browser.connect(endpoint, pageIndex)));
 
   server.registerTool("browser_navigate", {

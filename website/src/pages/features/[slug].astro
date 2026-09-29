@@ -1,11 +1,11 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
-import { features } from "../../data/topics.js";
+import { features, workflows } from "../../data/topics.js";
 import { siteBase } from "../../utils/site.js";
 export function getStaticPaths() { return features.map((feature) => ({ params: { slug: feature.slug }, props: { feature } })); }
 const { feature } = Astro.props;
 const faq = { "@context":"https://schema.org", "@type":"FAQPage", mainEntity:[{"@type":"Question", name:`Is ${feature.short.toLowerCase()} a guarantee of correctness?`, acceptedAnswer:{"@type":"Answer",text:feature.caveat}}] };
-const related = feature.related.map((slug) => features.find((item) => item.slug === slug) ?? null).filter(Boolean);
+const related = feature.related.map((slug) => [...features, ...workflows].find((item) => item.slug === slug) ?? null).filter(Boolean);
 ---
 <BaseLayout title={`${feature.title} | Agent Decision Kit`} description={feature.description} canonicalPath={feature.canonicalPath}>
   <script type="application/ld+json" set:html={JSON.stringify(faq)} slot="head" />

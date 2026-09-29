@@ -2,13 +2,15 @@ import { createServer, type Server } from "node:http";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import { chromium, type Browser } from "playwright";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { BrowserManager } from "../src/browser/manager.js";
 import type { DecisionProvider } from "../src/core/types.js";
 
 describe("Playwright browser safety flow", () => {
   let server: Server;
   let baseUrl = "";
+  let cdpWebSocketUrl = "";
   let profile = "";
   let browser: BrowserManager;
   let visualHtml: Buffer;
@@ -27,6 +29,11 @@ describe("Playwright browser safety flow", () => {
     tabHtml = Buffer.from('<!doctype html><div role="tab">Tab #1</div><div role="tab">Tab #2</div><div role="tab">Tab #3</div>');
     expandHtml = Buffer.from('<!doctype html><button id="toggle" aria-expanded="false" aria-controls="details">Section details</button><div id="details" hidden><p role="tab" aria-expanded="false">Submit</p><form onsubmit="event.preventDefault(); document.querySelector(\'#status\').textContent = \'Submitted locally\'"><button type="submit">Submit</button></form></div><p id="status">Not sent</p><script>document.querySelector(\'#toggle\').addEventListener(\'click\',e=>{const open=e.currentTarget.getAttribute(\'aria-expanded\')!==\'true\';e.currentTarget.setAttribute(\'aria-expanded\',String(open));document.querySelector(\'#details\').hidden=!open;location.hash=\'details\'})</script>');
     server = createServer((request, response) => {
+      if (request.url === "/json/version") {
+        response.writeHead(200, { "content-type": "application/json; charset=utf-8" });
+        response.end(JSON.stringify({ webSocketDebuggerUrl: cdpWebSocketUrl }));
+        return;
+      }
       response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
       response.end(request.url === "/visual-only" ? visualHtml : request.url === "/checkbox" ? checkboxHtml : request.url === "/submit" ? submitHtml : request.url === "/checkbox-task" ? checkboxTaskHtml : request.url === "/tabs" ? tabHtml : request.url === "/expand" ? expandHtml : html);
     });
@@ -37,6 +44,7 @@ describe("Playwright browser safety flow", () => {
     const address = server.address();
     if (!address || typeof address === "string") throw new Error("Unable to start local browser demo server");
     baseUrl = `http://127.0.0.1:${address.port}/`;
+    cdpWebSocketUrl = `ws://127.0.0.1:${address.port}/devtools/browser/test`;
   });
 
   afterAll(async () => {
@@ -46,6 +54,42 @@ describe("Playwright browser safety flow", () => {
   afterEach(async () => {
     await browser?.close();
     if (profile) await rm(profile, { recursive: true, force: true });
+    vi.restoreAllMocks();
+  });
+
+  it("lists loopback Chrome tabs first and attaches only to an explicitly selected tab", async () => {
+    const pages = [
+      { title: async () => "First tab", url: () => "https://first.example.test", isClosed: () => false },
+      { title: async () => "Second tab", url: () => "https://second.example.test", isClosed: () => false },
+    ];
+    const context = { pages: () => pages };
+    for (const page of pages) Object.assign(page, { context: () => context });
+    const cdpBrowser = { contexts: () => [context], close: vi.fn(async () => undefined) } as unknown as Browser;
+    const connectOverCDP = vi.spyOn(chromium, "connectOverCDP").mockResolvedValue(cdpBrowser);
+    browser = new BrowserManager();
+
+    const listed = await browser.connect(baseUrl);
+    expect(listed).toMatchObject({ connected: false, selectedTabRequired: true, tabs: [
+      { index: 0, title: "First tab", url: "https://first.example.test" },
+      { index: 1, title: "Second tab", url: "https://second.example.test" },
+    ] });
+    expect(browser.connected).toBe(false);
+    expect(connectOverCDP).toHaveBeenNthCalledWith(1, cdpWebSocketUrl);
+    expect(cdpBrowser.close).toHaveBeenCalledTimes(1);
+
+    const connected = await browser.connect(baseUrl, 1);
+    expect(connected).toMatchObject({ connected: true, page: { title: "Second tab", url: "https://second.example.test" } });
+    expect(browser.connected).toBe(true);
+    expect(connectOverCDP).toHaveBeenNthCalledWith(2, cdpWebSocketUrl);
+  });
+
+  it("rejects remote Chrome DevTools endpoints before opening a connection", async () => {
+    const connectOverCDP = vi.spyOn(chromium, "connectOverCDP");
+    browser = new BrowserManager();
+
+    await expect(browser.connect("http://example.com:9222")).rejects.toThrow("loopback");
+    await expect(browser.connect("ws://example.com/devtools/browser/test")).rejects.toThrow("loopback");
+    expect(connectOverCDP).not.toHaveBeenCalled();
   });
 
   it("inspects accessible controls, fills a draft locally, and gates a delete action", async () => {
