@@ -9,6 +9,7 @@
 - Record whether the local model cache directory existed before decision measurements and add one Linux Docker result; older MiniWoB cache-state claims were corrected.
 - Re-run the eight-task MiniWoB integration suite in Linux Docker and preserve summary and per-task records with environment versions.
 - Add a real CLI-over-MCP-stdio subprocess smoke check to local development and the cross-platform CI matrix.
+- Verify Claude Code's MCP health check and Codex CLI config loading on installed Windows clients using isolated temporary config directories; no vendor-model turns or paid inference were used.
 
 ## 0.1.0-alpha.1 — 2026-09-29
 

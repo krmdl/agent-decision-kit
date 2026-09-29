@@ -93,7 +93,7 @@ The browser tool does not bypass CAPTCHAs, site access controls, or authenticati
 | Cline | [Guide](docs/agents/cline.md) | `~/.cline/mcp.json` or IDE settings |
 | OpenCode | [Guide](docs/agents/opencode.md) | `opencode.json` |
 
-All integrations use the standard MCP stdio transport. CI starts the actual CLI subprocess, discovers its MCP tools, and calls a local workflow tool; separate protocol tests cover the in-memory transport. We have not claimed that every vendor agent version was installed and end-to-end tested in this checkout.
+All integrations use the standard MCP stdio transport. CI starts the actual CLI subprocess, discovers its MCP tools, and calls a local workflow tool; separate protocol tests cover the in-memory transport. In a local Windows check, Claude Code 2.1.218 reported the isolated server as connected; Codex CLI 0.154.0 loaded an isolated entry as enabled, but that check did not run an agent turn or tool call. The other vendor clients have not been runtime-tested here.
 
 Claude Code users can also opt into the [prompt-routing hook](integrations/claude-code-hooks/README.md). It adds a local, unbenchmarked route suggestion to submitted prompts; it never changes the active model.
 
@@ -107,7 +107,7 @@ Claude Code users can also opt into the [prompt-routing hook](integrations/claud
 
 ## Benchmarks and honest claims
 
-`benchmarks/` contains labeled fixtures, an evaluation protocol, raw records, and metric definitions. The eight-task MiniWoB smoke suite completed 7/8 on both Windows and Linux Docker; a separate 4/5 multi-tool integration harness exercises form entry, date-picker selection, native selects, paginated search, and read-only visual description. These are curated tool-loop checks, not a full agent or representative quality/speed results. A 30-case project-specific decision fixture scored 7/10 on Choice, 5/10 on yes/no, and 1.04 mean absolute error on Score; it is not held out and its probability estimates are uncalibrated. Report decision accuracy, score error, calibration, browser task success, action count, and latency separately. Broader WebArena/VisualWebArena evaluation and vendor-client runtime checks remain evaluation work; CI does not generate fabricated benchmark charts.
+`benchmarks/` contains labeled fixtures, an evaluation protocol, raw records, and metric definitions. The eight-task MiniWoB smoke suite completed 7/8 on both Windows and Linux Docker; a separate 4/5 multi-tool integration harness exercises form entry, date-picker selection, native selects, paginated search, and read-only visual description. These are curated tool-loop checks, not a full agent or representative quality/speed results. A 30-case project-specific decision fixture scored 7/10 on Choice, 5/10 on yes/no, and 1.04 mean absolute error on Score; it is not held out and its probability estimates are uncalibrated. Report decision accuracy, score error, calibration, browser task success, action count, and latency separately. Broader WebArena/VisualWebArena evaluation and runtime testing of the remaining vendor clients remain evaluation work; CI does not generate fabricated benchmark charts.
 
 We do not claim the 500 ms p95 target, 7-second browsing demo, Jev equivalence, or any other speedup until a reproducible run is published with hardware, versions, sample counts, and raw results.
 

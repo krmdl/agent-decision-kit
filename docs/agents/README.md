@@ -1,13 +1,13 @@
 # Agent setup guides
 
-These guides cover MCP stdio configuration for nine common coding-agent surfaces: Claude Code, Codex CLI, Cursor, Gemini CLI, Windsurf Cascade, VS Code/Copilot Chat, GitHub Copilot CLI, Cline, and OpenCode. CI launches the server through its real stdio transport with the reference MCP SDK; this does not claim that each vendor's executable was installed and tested in this development environment.
+These guides cover MCP stdio configuration for nine common coding-agent surfaces: Claude Code, Codex CLI, Cursor, Gemini CLI, Windsurf Cascade, VS Code/Copilot Chat, GitHub Copilot CLI, Cline, and OpenCode. CI launches the server through its real stdio transport with the reference MCP SDK. In a local Windows check, Claude Code 2.1.218 reported a connected isolated server; Codex CLI 0.154.0 loaded an isolated config entry as enabled, without an agent-turn/tool-call test. The other vendor executables have not been runtime-tested in this environment.
 
 ## Compatibility status
 
 | Client | Server config guide | Current project evidence |
 | --- | --- | --- |
-| Claude Code | [Guide](claude-code.md) | MCP stdio config form checked against the current official docs; SDK stdio subprocess smoke test |
-| Codex CLI | [Guide](codex-cli.md) | TOML/CLI shape checked against OpenAI docs; SDK stdio subprocess smoke test |
+| Claude Code | [Guide](claude-code.md) | Isolated CLI health check reported `Connected`; SDK stdio subprocess smoke test |
+| Codex CLI | [Guide](codex-cli.md) | Isolated CLI config listed as `enabled`; SDK stdio subprocess smoke test, no Codex tool-call round trip |
 | Cursor | [Guide](cursor.md) | JSON shape checked against Cursor docs; SDK stdio subprocess smoke test |
 | Gemini CLI | [Guide](gemini-cli.md) | `mcpServers` shape checked against Google docs; SDK stdio subprocess smoke test |
 | Windsurf Cascade | [Guide](windsurf.md) | JSON shape checked against the legacy Cascade docs; SDK stdio subprocess smoke test |
