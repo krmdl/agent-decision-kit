@@ -25,6 +25,25 @@ Raw records redact local file URLs and home-directory paths before writing them 
 
 The checked-in run completed 7/8 tasks (87.5%) with no harness timeouts. End-to-end latency, including environment reset, was p50 1,822 ms and p95 3,154 ms. The browser action path was p50 305 ms and p95 689 ms; the three provider calls were p50 202 ms and p95 208 ms. Each task used a fresh Node bridge process, so its first inference was cold even though model files were cached. Four deterministic local selections (an exact quoted label, a numbered tab, a checkbox target, and an expand/submit step) are excluded from provider-call latency and do not report probabilities. The separate 11-label local decision loop measures its warm within-process p95 at 25 ms. These small CPU smoke fixtures do not establish consumer-GPU performance, calibration, or broad browser quality. The remaining click-link page exposed no DOM control and was recorded as `visual-only-page`.
 
+`results/miniwob-expanded-smoke-suite.json` and the 26 per-task files preserve a broader curated run across visual-only, menu, tab, form, search, and widget tasks. It completed 3/26 tasks with no harness timeouts. End-to-end latency was p50 3,318 ms and p95 4,658 ms; the bounded browser action loop was p50 840 ms and p95 2,147 ms; 51 provider calls had p50 111 ms and p95 789 ms. Five episodes ended on pages with no DOM action candidates, six ended with ambiguous selection, and the action cap was eight rounds. This CPU run used a cached local model on Windows 10 with a Ryzen 5 5600H.
+
+Interpret this as a limited tool-loop integration result, not a full coding-agent task-success score: the runner repeatedly invokes `browser_decide_and_act` and can confirm only the exact local fake-page actions. The current code exposes `browser_fill`, `browser_select_option`, and `browser_visual_inspect`, but this runner does not orchestrate those tools or generate field values. It records ambiguous and visual-only states instead of guessing. Native date/select tools have dedicated Playwright tests, but they have not yet been evaluated by a multi-tool BrowserGym agent. The focused eight-task run and this more varied 26-task run are not directly comparable; neither represents the full benchmark distribution or verifies the GPU latency target. The raw suite metadata lists exactly which tools this harness exercises.
+
+Reproduce the expanded task mix with the same runner and action cap:
+
+```sh
+python benchmarks/run-browsergym-miniwob-suite.py \
+  --miniwob-root /tmp/miniwob-plusplus/miniwob/html/miniwob \
+  --tasks ascending-numbers choose-date-easy choose-list click-button \
+    click-checkboxes-large click-collapsible-2 click-dialog-2 click-link \
+    click-menu-2 click-option click-scroll-list click-tab-2-easy click-test-2 \
+    click-widget copy-paste daily-calendar email-inbox-noscroll enter-date \
+    enter-text-2 focus-text-2 form-sequence-2 navigate-tree read-table-2 \
+    search-engine use-autocomplete-nodelay use-slider-2 \
+  --max-actions 8 --approve-synthetic-actions \
+  --output benchmarks/results/miniwob-expanded-smoke-suite.json
+```
+
 To reproduce the recorded smoke suite, use Node.js 20.19 or newer, Python 3.10+, and the exact MiniWoB++ revision from the raw records. Install BrowserGym in a separate virtual environment (it is not a runtime dependency of this package):
 
 ```sh

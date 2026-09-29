@@ -22,6 +22,7 @@ describe("Playwright browser safety flow", () => {
   let checkboxTaskHtml: Buffer;
   let tabHtml: Buffer;
   let expandHtml: Buffer;
+  let nativeFieldsHtml: Buffer;
 
   beforeAll(async () => {
     const html = await readFile(path.resolve("examples/browser-demo.html"));
@@ -31,6 +32,7 @@ describe("Playwright browser safety flow", () => {
     checkboxTaskHtml = Buffer.from('<!doctype html><form id="sample" onsubmit="event.preventDefault(); document.querySelector(\'#status\').textContent = \'Submitted locally\'"><label><input type="checkbox" name="target"> Neb</label><button type="submit">Submit</button></form><p id="status">Not sent</p>');
     tabHtml = Buffer.from('<!doctype html><div role="tab">Tab #1</div><div role="tab">Tab #2</div><div role="tab">Tab #3</div>');
     expandHtml = Buffer.from('<!doctype html><button id="toggle" aria-expanded="false" aria-controls="details">Section details</button><div id="details" hidden><p role="tab" aria-expanded="false">Submit</p><form onsubmit="event.preventDefault(); document.querySelector(\'#status\').textContent = \'Submitted locally\'"><button type="submit">Submit</button></form></div><p id="status">Not sent</p><script>document.querySelector(\'#toggle\').addEventListener(\'click\',e=>{const open=e.currentTarget.getAttribute(\'aria-expanded\')!==\'true\';e.currentTarget.setAttribute(\'aria-expanded\',String(open));document.querySelector(\'#details\').hidden=!open;location.hash=\'details\'})</script>');
+    nativeFieldsHtml = Buffer.from('<!doctype html><form id="native-form" onsubmit="event.preventDefault(); document.querySelector(\'#status\').textContent = \'Submitted\'"><label for="country">Country</label><select id="country" name="country"><option value="">Choose one</option><option value="ca">Canada</option><option value="cn">China</option><optgroup label="Disabled" disabled><option value="blocked">Unavailable</option></optgroup></select><label for="date">Date</label><input id="date" name="date" type="date"><button type="submit">Submit</button></form><p id="status">Not submitted</p><script>document.querySelector(\'#country\').addEventListener(\'change\',()=>document.querySelector(\'#status\').textContent=\'Selected country\');document.querySelector(\'#date\').addEventListener(\'change\',()=>document.querySelector(\'#status\').textContent=\'Date entry updated\')</script>');
     server = createServer((request, response) => {
       if (request.url === "/json/version") {
         if (cdpRedirect) {
@@ -43,7 +45,7 @@ describe("Playwright browser safety flow", () => {
         return;
       }
       response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-      response.end(request.url === "/visual-only" ? visualHtml : request.url === "/checkbox" ? checkboxHtml : request.url === "/submit" ? submitHtml : request.url === "/checkbox-task" ? checkboxTaskHtml : request.url === "/tabs" ? tabHtml : request.url === "/expand" ? expandHtml : html);
+      response.end(request.url === "/visual-only" ? visualHtml : request.url === "/checkbox" ? checkboxHtml : request.url === "/submit" ? submitHtml : request.url === "/checkbox-task" ? checkboxTaskHtml : request.url === "/tabs" ? tabHtml : request.url === "/expand" ? expandHtml : request.url === "/native-fields" ? nativeFieldsHtml : html);
     });
     await new Promise<void>((resolve, reject) => {
       server.once("error", reject);
@@ -210,6 +212,46 @@ describe("Playwright browser safety flow", () => {
     const result = await browser.act(checkbox!.ref);
     expect(result.status).toBe("action-executed");
     expect(result.effect.checked).toBe(true);
+  }, 45_000);
+
+  it("exposes labeled native date and select controls without disclosing entered values", async () => {
+    profile = await mkdtemp(path.join(os.tmpdir(), "adk-browser-native-field-test-"));
+    browser = new BrowserManager({ headless: true, profileDir: path.join(profile, "chromium") });
+    await browser.launch(`${baseUrl}native-fields`);
+
+    const snapshot = await browser.inspect();
+    const country = snapshot.candidates.find((candidate) => candidate.kind === "select-one");
+    const date = snapshot.candidates.find((candidate) => candidate.kind === "date");
+    expect(country?.role).toBe("combobox");
+    expect(country?.label).toContain("Country");
+    expect(country?.label).toContain("Options: Choose one, Canada, China");
+    expect(country?.label).not.toContain("Unavailable");
+    expect(date?.label).toContain("Date");
+    expect(JSON.stringify(snapshot)).not.toContain('value="cn"');
+  }, 45_000);
+
+  it("selects one exact visible native option and fills a date without submitting", async () => {
+    profile = await mkdtemp(path.join(os.tmpdir(), "adk-browser-native-action-test-"));
+    browser = new BrowserManager({ headless: true, profileDir: path.join(profile, "chromium") });
+    await browser.launch(`${baseUrl}native-fields`);
+
+    let snapshot = await browser.inspect();
+    let country = snapshot.candidates.find((candidate) => candidate.kind === "select-one");
+    expect(country).toBeDefined();
+    await expect(browser.selectOption(country!.ref, "CN")).rejects.toThrow("exact, enabled option label");
+    await expect(browser.selectOption(country!.ref, "Unavailable")).rejects.toThrow("exact, enabled option label");
+    const selected = await browser.selectOption(country!.ref, "China");
+    expect(selected).toMatchObject({ status: "selected", optionLabel: "China", submitted: false, valueReturned: false });
+
+    snapshot = await browser.inspect();
+    const date = snapshot.candidates.find((candidate) => candidate.kind === "date");
+    expect(date).toBeDefined();
+    const filled = await browser.fill(date!.ref, "2016-12-22");
+    expect(filled).toMatchObject({ status: "filled", valueReturned: false });
+    expect(JSON.stringify(filled)).not.toContain("2016-12-22");
+    const result = await browser.inspect();
+    expect(result.textExcerpt).toContain("Date entry updated");
+    expect(result.textExcerpt).not.toContain("Submitted");
   }, 45_000);
 
   it("uses an exact quoted visible label locally and still gates a risky action", async () => {

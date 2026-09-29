@@ -1,0 +1,111 @@
+{
+  "benchmark": "miniwob",
+  "task": "click-test-2",
+  "taskPrompt": "Click button ONE.",
+  "runnerMode": "bounded-repeated-browser-decide-and-act",
+  "toolCoverage": [
+    "browser_connect",
+    "browser_decide_and_act",
+    "browser_confirm"
+  ],
+  "notExercisedTools": [
+    "browser_fill",
+    "browser_select_option",
+    "browser_visual_inspect"
+  ],
+  "success": false,
+  "timeout": false,
+  "failureReason": "task-goal-not-achieved",
+  "actions": 0,
+  "selectedAction": null,
+  "decisionConfidence": null,
+  "decisionCalibration": null,
+  "decisionLatencyMs": 506,
+  "decisionCallLatenciesMs": [
+    506
+  ],
+  "decisionSnapshot": null,
+  "availableCandidates": [
+    {
+      "ref": "r1",
+      "role": "button",
+      "label": "ONE",
+      "kind": "button",
+      "risk": "low"
+    },
+    {
+      "ref": "r2",
+      "role": "button",
+      "label": "TWO",
+      "kind": "button",
+      "risk": "low"
+    }
+  ],
+  "decisionTrace": [
+    {
+      "step": 1,
+      "decisionStatus": "ambiguous-selection",
+      "provider": "semantic-local",
+      "model": "Xenova/all-MiniLM-L6-v2",
+      "selectionRule": null,
+      "selectedAction": null,
+      "availableCandidates": [
+        {
+          "ref": "r1",
+          "role": "button",
+          "label": "ONE",
+          "kind": "button",
+          "risk": "low"
+        },
+        {
+          "ref": "r2",
+          "role": "button",
+          "label": "TWO",
+          "kind": "button",
+          "risk": "low"
+        }
+      ],
+      "decisionLatencyMs": 506,
+      "candidateCount": 2,
+      "confidence": null,
+      "calibration": null,
+      "executionStatus": "ambiguous-selection"
+    }
+  ],
+  "candidateCount": 2,
+  "selectionRule": null,
+  "syntheticApprovalCount": 0,
+  "latencyMs": 2985,
+  "environmentResetLatencyMs": 2435,
+  "agentActionLatencyMs": 550,
+  "reward": 0.0,
+  "terminated": false,
+  "decisionStatus": "ambiguous-selection",
+  "decisionProvider": "semantic-local",
+  "decisionModel": "Xenova/all-MiniLM-L6-v2",
+  "browserGymVersion": "0.14.3",
+  "browserGymPackageCommit": "0a785fbed075224ae81ca9c1fe924f66050696fe",
+  "playwrightPythonVersion": "1.44.0",
+  "playwrightNodeVersion": "1.63.0",
+  "browserVersion": "HeadlessChrome/125.0.6422.26",
+  "pythonVersion": "3.10.0",
+  "nodeVersion": "v22.14.0",
+  "operatingSystem": "Windows-10-10.0.19045-SP0",
+  "cpu": "AMD64 Family 25 Model 80 Stepping 0, AuthenticAMD",
+  "accelerator": "CPU",
+  "modelCacheState": "local cache already populated before this episode",
+  "decisionWarmState": "first provider inference in a fresh Node bridge process; model files are cached",
+  "miniWobCommit": "7fd85d71a4b60325c6585396ec4f48377d049838",
+  "browserStillOpenAfterDisconnect": true,
+  "rawTaskInfo": {
+    "REWARD_GLOBAL": 0,
+    "RAW_REWARD_GLOBAL": 0,
+    "REWARD_REASON": null,
+    "DONE_GLOBAL": false,
+    "EPISODE_ID": 0,
+    "TASK_READY": true
+  },
+  "timestampUtc": "2026-09-29T19:12:09.377288+00:00",
+  "maxActions": 8,
+  "note": "Single-task integration smoke check of a bounded repeated decide-and-act loop, not a full autonomous agent. It does not orchestrate field filling, native select choices, or visual inspection. Not a representative BrowserGym benchmark, model-quality estimate, or speed claim. Synthetic approvals are possible only for the exact local MiniWoB file URL."
+}

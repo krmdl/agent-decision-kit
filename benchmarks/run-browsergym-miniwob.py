@@ -222,6 +222,9 @@ def main():
             "benchmark": "miniwob",
             "task": args.task,
             "taskPrompt": task,
+            "runnerMode": "bounded-repeated-browser-decide-and-act",
+            "toolCoverage": ["browser_connect", "browser_decide_and_act", "browser_confirm"],
+            "notExercisedTools": ["browser_fill", "browser_select_option", "browser_visual_inspect"],
             "success": bool(reward > 0),
             "timeout": False,
             "failureReason": None if reward > 0 else (task_info.get("REWARD_REASON") or "task-goal-not-achieved"),
@@ -262,7 +265,7 @@ def main():
             "rawTaskInfo": task_info,
             "timestampUtc": datetime.now(timezone.utc).isoformat(),
             "maxActions": args.max_actions,
-            "note": "Single-task integration smoke check. The runner repeats bounded BrowserManager calls up to maxActions. Not a representative BrowserGym benchmark, model-quality estimate, or speed claim. Synthetic approvals are possible only for the exact local MiniWoB file URL.",
+            "note": "Single-task integration smoke check of a bounded repeated decide-and-act loop, not a full autonomous agent. It does not orchestrate field filling, native select choices, or visual inspection. Not a representative BrowserGym benchmark, model-quality estimate, or speed claim. Synthetic approvals are possible only for the exact local MiniWoB file URL.",
         }
         if args.output:
             args.output.parent.mkdir(parents=True, exist_ok=True)
@@ -279,6 +282,9 @@ def main():
                 "benchmark": "miniwob",
                 "task": args.task,
                 "taskPrompt": task,
+                "runnerMode": "bounded-repeated-browser-decide-and-act",
+                "toolCoverage": ["browser_connect", "browser_decide_and_act", "browser_confirm"],
+                "notExercisedTools": ["browser_fill", "browser_select_option", "browser_visual_inspect"],
                 "success": False,
                 "timeout": timed_out,
                 "failureReason": message[:500],
@@ -302,7 +308,7 @@ def main():
                 "decisionModel": decision_model or "not-reported",
                 "miniWobCommit": MINIWOB_COMMIT,
                 "timestampUtc": datetime.now(timezone.utc).isoformat(),
-                "note": "Failed episode record. Timeout is detected from the harness deadline or a reported timeout; inspect failureReason for the source.",
+                "note": "Failed episode record from the bounded repeated decide-and-act loop, not a full autonomous agent. It does not orchestrate field filling, native select choices, or visual inspection. Timeout is detected from the harness deadline or a reported timeout; inspect failureReason for the source.",
             }
             if args.output:
                 args.output.parent.mkdir(parents=True, exist_ok=True)

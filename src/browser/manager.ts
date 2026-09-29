@@ -91,18 +91,26 @@ export class BrowserManager {
         const aria = element.getAttribute("aria-label") || labelledBy || element.getAttribute("title") || "";
         const id = element.id ? document.querySelector(`label[for="${CSS.escape(element.id)}"]`)?.textContent ?? "" : "";
         const wrappingLabel = element.closest("label")?.textContent?.replace(/\s+/g, " ").trim() ?? "";
-        const text = (element.textContent ?? "").replace(/\s+/g, " ").trim();
+        const isSelect = element.tagName.toLowerCase() === "select";
+        const text = isSelect ? "" : (element.textContent ?? "").replace(/\s+/g, " ").trim();
         const placeholder = input.placeholder ?? "";
         const name = input.getAttribute("name") ?? "";
         const checked = ["checkbox", "radio"].includes(input.type) ? input.checked : ["checkbox", "radio", "switch", "menuitemcheckbox", "menuitemradio"].includes(element.getAttribute("role") ?? "") && ["true", "false"].includes(element.getAttribute("aria-checked") ?? "") ? element.getAttribute("aria-checked") === "true" : undefined;
         const expanded = element.getAttribute("aria-expanded");
         const toggleState = checked === undefined ? "" : `Currently ${checked ? "checked" : "unchecked"}`;
         const disclosureState = expanded === "true" ? "Expanded" : expanded === "false" ? "Collapsed" : "";
-        return [...new Set([aria, id, wrappingLabel, text, placeholder, name, toggleState, disclosureState].filter(Boolean))].join(" — ").slice(0, 180);
+        const options = isSelect
+          ? Array.from((element as HTMLSelectElement).options).filter((option) => !option.disabled && !(option.parentElement?.tagName === "OPTGROUP" && (option.parentElement as HTMLOptGroupElement).disabled) && option.label.trim()).slice(0, 12).map((option) => option.label.trim())
+          : [];
+        const parts = [...new Set([aria, id, wrappingLabel, text, placeholder, name, toggleState, disclosureState].filter(Boolean))];
+        const currentOption = isSelect ? (element as HTMLSelectElement).selectedOptions[0]?.label.trim() : "";
+        if (currentOption) parts.push(`Currently selected: ${currentOption}`);
+        if (options.length) parts.push(`Options: ${options.join(", ")}`);
+        return parts.join(" — ").slice(0, 240);
       };
-      const supportedInputTypes = new Set(["text", "search", "email", "tel", "url", "number", "checkbox", "radio", "submit", "image", "button", "reset"]);
+      const supportedInputTypes = new Set(["text", "search", "email", "tel", "url", "number", "date", "datetime-local", "time", "month", "week", "checkbox", "radio", "submit", "image", "button", "reset"]);
       const semanticRoles = "[role=button], [role=link], [role=tab], [role=checkbox], [role=radio], [role=switch], [role=menuitem], [role=menuitemcheckbox], [role=menuitemradio], [role=option]";
-      const all = Array.from(document.querySelectorAll(`button, a[href], input:not([type=password]):not([type=hidden]):not([type=file]), textarea, ${semanticRoles}`));
+      const all = Array.from(document.querySelectorAll(`button, a[href], input:not([type=password]):not([type=hidden]):not([type=file]), textarea, select, ${semanticRoles}`));
       const nodes = all.filter(visible).filter((element) => {
         if (element.tagName.toLowerCase() !== "input") return true;
         return supportedInputTypes.has((element as HTMLInputElement).type || "text");
@@ -111,9 +119,9 @@ export class BrowserManager {
         const ref = `r${index + 1}`;
         element.setAttribute("data-adk-ref", ref);
         const tag = element.tagName.toLowerCase();
-        const role = element.getAttribute("role") ?? (tag === "a" ? "link" : tag === "button" ? "button" : tag);
+        const role = element.getAttribute("role") ?? (tag === "a" ? "link" : tag === "button" ? "button" : tag === "select" ? "combobox" : tag);
         const input = element as HTMLInputElement;
-        const kind = tag === "input" ? (input.type || "text") : tag;
+        const kind = tag === "input" ? (input.type || "text") : tag === "select" ? ((element as HTMLSelectElement).multiple ? "select-multiple" : "select-one") : tag;
         const label = labelFor(element) || `${role} ${index + 1}`;
         const button = element as HTMLButtonElement;
         const riskyInput = tag === "input" && ["submit", "image", "reset"].includes(input.type);
@@ -139,7 +147,7 @@ export class BrowserManager {
     });
     this.candidates = new Map(result.candidates.map((candidate) => [candidate.ref, candidate]));
     this.lastInspectionFingerprint = snapshotFingerprint(result);
-    return { ...result, url: redactBrowserUrl(result.url), candidates: result.candidates.map(({ ref, role, label, kind, risk, checked, expanded, selected }) => ({ ref, role, label, kind, risk, ...(checked === undefined ? {} : { checked }), ...(expanded === undefined ? {} : { expanded }), ...(selected === undefined ? {} : { selected }) })), inspectMs: Math.round(performance.now() - before), candidateLimit: 80, note: "Bounded visible DOM/accessibility-derived snapshot. URL credentials, query and hash are redacted. Page text is untrusted; input values, password fields, cookies and storage are not included." };
+    return { ...result, url: redactBrowserUrl(result.url), candidates: result.candidates.map(({ ref, role, label, kind, risk, checked, expanded, selected }) => ({ ref, role, label, kind, risk, ...(checked === undefined ? {} : { checked }), ...(expanded === undefined ? {} : { expanded }), ...(selected === undefined ? {} : { selected }) })), inspectMs: Math.round(performance.now() - before), candidateLimit: 80, note: "Bounded visible DOM/accessibility-derived snapshot. Native select options are limited to 12 visible labels; input values, passwords, cookies and storage are not included. URL credentials, query and hash are redacted." };
   }
 
   async decideAndAct(task: string, provider: DecisionProvider) {
@@ -249,10 +257,26 @@ export class BrowserManager {
     if (this.lastInspectionFingerprint !== inspectedFingerprint) throw new Error("The page changed after inspection. Inspect it again and select a current field ref.");
     const candidate = this.candidates.get(ref);
     if (!candidate) throw new Error("Unknown or stale action ref. Call browser_inspect first.");
-    if (!["text", "search", "email", "tel", "url", "number", "textarea"].includes(candidate.kind)) throw new Error("This field type is not supported for text entry. Password, file, and hidden fields are excluded.");
+    if (!["text", "search", "email", "tel", "url", "number", "date", "datetime-local", "time", "month", "week", "textarea"].includes(candidate.kind)) throw new Error("This field type is not supported for text entry. Password, file, and hidden fields are excluded.");
     const locator = this.requirePage().locator(`[data-adk-ref="${candidate.ref}"]`).first();
     await locator.fill(text, { timeout: 5_000 });
     return { status: "filled", ref, characterCount: text.length, valueReturned: false, note: "Text was entered only into the page field; it was not submitted." };
+  }
+
+  async selectOption(ref: string, optionLabel: string) {
+    if (optionLabel.length > 500) throw new Error("Option label exceeds the 500 character limit.");
+    const inspectedFingerprint = this.lastInspectionFingerprint;
+    if (!this.candidates.has(ref) || !inspectedFingerprint) throw new Error("Unknown or stale action ref. Call browser_inspect first.");
+    const snapshot = await this.inspect();
+    if (this.lastInspectionFingerprint !== inspectedFingerprint) throw new Error("The page changed after inspection. Inspect it again and select a current field ref.");
+    const candidate = this.candidates.get(ref);
+    if (!candidate || !["select-one", "select-multiple"].includes(candidate.kind)) throw new Error("This ref is not a native select control.");
+    const locator = this.requirePage().locator(`[data-adk-ref="${candidate.ref}"]`).first();
+    const labels = await locator.evaluate((element) => Array.from((element as HTMLSelectElement).options).filter((option) => !option.disabled && !(option.parentElement?.tagName === "OPTGROUP" && (option.parentElement as HTMLOptGroupElement).disabled)).map((option) => option.label.trim()).filter(Boolean));
+    const matches = labels.filter((label) => label === optionLabel);
+    if (matches.length !== 1) throw new Error("Choose one exact, enabled option label visible in the current select control.");
+    await locator.selectOption({ label: optionLabel }, { timeout: 5_000 });
+    return { status: "selected", ref, optionLabel, submitted: false, valueReturned: false, note: "A visible native option was selected. The page was not submitted." };
   }
 
   async visualInspect(question?: string) {
@@ -279,7 +303,11 @@ export class BrowserManager {
       const checked = nativeInput ? await locator.isChecked().catch(() => null) : await locator.getAttribute("aria-checked").then((value) => value === "true").catch(() => null);
       return { checked, note: "The selected checkbox or radio control changed state without submitting its form." };
     }
-    if (candidate.role === "textarea" || (candidate.role === "input" && ["text", "search", "email", "tel", "url", "number"].includes(candidate.kind))) {
+    if (["select-one", "select-multiple"].includes(candidate.kind)) {
+      await locator.focus();
+      return { focused: true, note: "Choose a visible option with browser_select_option; the page was not submitted." };
+    }
+    if (candidate.role === "textarea" || (candidate.role === "input" && ["text", "search", "email", "tel", "url", "number", "date", "datetime-local", "time", "month", "week"].includes(candidate.kind))) {
       await locator.focus();
       return { focused: true, note: "Text entry is deliberately separate; no user-provided text was entered." };
     }

@@ -1,0 +1,694 @@
+{
+  "benchmark": "miniwob",
+  "task": "search-engine",
+  "taskPrompt": "Use the textbox to enter \"Deneen\" and press \"Search\", then find and click the 8th search result.",
+  "runnerMode": "bounded-repeated-browser-decide-and-act",
+  "toolCoverage": [
+    "browser_connect",
+    "browser_decide_and_act",
+    "browser_confirm"
+  ],
+  "notExercisedTools": [
+    "browser_fill",
+    "browser_select_option",
+    "browser_visual_inspect"
+  ],
+  "success": false,
+  "timeout": false,
+  "failureReason": "task-goal-not-achieved",
+  "actions": 8,
+  "selectedAction": {
+    "ref": "r2",
+    "role": "button",
+    "label": "Search",
+    "kind": "button",
+    "risk": "low"
+  },
+  "decisionConfidence": null,
+  "decisionCalibration": "not-applicable-rule",
+  "decisionLatencyMs": 0,
+  "decisionCallLatenciesMs": [],
+  "decisionSnapshot": null,
+  "availableCandidates": null,
+  "decisionTrace": [
+    {
+      "step": 1,
+      "decisionStatus": "action-executed",
+      "provider": "local-literal-match",
+      "model": "unique-exact-quoted-label",
+      "selectionRule": "unique-exact-quoted-label",
+      "selectedAction": {
+        "ref": "r2",
+        "role": "button",
+        "label": "Search",
+        "kind": "button",
+        "risk": "low"
+      },
+      "availableCandidates": [
+        {
+          "ref": "r1",
+          "role": "input",
+          "label": "input 1",
+          "kind": "text",
+          "risk": "low"
+        },
+        {
+          "ref": "r2",
+          "role": "button",
+          "label": "Search",
+          "kind": "button",
+          "risk": "low"
+        }
+      ],
+      "decisionLatencyMs": 0,
+      "candidateCount": 2,
+      "confidence": null,
+      "calibration": "not-applicable-rule",
+      "executionStatus": "action-executed"
+    },
+    {
+      "step": 2,
+      "decisionStatus": "action-executed",
+      "provider": "local-literal-match",
+      "model": "unique-exact-quoted-label",
+      "selectionRule": "unique-exact-quoted-label",
+      "selectedAction": {
+        "ref": "r2",
+        "role": "button",
+        "label": "Search",
+        "kind": "button",
+        "risk": "low"
+      },
+      "availableCandidates": [
+        {
+          "ref": "r1",
+          "role": "input",
+          "label": "input 1",
+          "kind": "text",
+          "risk": "low"
+        },
+        {
+          "ref": "r2",
+          "role": "button",
+          "label": "Search",
+          "kind": "button",
+          "risk": "low"
+        },
+        {
+          "ref": "r3",
+          "role": "link",
+          "label": "Riley",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r4",
+          "role": "link",
+          "label": "Dolores",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r5",
+          "role": "link",
+          "label": "Beaulah",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r6",
+          "role": "link",
+          "label": "1",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r7",
+          "role": "link",
+          "label": "2",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r8",
+          "role": "link",
+          "label": "3",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r9",
+          "role": "link",
+          "label": ">",
+          "kind": "a",
+          "risk": "low"
+        }
+      ],
+      "decisionLatencyMs": 0,
+      "candidateCount": 9,
+      "confidence": null,
+      "calibration": "not-applicable-rule",
+      "executionStatus": "action-executed"
+    },
+    {
+      "step": 3,
+      "decisionStatus": "action-executed",
+      "provider": "local-literal-match",
+      "model": "unique-exact-quoted-label",
+      "selectionRule": "unique-exact-quoted-label",
+      "selectedAction": {
+        "ref": "r2",
+        "role": "button",
+        "label": "Search",
+        "kind": "button",
+        "risk": "low"
+      },
+      "availableCandidates": [
+        {
+          "ref": "r1",
+          "role": "input",
+          "label": "input 1",
+          "kind": "text",
+          "risk": "low"
+        },
+        {
+          "ref": "r2",
+          "role": "button",
+          "label": "Search",
+          "kind": "button",
+          "risk": "low"
+        },
+        {
+          "ref": "r3",
+          "role": "link",
+          "label": "Leonie",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r4",
+          "role": "link",
+          "label": "Vanda",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r5",
+          "role": "link",
+          "label": "Myron",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r6",
+          "role": "link",
+          "label": "1",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r7",
+          "role": "link",
+          "label": "2",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r8",
+          "role": "link",
+          "label": "3",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r9",
+          "role": "link",
+          "label": ">",
+          "kind": "a",
+          "risk": "low"
+        }
+      ],
+      "decisionLatencyMs": 0,
+      "candidateCount": 9,
+      "confidence": null,
+      "calibration": "not-applicable-rule",
+      "executionStatus": "action-executed"
+    },
+    {
+      "step": 4,
+      "decisionStatus": "action-executed",
+      "provider": "local-literal-match",
+      "model": "unique-exact-quoted-label",
+      "selectionRule": "unique-exact-quoted-label",
+      "selectedAction": {
+        "ref": "r2",
+        "role": "button",
+        "label": "Search",
+        "kind": "button",
+        "risk": "low"
+      },
+      "availableCandidates": [
+        {
+          "ref": "r1",
+          "role": "input",
+          "label": "input 1",
+          "kind": "text",
+          "risk": "low"
+        },
+        {
+          "ref": "r2",
+          "role": "button",
+          "label": "Search",
+          "kind": "button",
+          "risk": "low"
+        },
+        {
+          "ref": "r3",
+          "role": "link",
+          "label": "Jerald",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r4",
+          "role": "link",
+          "label": "Jerald",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r5",
+          "role": "link",
+          "label": "Agustina",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r6",
+          "role": "link",
+          "label": "1",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r7",
+          "role": "link",
+          "label": "2",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r8",
+          "role": "link",
+          "label": "3",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r9",
+          "role": "link",
+          "label": ">",
+          "kind": "a",
+          "risk": "low"
+        }
+      ],
+      "decisionLatencyMs": 0,
+      "candidateCount": 9,
+      "confidence": null,
+      "calibration": "not-applicable-rule",
+      "executionStatus": "action-executed"
+    },
+    {
+      "step": 5,
+      "decisionStatus": "action-executed",
+      "provider": "local-literal-match",
+      "model": "unique-exact-quoted-label",
+      "selectionRule": "unique-exact-quoted-label",
+      "selectedAction": {
+        "ref": "r2",
+        "role": "button",
+        "label": "Search",
+        "kind": "button",
+        "risk": "low"
+      },
+      "availableCandidates": [
+        {
+          "ref": "r1",
+          "role": "input",
+          "label": "input 1",
+          "kind": "text",
+          "risk": "low"
+        },
+        {
+          "ref": "r2",
+          "role": "button",
+          "label": "Search",
+          "kind": "button",
+          "risk": "low"
+        },
+        {
+          "ref": "r3",
+          "role": "link",
+          "label": "Donovan",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r4",
+          "role": "link",
+          "label": "Vanda",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r5",
+          "role": "link",
+          "label": "Thaddeus",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r6",
+          "role": "link",
+          "label": "1",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r7",
+          "role": "link",
+          "label": "2",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r8",
+          "role": "link",
+          "label": "3",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r9",
+          "role": "link",
+          "label": ">",
+          "kind": "a",
+          "risk": "low"
+        }
+      ],
+      "decisionLatencyMs": 0,
+      "candidateCount": 9,
+      "confidence": null,
+      "calibration": "not-applicable-rule",
+      "executionStatus": "action-executed"
+    },
+    {
+      "step": 6,
+      "decisionStatus": "action-executed",
+      "provider": "local-literal-match",
+      "model": "unique-exact-quoted-label",
+      "selectionRule": "unique-exact-quoted-label",
+      "selectedAction": {
+        "ref": "r2",
+        "role": "button",
+        "label": "Search",
+        "kind": "button",
+        "risk": "low"
+      },
+      "availableCandidates": [
+        {
+          "ref": "r1",
+          "role": "input",
+          "label": "input 1",
+          "kind": "text",
+          "risk": "low"
+        },
+        {
+          "ref": "r2",
+          "role": "button",
+          "label": "Search",
+          "kind": "button",
+          "risk": "low"
+        },
+        {
+          "ref": "r3",
+          "role": "link",
+          "label": "Nieves",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r4",
+          "role": "link",
+          "label": "Nathalie",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r5",
+          "role": "link",
+          "label": "Tora",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r6",
+          "role": "link",
+          "label": "1",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r7",
+          "role": "link",
+          "label": "2",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r8",
+          "role": "link",
+          "label": "3",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r9",
+          "role": "link",
+          "label": ">",
+          "kind": "a",
+          "risk": "low"
+        }
+      ],
+      "decisionLatencyMs": 0,
+      "candidateCount": 9,
+      "confidence": null,
+      "calibration": "not-applicable-rule",
+      "executionStatus": "action-executed"
+    },
+    {
+      "step": 7,
+      "decisionStatus": "action-executed",
+      "provider": "local-literal-match",
+      "model": "unique-exact-quoted-label",
+      "selectionRule": "unique-exact-quoted-label",
+      "selectedAction": {
+        "ref": "r2",
+        "role": "button",
+        "label": "Search",
+        "kind": "button",
+        "risk": "low"
+      },
+      "availableCandidates": [
+        {
+          "ref": "r1",
+          "role": "input",
+          "label": "input 1",
+          "kind": "text",
+          "risk": "low"
+        },
+        {
+          "ref": "r2",
+          "role": "button",
+          "label": "Search",
+          "kind": "button",
+          "risk": "low"
+        },
+        {
+          "ref": "r3",
+          "role": "link",
+          "label": "Tula",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r4",
+          "role": "link",
+          "label": "Sergio",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r5",
+          "role": "link",
+          "label": "Teodoro",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r6",
+          "role": "link",
+          "label": "1",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r7",
+          "role": "link",
+          "label": "2",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r8",
+          "role": "link",
+          "label": "3",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r9",
+          "role": "link",
+          "label": ">",
+          "kind": "a",
+          "risk": "low"
+        }
+      ],
+      "decisionLatencyMs": 0,
+      "candidateCount": 9,
+      "confidence": null,
+      "calibration": "not-applicable-rule",
+      "executionStatus": "action-executed"
+    },
+    {
+      "step": 8,
+      "decisionStatus": "action-executed",
+      "provider": "local-literal-match",
+      "model": "unique-exact-quoted-label",
+      "selectionRule": "unique-exact-quoted-label",
+      "selectedAction": {
+        "ref": "r2",
+        "role": "button",
+        "label": "Search",
+        "kind": "button",
+        "risk": "low"
+      },
+      "availableCandidates": [
+        {
+          "ref": "r1",
+          "role": "input",
+          "label": "input 1",
+          "kind": "text",
+          "risk": "low"
+        },
+        {
+          "ref": "r2",
+          "role": "button",
+          "label": "Search",
+          "kind": "button",
+          "risk": "low"
+        },
+        {
+          "ref": "r3",
+          "role": "link",
+          "label": "Renda",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r4",
+          "role": "link",
+          "label": "Tula",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r5",
+          "role": "link",
+          "label": "Bernardine",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r6",
+          "role": "link",
+          "label": "1",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r7",
+          "role": "link",
+          "label": "2",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r8",
+          "role": "link",
+          "label": "3",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r9",
+          "role": "link",
+          "label": ">",
+          "kind": "a",
+          "risk": "low"
+        }
+      ],
+      "decisionLatencyMs": 0,
+      "candidateCount": 9,
+      "confidence": null,
+      "calibration": "not-applicable-rule",
+      "executionStatus": "action-executed"
+    }
+  ],
+  "candidateCount": 9,
+  "selectionRule": "unique-exact-quoted-label",
+  "syntheticApprovalCount": 0,
+  "latencyMs": 4658,
+  "environmentResetLatencyMs": 2511,
+  "agentActionLatencyMs": 2147,
+  "reward": 0.0,
+  "terminated": false,
+  "decisionStatus": "action-executed",
+  "decisionProvider": "local-literal-match",
+  "decisionModel": "unique-exact-quoted-label",
+  "browserGymVersion": "0.14.3",
+  "browserGymPackageCommit": "0a785fbed075224ae81ca9c1fe924f66050696fe",
+  "playwrightPythonVersion": "1.44.0",
+  "playwrightNodeVersion": "1.63.0",
+  "browserVersion": "HeadlessChrome/125.0.6422.26",
+  "pythonVersion": "3.10.0",
+  "nodeVersion": "v22.14.0",
+  "operatingSystem": "Windows-10-10.0.19045-SP0",
+  "cpu": "AMD64 Family 25 Model 80 Stepping 0, AuthenticAMD",
+  "accelerator": "CPU",
+  "modelCacheState": "local cache already populated before this episode",
+  "decisionWarmState": "first provider inference in a fresh Node bridge process; model files are cached",
+  "miniWobCommit": "7fd85d71a4b60325c6585396ec4f48377d049838",
+  "browserStillOpenAfterDisconnect": true,
+  "rawTaskInfo": {
+    "REWARD_GLOBAL": 0,
+    "RAW_REWARD_GLOBAL": 0,
+    "REWARD_REASON": null,
+    "DONE_GLOBAL": false,
+    "EPISODE_ID": 0,
+    "TASK_READY": true
+  },
+  "timestampUtc": "2026-09-29T19:13:47.219694+00:00",
+  "maxActions": 8,
+  "note": "Single-task integration smoke check of a bounded repeated decide-and-act loop, not a full autonomous agent. It does not orchestrate field filling, native select choices, or visual inspection. Not a representative BrowserGym benchmark, model-quality estimate, or speed claim. Synthetic approvals are possible only for the exact local MiniWoB file URL."
+}

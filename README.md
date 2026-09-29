@@ -23,7 +23,7 @@ It uses ordinary code to constrain choices and execute actions. Its default deci
 ## What it does
 
 - **Browser loop first.** Playwright inspects a bounded set of visible controls, chooses from those controls, and returns a short page delta. Launch an isolated profile or [list and explicitly select a local Chrome tab](docs/browser-chrome.md) over loopback CDP.
-- **Approval for consequential actions.** Payment, sending, publishing, deletion, and form submission candidates pause for a distinct confirmation call. Password and file inputs are excluded. Text fields can be filled without submitting them.
+- **Approval for consequential actions.** Payment, sending, publishing, deletion, and form submission candidates pause for a distinct confirmation call. Password and file inputs are excluded. Text and date/time fields can be filled, and native select options can be chosen, without submitting the page.
 - **Structured decisions.** Batch up to eight `Choice`, `Score`, and yes/no (`noul`) questions in one request, with probability estimates and an explicit calibration label.
 - **Fast local browser paths.** Unique quoted labels, numbered tabs, named checkboxes, and clear expand-then-submit steps can resolve without model inference. These rule-based choices return no probability and keep sensitive actions behind the approval gate.
 - **Coding workflows.** Find relevant files, prune context while keeping requested strings verbatim, suggest a model route, pre-screen a diff, rerank, classify, screen, extract from caller-supplied candidates, and check completion evidence.

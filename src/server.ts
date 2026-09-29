@@ -99,7 +99,7 @@ export function createServer() {
 
   server.registerTool("browser_inspect", {
     title: "Inspect browser page",
-    description: "Return a bounded visible DOM/accessible-action snapshot. Does not include form values, passwords, cookies, or storage.",
+    description: "Return a bounded visible DOM/accessibility snapshot. Includes at most 12 enabled labels per native select, but not input values, passwords, cookies, or storage.",
     inputSchema: {},
   }, async () => asToolResult(await browser.inspect()));
 
@@ -111,15 +111,21 @@ export function createServer() {
 
   server.registerTool("browser_action", {
     title: "Run selected browser action",
-    description: "Click a ref returned by browser_inspect. Sensitive actions return an approval token and do not run until browser_confirm is called.",
+    description: "Click a control or focus a supported field ref returned by browser_inspect. Sensitive actions return an approval token and do not run until browser_confirm is called.",
     inputSchema: { ref: z.string().regex(/^r\d+$/) },
   }, async ({ ref }) => asToolResult(await browser.act(ref)));
 
   server.registerTool("browser_fill", {
     title: "Fill a visible browser field",
-    description: "Fill a visible non-password text field selected by a fresh browser_inspect ref. The value is never returned or submitted; it remains in the page until a separate action is taken.",
+    description: "Fill a supported visible text, number, or date/time field selected by a fresh browser_inspect ref. The value is never returned or submitted; it remains in the page until a separate action is taken.",
     inputSchema: { ref: z.string().regex(/^r\d+$/), text: z.string().max(20_000) },
   }, async ({ ref, text }) => asToolResult(await browser.fill(ref, text)));
+
+  server.registerTool("browser_select_option", {
+    title: "Select a native browser option",
+    description: "Select one exact, enabled option label from a visible native select control. It does not submit the page or return the option value.",
+    inputSchema: { ref: z.string().regex(/^r\d+$/), optionLabel: z.string().min(1).max(500) },
+  }, async ({ ref, optionLabel }) => asToolResult(await browser.selectOption(ref, optionLabel)));
 
   server.registerTool("browser_confirm", {
     title: "Approve or cancel sensitive action",

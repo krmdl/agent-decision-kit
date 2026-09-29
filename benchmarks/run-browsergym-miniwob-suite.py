@@ -123,6 +123,10 @@ def main():
     summary = load_aggregator().summarize(records)
     summary["suite"] = {
         "name": "miniwob-smoke",
+        "runnerMode": "bounded-repeated-browser-decide-and-act",
+        "toolCoverage": ["browser_connect", "browser_decide_and_act", "browser_confirm"],
+        "notExercisedTools": ["browser_fill", "browser_select_option", "browser_visual_inspect"],
+        "limitation": "This runner is not a full autonomous agent. It does not generate or enter field values, choose native select options, or request visual inspection; it records ambiguous and visual-only states as outcomes.",
         "seed": args.seed,
         "maxActionsPerTask": args.max_actions,
         "timeoutSecondsPerTask": args.timeout_seconds,
@@ -132,7 +136,7 @@ def main():
         "pythonVersion": platform.python_version(),
         "operatingSystem": platform.platform(),
     }
-    summary["note"] += " The selected MiniWoB task set is a reproducible smoke suite, not a representative BrowserGym sample."
+    summary["note"] += " The selected MiniWoB task set is a reproducible smoke suite, not a representative BrowserGym sample. The runner measures a bounded repeated decide-and-act tool loop, not a complete coding agent."
     summary = sanitize_record(summary)
     rendered = json.dumps(summary, indent=2) + "\n"
     args.output.parent.mkdir(parents=True, exist_ok=True)
