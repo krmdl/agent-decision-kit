@@ -54,6 +54,12 @@ Aggregate a JSON file with `benchmarks/aggregate-browsergym.py`:
 
 Report task success rate, action-count distribution, latency p50/p95, and timeout rate separately. Publish raw episode records along with every chart. Never present elapsed time alone as “speed” without controlling for task success.
 
+## Visual-only fallback
+
+`npm run vision:verify` opens the local synthetic canvas demo, confirms it has no DOM action candidates, and asks the local vision model to read the main button label. The test passes only when the returned description contains the expected `Open task` label. Its raw one-sample record is `results/vision-smoke.json`.
+
+The checked-in run recognized the label on CPU in 21,634 ms with model files already present in the local cache. The timing includes model initialization and generation. Confidence is unavailable; this is an integration smoke check, not a quality, calibration, or speed benchmark. If the model is not cached, the first run downloads its weights. The screenshot and model inference remain local.
+
 ## Calibration
 
 For labeled outcomes, report Brier score and reliability bins alongside accuracy. Do not call `confidence` calibrated unless the provider explicitly identifies its calibration source and the measured reliability backs that up on held-out examples. The local semantic model reports `uncalibrated-estimate`.

@@ -1,0 +1,24 @@
+{
+  "benchmark": "visual-only-smoke",
+  "task": "read-canvas-button-label",
+  "success": true,
+  "expectedLabel": "Open task",
+  "description": "\"Open task.\"",
+  "model": "HuggingFaceTB/SmolVLM2-500M-Video-Instruct",
+  "provider": "local-vision",
+  "confidence": null,
+  "calibration": "unavailable",
+  "latencyMs": 21634,
+  "sampleCount": 1,
+  "runtime": {
+    "node": "v22.14.0",
+    "platform": "win32",
+    "architecture": "x64",
+    "osVersion": "10.0.19045",
+    "cpuModel": "AMD Ryzen 5 5600H with Radeon Graphics         ",
+    "accelerator": "CPU",
+    "modelFilesPresentBeforeRun": true
+  },
+  "timestampUtc": "2026-09-29T18:44:49.424Z",
+  "note": "One integration smoke sample on a synthetic canvas page. It checks visible text recognition only; it is not a quality, calibration, or speed benchmark. Latency includes model initialization and generation."
+}
