@@ -10,6 +10,8 @@ website/.astro/
 .agent-decision/
 playwright-report/
 test-results/
+__pycache__/
+benchmarks/results/miniwob-click-*-smoke.json
 *.log
 Thumbs.db
 .DS_Store

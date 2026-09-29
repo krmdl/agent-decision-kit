@@ -1,7 +1,7 @@
 {
   "benchmark": "miniwob",
-  "task": "click-test",
-  "taskPrompt": "Click the button.",
+  "task": "click-dialog",
+  "taskPrompt": "Close the dialog box by clicking the \"x\".",
   "success": true,
   "timeout": false,
   "failureReason": null,
@@ -9,43 +9,47 @@
   "selectedAction": {
     "ref": "r1",
     "role": "button",
-    "label": "Click Me!",
+    "label": "Close â€” Close",
     "kind": "button",
-    "risk": "approval-required"
+    "risk": "low"
   },
   "decisionConfidence": 1,
   "decisionCalibration": "uncalibrated-estimate",
-  "decisionLatencyMs": 423,
+  "decisionLatencyMs": 402,
   "decisionCallLatenciesMs": [
-    423
+    402
   ],
   "decisionSnapshot": null,
   "decisionTrace": [
     {
       "step": 1,
-      "decisionStatus": "awaiting-user-approval",
+      "decisionStatus": "action-executed",
+      "provider": "semantic-local",
+      "model": "Xenova/all-MiniLM-L6-v2",
+      "selectionRule": null,
       "selectedAction": {
         "ref": "r1",
         "role": "button",
-        "label": "Click Me!",
+        "label": "Close â€” Close",
         "kind": "button",
-        "risk": "approval-required"
+        "risk": "low"
       },
-      "decisionLatencyMs": 423,
+      "decisionLatencyMs": 402,
       "candidateCount": 1,
       "confidence": 1,
       "calibration": "uncalibrated-estimate",
-      "executionStatus": "action-executed-after-approval"
+      "executionStatus": "action-executed"
     }
   ],
   "candidateCount": 1,
-  "syntheticApprovalCount": 1,
-  "latencyMs": 3627,
-  "environmentResetLatencyMs": 2860,
-  "agentActionLatencyMs": 767,
+  "selectionRule": null,
+  "syntheticApprovalCount": 0,
+  "latencyMs": 3172,
+  "environmentResetLatencyMs": 2439,
+  "agentActionLatencyMs": 733,
   "reward": 1.0,
   "terminated": true,
-  "decisionStatus": "action-executed-after-approval",
+  "decisionStatus": "action-executed",
   "decisionProvider": "semantic-local",
   "decisionModel": "Xenova/all-MiniLM-L6-v2",
   "browserGymVersion": "0.14.3",
@@ -59,17 +63,18 @@
   "cpu": "AMD64 Family 25 Model 80 Stepping 0, AuthenticAMD",
   "accelerator": "CPU",
   "modelCacheState": "local cache already populated before this episode",
+  "decisionWarmState": "first provider inference in a fresh Node bridge process; model files are cached",
   "miniWobCommit": "7fd85d71a4b60325c6585396ec4f48377d049838",
   "browserStillOpenAfterDisconnect": true,
   "rawTaskInfo": {
-    "REWARD_GLOBAL": 0.997164,
+    "REWARD_GLOBAL": 0.997338,
     "RAW_REWARD_GLOBAL": 1,
     "REWARD_REASON": null,
     "DONE_GLOBAL": true,
     "EPISODE_ID": 1,
     "TASK_READY": true
   },
-  "timestampUtc": "2026-09-29T16:42:48.168245+00:00",
+  "timestampUtc": "2026-09-29T16:59:46.350612+00:00",
   "maxActions": 5,
   "note": "Single-task integration smoke check. The runner repeats bounded BrowserManager calls up to maxActions. Not a representative BrowserGym benchmark, model-quality estimate, or speed claim. Synthetic approvals are possible only for the exact local MiniWoB file URL."
 }

@@ -12,13 +12,17 @@ describe("Playwright browser safety flow", () => {
   let profile = "";
   let browser: BrowserManager;
   let visualHtml: Buffer;
+  let checkboxHtml: Buffer;
+  let submitHtml: Buffer;
 
   beforeAll(async () => {
     const html = await readFile(path.resolve("examples/browser-demo.html"));
     visualHtml = await readFile(path.resolve("examples/visual-only-demo.html"));
+    checkboxHtml = Buffer.from('<!doctype html><label><input type="checkbox" name="updates"> Receive product updates</label>');
+    submitHtml = Buffer.from('<!doctype html><form onsubmit="event.preventDefault(); document.querySelector(\'#status\').textContent = \'Submitted locally\'"><input type="submit" value="Send test"></form><p id="status">Not sent</p>');
     server = createServer((request, response) => {
       response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-      response.end(request.url === "/visual-only" ? visualHtml : html);
+      response.end(request.url === "/visual-only" ? visualHtml : request.url === "/checkbox" ? checkboxHtml : request.url === "/submit" ? submitHtml : html);
     });
     await new Promise<void>((resolve, reject) => {
       server.once("error", reject);
@@ -80,5 +84,53 @@ describe("Playwright browser safety flow", () => {
     expect(result.visualFallbackAvailable).toBe(true);
     expect(result.suggestedTool).toBe("browser_visual_inspect");
     expect("visual" in result).toBe(false);
+  }, 45_000);
+
+  it("clicks a visible checkbox without submitting its form", async () => {
+    profile = await mkdtemp(path.join(os.tmpdir(), "adk-browser-checkbox-test-"));
+    browser = new BrowserManager({ headless: true, profileDir: path.join(profile, "chromium") });
+    await browser.launch(`${baseUrl}checkbox`);
+
+    const snapshot = await browser.inspect();
+    const checkbox = snapshot.candidates.find((candidate) => candidate.kind === "checkbox");
+    expect(checkbox?.label).toContain("Currently unchecked");
+
+    const result = await browser.act(checkbox!.ref);
+    expect(result.status).toBe("action-executed");
+    expect(result.effect.checked).toBe(true);
+  }, 45_000);
+
+  it("uses an exact quoted visible label locally and still gates a risky action", async () => {
+    profile = await mkdtemp(path.join(os.tmpdir(), "adk-browser-label-test-"));
+    browser = new BrowserManager({ headless: true, profileDir: path.join(profile, "chromium") });
+    await browser.launch(baseUrl);
+    const provider: DecisionProvider = {
+      id: "remote-test-provider",
+      model: "unused-test-provider",
+      decide: async () => { throw new Error("A unique quoted label should resolve locally"); },
+    };
+
+    const result = await browser.decideAndAct('Click the "Delete draft" button', provider);
+    expect(result.status).toBe("awaiting-user-approval");
+    expect(result.selectionRule).toBe("unique-exact-quoted-label");
+    expect(result.confidence).toBeNull();
+    expect(result.calibration).toBe("not-applicable-rule");
+  }, 45_000);
+
+  it("executes a submit input only after the separate approval call", async () => {
+    profile = await mkdtemp(path.join(os.tmpdir(), "adk-browser-submit-test-"));
+    browser = new BrowserManager({ headless: true, profileDir: path.join(profile, "chromium") });
+    await browser.launch(`${baseUrl}submit`);
+
+    const snapshot = await browser.inspect();
+    const submit = snapshot.candidates.find((candidate) => candidate.kind === "submit");
+    expect(submit?.risk).toBe("approval-required");
+
+    const proposed = await browser.act(submit!.ref);
+    expect(proposed.status).toBe("awaiting-user-approval");
+    const token = "approvalToken" in proposed ? proposed.approvalToken : "";
+    const result = await browser.confirm(token, true);
+    expect(result.status).toBe("action-executed-after-approval");
+    expect(result.effect.textDelta.excerpt).toContain("Submitted locally");
   }, 45_000);
 });

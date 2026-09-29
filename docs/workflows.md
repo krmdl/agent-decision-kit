@@ -36,10 +36,10 @@ This is a local, transparent baseline. It does not summarize, rewrite, or judge 
 
 1. `browser_launch` opens a separate persistent Chromium profile, or `browser_connect` attaches to a selected loopback CDP tab.
 2. `browser_inspect` returns the page title, bounded text excerpt, and visible control labels/refs. Form values and browser storage are omitted.
-3. Ask `browser_decide_and_act` for one task, or choose a ref explicitly with `browser_action`.
+3. Ask `browser_decide_and_act` for one task, or choose a ref explicitly with `browser_action`. A unique visible label written in quotes is matched locally without provider inference.
 4. Read the short DOM delta. A destructive or externally consequential control returns an approval token instead of clicking.
 5. Inspect the proposed action, then call `browser_confirm` separately. Approval is invalidated when the page fingerprint changes.
-6. Fill text through `browser_fill`; submitting remains a distinct action.
+6. Fill text through `browser_fill`; it never submits the form. Checkboxes and radio controls can be toggled. Submit, reset, image-submit, and consequential button actions require a separate `browser_confirm` call before Playwright clicks them.
 
 DOM inspection is the fast path. If no visible DOM actions exist, `browser_decide_and_act` returns a `visual-only-page` status immediately rather than loading a model. Call `browser_visual_inspect` when a screenshot description is useful; it accepts an optional question and runs the Apache-2.0 [SmolVLM2 500M](https://huggingface.co/HuggingFaceTB/SmolVLM2-500M-Video-Instruct) model locally. It downloads model weights on first use and can take tens of seconds per screenshot on CPU. Its description is uncalibrated and cannot select controls, infer click coordinates, or perform actions. See the [canvas-only fake-data demo](../examples/visual-only-demo.html) and try the repeatable smoke check with `npm run vision:verify`.
 

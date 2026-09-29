@@ -1,0 +1,144 @@
+#!/usr/bin/env python3
+"""Run a fixed MiniWoB smoke suite and preserve every episode, including failures."""
+import argparse
+import importlib.util
+import json
+import platform
+import subprocess
+import sys
+import time
+from pathlib import Path
+from benchmark_records import sanitize_record
+
+ROOT = Path(__file__).resolve().parents[1]
+RUNNER = Path(__file__).with_name("run-browsergym-miniwob.py")
+AGGREGATOR = Path(__file__).with_name("aggregate-browsergym.py")
+DEFAULT_TASKS = [
+    "click-test",
+    "click-button",
+    "click-link",
+    "click-tab",
+    "click-collapsible",
+    "click-dialog",
+    "click-menu",
+    "click-checkboxes",
+]
+
+
+def load_aggregator():
+    spec = importlib.util.spec_from_file_location("aggregate_browsergym", AGGREGATOR)
+    if spec is None or spec.loader is None:
+        raise RuntimeError("Could not load the BrowserGym aggregation module")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--miniwob-root", required=True, type=Path, help="Path to miniwob-plusplus/miniwob/html/miniwob")
+    parser.add_argument("--output", required=True, type=Path, help="Summary path; per-task episode JSON files are written beside it")
+    parser.add_argument("--tasks", nargs="+", default=DEFAULT_TASKS, help="MiniWoB task IDs; defaults to the included 8-task smoke suite")
+    parser.add_argument("--seed", type=int, default=7)
+    parser.add_argument("--max-actions", type=int, default=5)
+    parser.add_argument("--timeout-seconds", type=int, default=120, help="Outer time limit per task process")
+    parser.add_argument("--approve-synthetic-actions", action="store_true", help="Allow gated actions only when the runner confirms the exact local file:// task URL")
+    args = parser.parse_args()
+
+    miniwob_root = args.miniwob_root.resolve()
+    if not args.tasks or len(args.tasks) != len(set(args.tasks)):
+        raise SystemExit("Supply at least one distinct MiniWoB task ID")
+    missing = [task for task in args.tasks if not (miniwob_root / f"{task}.html").is_file()]
+    if missing:
+        raise SystemExit(f"MiniWoB task file(s) not found: {', '.join(missing)}")
+    if args.timeout_seconds < 1:
+        raise SystemExit("--timeout-seconds must be positive")
+
+    records = []
+    episode_files = []
+    for task in args.tasks:
+        episode_path = args.output.parent / f"{args.output.stem}-{task}.json"
+        episode_files.append(episode_path)
+        command = [
+            sys.executable, str(RUNNER),
+            "--task", task,
+            "--task-prompt", "",
+            "--miniwob-root", str(miniwob_root),
+            "--seed", str(args.seed),
+            "--max-actions", str(args.max_actions),
+            "--output", str(episode_path),
+        ]
+        if args.approve_synthetic_actions:
+            command.append("--approve-synthetic-actions")
+
+        start = time.perf_counter()
+        try:
+            completed = subprocess.run(
+                command,
+                cwd=ROOT,
+                capture_output=True,
+                text=True,
+                timeout=args.timeout_seconds,
+                check=False,
+            )
+        except subprocess.TimeoutExpired:
+            record = {
+                "benchmark": "miniwob",
+                "task": task,
+                "success": False,
+                "timeout": True,
+                "failureReason": f"suite-runner-timeout-{args.timeout_seconds}s",
+                "actions": 0,
+                "latencyMs": args.timeout_seconds * 1000,
+                "decisionStatus": "suite-timeout",
+                "operatingSystem": platform.platform(),
+                "pythonVersion": platform.python_version(),
+                "timestampUtc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            }
+            episode_path.parent.mkdir(parents=True, exist_ok=True)
+            episode_path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+        else:
+            if episode_path.is_file():
+                record = json.loads(episode_path.read_text(encoding="utf-8"))
+            else:
+                error = completed.stderr.strip() or completed.stdout.strip() or f"runner-exit-{completed.returncode}-without-record"
+                record = {
+                    "benchmark": "miniwob",
+                    "task": task,
+                    "success": False,
+                    "timeout": False,
+                    "failureReason": error[-500:],
+                    "actions": 0,
+                    "latencyMs": round((time.perf_counter() - start) * 1000),
+                    "decisionStatus": "runner-error",
+                    "operatingSystem": platform.platform(),
+                    "pythonVersion": platform.python_version(),
+                    "timestampUtc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                }
+                episode_path.parent.mkdir(parents=True, exist_ok=True)
+                episode_path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+        records.append(record)
+        print(f"{task}: {'PASS' if record['success'] else 'FAIL'}; actions={record['actions']}; timeout={record.get('timeout', False)}; latencyMs={record['latencyMs']}")
+
+    summary = load_aggregator().summarize(records)
+    summary["suite"] = {
+        "name": "miniwob-smoke",
+        "seed": args.seed,
+        "maxActionsPerTask": args.max_actions,
+        "timeoutSecondsPerTask": args.timeout_seconds,
+        "syntheticApprovalsEnabled": args.approve_synthetic_actions,
+        "miniwobRoot": str(miniwob_root),
+        "episodeFiles": [str(path.relative_to(ROOT)) if path.is_relative_to(ROOT) else str(path) for path in episode_files],
+        "pythonVersion": platform.python_version(),
+        "operatingSystem": platform.platform(),
+    }
+    summary["note"] += " The selected MiniWoB task set is a reproducible smoke suite, not a representative BrowserGym sample."
+    summary = sanitize_record(summary)
+    rendered = json.dumps(summary, indent=2) + "\n"
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    args.output.write_text(rendered, encoding="utf-8")
+    print(json.dumps({key: summary[key] for key in ("episodeCount", "successCount", "taskSuccessRate", "timeoutRate", "latencyMs", "agentActionLatencyMs", "decisionCallLatencyMs", "decisionLatencyPerEpisodeMs", "actions")}, indent=2))
+
+
+if __name__ == "__main__":
+    main()

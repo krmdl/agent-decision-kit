@@ -8,7 +8,7 @@
 
 [![CI](https://github.com/krmdl/agent-decision-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/krmdl/agent-decision-kit/actions/workflows/ci.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
-[![Node.js 20+](https://img.shields.io/badge/Node.js-20%2B-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
+[![Node.js 20.19+](https://img.shields.io/badge/Node.js-20.19%2B-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 
 [Quick start](#quick-start) · [Browser demo](#browser-demo) · [Agent setup](#connect-your-agent) · [Privacy and cost](#privacy-and-cost)
 
@@ -24,7 +24,8 @@ It uses ordinary code to constrain choices and execute actions. Its default deci
 
 - **Browser loop first.** Playwright inspects a bounded set of visible controls, chooses from those controls, and returns a short page delta. Launch an isolated profile or attach to a selected local Chrome tab over CDP.
 - **Approval for consequential actions.** Payment, sending, publishing, deletion, and form submission candidates pause for a distinct confirmation call. Password and file inputs are excluded. Text fields can be filled without submitting them.
-- **Structured decisions.** Batch up to eight `Choice`, `Score`, and `Noul` questions in one request, with probability estimates and an explicit calibration label.
+- **Structured decisions.** Batch up to eight `Choice`, `Score`, and yes/no (`noul`) questions in one request, with probability estimates and an explicit calibration label.
+- **Fast exact browser matches.** A task that quotes one unique visible control label can resolve locally without model inference; it returns no probability and preserves the approval gate for consequential controls.
 - **Coding workflows.** Find relevant files, prune context while keeping requested strings verbatim, suggest a model route, pre-screen a diff, rerank, classify, screen, extract from caller-supplied candidates, and check completion evidence.
 - **CLI and MCP.** Use the same functions in a shell pipeline or from an MCP-compatible coding agent.
 - **Local vision fallback.** When a page has no visible DOM actions, `browser_decide_and_act` returns immediately and points to `browser_visual_inspect`; that separate tool can answer a question about the screenshot with [SmolVLM2 500M](https://huggingface.co/HuggingFaceTB/SmolVLM2-500M-Video-Instruct), an Apache-2.0 vision-language model. First use downloads model files; CPU inference can take tens of seconds. The screenshot stays local. Its description is uncalibrated and never triggers an action.
@@ -37,7 +38,7 @@ It uses ordinary code to constrain choices and execute actions. Its default deci
 
 ## Quick start
 
-Requirements: Node.js 20 or newer. The repository is in experimental alpha; the npm package is not published yet. Run from a local checkout:
+Requirements: Node.js 20.19 or newer. The repository is in experimental alpha; the npm package is not published yet. Run from a local checkout:
 
 ```sh
 npm install

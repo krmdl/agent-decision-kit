@@ -14,6 +14,7 @@ import time
 import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
+from benchmark_records import sanitize_record
 
 ROOT = Path(__file__).resolve().parents[1]
 MARKER = "@@ADK_BROWSERGYM@@"
@@ -96,9 +97,12 @@ def main():
     parser.add_argument("--task-prompt", help="Instruction passed to the local decision provider; defaults to BrowserGym's task goal")
     parser.add_argument("--miniwob-root", required=True, type=Path, help="Path to miniwob-plusplus/miniwob/html/miniwob")
     parser.add_argument("--seed", type=int, default=7)
+    parser.add_argument("--max-actions", type=int, default=5, help="Maximum BrowserManager decision/action rounds for this task")
     parser.add_argument("--approve-synthetic-actions", action="store_true", help="Confirm approval-gated actions only when the benchmark page uses a local file:// URL")
     parser.add_argument("--output", type=Path, help="Optional path for one raw JSON episode record")
     args = parser.parse_args()
+    if args.max_actions < 1 or args.max_actions > 20:
+        raise SystemExit("--max-actions must be between 1 and 20")
 
     miniwob_root = args.miniwob_root.resolve()
     if not (miniwob_root / f"{args.task}.html").is_file():
@@ -126,7 +130,24 @@ def main():
         pre_observation_delay=0.1,
     )
     bridge = None
+    episode_start = time.perf_counter()
     reset_start = time.perf_counter()
+    reset_latency_ms = 0
+    action_latency_ms = 0
+    decision = {}
+    decision_provider = "semantic-local"
+    decision_model = None
+    decision_selection_rule = None
+    selected_action = None
+    decision_confidence = None
+    decision_calibration = None
+    candidate_count = None
+    decision_latencies = []
+    decision_trace = []
+    action_count = 0
+    synthetic_approval_count = 0
+    task = args.task_prompt or ""
+    record = None
     try:
         observation, _ = env.reset(seed=args.seed)
         reset_latency_ms = round((time.perf_counter() - reset_start) * 1000)
@@ -144,16 +165,50 @@ def main():
         playwright_node_version = bridge.call("versions")["playwright"]
 
         action_start = time.perf_counter()
-        decision = bridge.call("decide-and-act", task=task)
-        synthetic_approval_count = 0
-        if decision.get("status") == "awaiting-user-approval" and args.approve_synthetic_actions:
-            expected_url = base_url + f"{args.task}.html"
-            if not base_url.startswith("file://") or env.unwrapped.page.url != expected_url:
-                raise RuntimeError("Refusing benchmark auto-approval: the page is not the expected local MiniWoB file")
-            decision = bridge.call("confirm", approvalToken=decision["approvalToken"], approve=True)
-            synthetic_approval_count = 1
+        for step_index in range(args.max_actions):
+            decision = bridge.call("decide-and-act", task=task)
+            selected_action = decision.get("proposedAction") or decision.get("action")
+            decision_provider = decision.get("provider", "semantic-local")
+            decision_model = decision.get("model")
+            decision_selection_rule = decision.get("selectionRule")
+            decision_confidence = decision.get("confidence")
+            decision_calibration = decision.get("calibration")
+            step_decision_latency = decision.get("decisionLatencyMs")
+            if isinstance(step_decision_latency, (int, float)) and decision_provider != "local-literal-match":
+                decision_latencies.append(step_decision_latency)
+            candidate_count = decision.get("candidateCount")
+            trace_item = {
+                "step": step_index + 1,
+                "decisionStatus": decision.get("status"),
+                "provider": decision_provider,
+                "model": decision.get("model"),
+                "selectionRule": decision_selection_rule,
+                "selectedAction": selected_action,
+                "decisionLatencyMs": step_decision_latency,
+                "candidateCount": candidate_count,
+                "confidence": decision_confidence,
+                "calibration": decision_calibration,
+            }
+            decision_trace.append(trace_item)
+            if decision.get("status") == "awaiting-user-approval":
+                if not args.approve_synthetic_actions:
+                    break
+                expected_url = base_url + f"{args.task}.html"
+                if not base_url.startswith("file://") or env.unwrapped.page.url != expected_url:
+                    raise RuntimeError("Refusing benchmark auto-approval: the page is not the expected local MiniWoB file")
+                decision = bridge.call("confirm", approvalToken=decision["approvalToken"], approve=True)
+                synthetic_approval_count += 1
+            trace_item["executionStatus"] = decision.get("status")
+
+            if decision.get("status") not in {"action-executed", "action-executed-after-approval"}:
+                reward, terminated, _, task_info = env.unwrapped.task.validate(env.unwrapped.page, env.unwrapped.chat.messages)
+                break
+
+            action_count += 1
+            reward, terminated, _, task_info = env.unwrapped.task.validate(env.unwrapped.page, env.unwrapped.chat.messages)
+            if reward > 0 or terminated:
+                break
         action_latency_ms = round((time.perf_counter() - action_start) * 1000)
-        reward, terminated, _, task_info = env.unwrapped.task.validate(env.unwrapped.page, env.unwrapped.chat.messages)
         episode_latency_ms = reset_latency_ms + action_latency_ms
 
         bridge.close()
@@ -165,8 +220,20 @@ def main():
         record = {
             "benchmark": "miniwob",
             "task": args.task,
+            "taskPrompt": task,
             "success": bool(reward > 0),
-            "actions": 1 if decision.get("status") in {"action-executed", "action-executed-after-approval"} else 0,
+            "timeout": False,
+            "failureReason": None if reward > 0 else (task_info.get("REWARD_REASON") or "task-goal-not-achieved"),
+            "actions": action_count,
+            "selectedAction": selected_action,
+            "decisionConfidence": decision_confidence,
+            "decisionCalibration": decision_calibration,
+            "decisionLatencyMs": sum(decision_latencies),
+            "decisionCallLatenciesMs": decision_latencies,
+            "decisionSnapshot": decision.get("snapshot"),
+            "decisionTrace": decision_trace,
+            "candidateCount": candidate_count,
+            "selectionRule": decision_selection_rule,
             "syntheticApprovalCount": synthetic_approval_count,
             "latencyMs": episode_latency_ms,
             "environmentResetLatencyMs": reset_latency_ms,
@@ -174,8 +241,8 @@ def main():
             "reward": reward,
             "terminated": bool(terminated),
             "decisionStatus": decision.get("status"),
-            "decisionProvider": "semantic-local",
-            "decisionModel": "Xenova/all-MiniLM-L6-v2",
+            "decisionProvider": decision_provider,
+            "decisionModel": decision_model or "not-reported",
             "browserGymVersion": importlib.metadata.version("browsergym-core"),
             "browserGymPackageCommit": BROWSERGYM_PACKAGE_COMMIT,
             "playwrightPythonVersion": importlib.metadata.version("playwright"),
@@ -187,18 +254,58 @@ def main():
             "cpu": platform.processor() or "not reported by Python",
             "accelerator": "CPU",
             "modelCacheState": "local cache already populated before this episode",
+            "decisionWarmState": "first provider inference in a fresh Node bridge process; model files are cached",
             "miniWobCommit": MINIWOB_COMMIT,
             "browserStillOpenAfterDisconnect": browser_still_open,
             "rawTaskInfo": task_info,
             "timestampUtc": datetime.now(timezone.utc).isoformat(),
-            "note": "Single-task integration smoke check. Not a representative BrowserGym benchmark, model-quality estimate, or speed claim. Synthetic approvals are possible only for the exact local MiniWoB file URL.",
+            "maxActions": args.max_actions,
+            "note": "Single-task integration smoke check. The runner repeats bounded BrowserManager calls up to maxActions. Not a representative BrowserGym benchmark, model-quality estimate, or speed claim. Synthetic approvals are possible only for the exact local MiniWoB file URL.",
         }
         if args.output:
             args.output.parent.mkdir(parents=True, exist_ok=True)
-            args.output.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
-        print(json.dumps(record, indent=2))
+            args.output.write_text(json.dumps(sanitize_record(record), indent=2) + "\n", encoding="utf-8")
+        print(json.dumps(sanitize_record(record), indent=2))
         if not record["success"]:
             raise SystemExit(1)
+    except Exception as error:
+        if record is None:
+            message = str(error)
+            timed_out = isinstance(error, TimeoutError) or "timeout" in message.lower()
+            action_latency_ms = round((time.perf_counter() - episode_start) * 1000 - reset_latency_ms)
+            record = {
+                "benchmark": "miniwob",
+                "task": args.task,
+                "taskPrompt": task,
+                "success": False,
+                "timeout": timed_out,
+                "failureReason": message[:500],
+                "actions": action_count,
+                "selectedAction": selected_action,
+                "decisionConfidence": decision_confidence,
+                "decisionCalibration": decision_calibration,
+                "decisionLatencyMs": sum(decision_latencies),
+                "decisionCallLatenciesMs": decision_latencies,
+                "decisionSnapshot": decision.get("snapshot"),
+                "decisionTrace": decision_trace,
+                "candidateCount": candidate_count,
+                "selectionRule": decision_selection_rule,
+                "syntheticApprovalCount": synthetic_approval_count,
+                "latencyMs": reset_latency_ms + action_latency_ms,
+                "environmentResetLatencyMs": reset_latency_ms,
+                "agentActionLatencyMs": action_latency_ms,
+                "decisionStatus": decision.get("status", "error"),
+                "decisionProvider": decision_provider,
+                "decisionModel": decision_model or "not-reported",
+                "miniWobCommit": MINIWOB_COMMIT,
+                "timestampUtc": datetime.now(timezone.utc).isoformat(),
+                "note": "Failed episode record. Timeout is detected from the harness deadline or a reported timeout; inspect failureReason for the source.",
+            }
+            if args.output:
+                args.output.parent.mkdir(parents=True, exist_ok=True)
+                args.output.write_text(json.dumps(sanitize_record(record), indent=2) + "\n", encoding="utf-8")
+            print(json.dumps(sanitize_record(record), indent=2))
+        raise
     finally:
         if bridge is not None:
             bridge.close()

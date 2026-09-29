@@ -80,10 +80,15 @@ export class BrowserManager {
         const text = (element.textContent ?? "").replace(/\s+/g, " ").trim();
         const placeholder = input.placeholder ?? "";
         const name = input.getAttribute("name") ?? "";
-        return [aria, id, text, placeholder, name].filter(Boolean).join(" — ").slice(0, 180);
+        const toggleState = ["checkbox", "radio"].includes(input.type) ? `Currently ${input.checked ? "checked" : "unchecked"}` : "";
+        return [aria, id, text, placeholder, name, toggleState].filter(Boolean).join(" — ").slice(0, 180);
       };
-      const all = Array.from(document.querySelectorAll("button, a[href], input:not([type=password]):not([type=hidden]):not([type=file]), textarea, select, [role=button], [role=link]"));
-      const nodes = all.filter(visible).slice(0, 80);
+      const supportedInputTypes = new Set(["text", "search", "email", "tel", "url", "number", "checkbox", "radio", "submit", "image", "button", "reset"]);
+      const all = Array.from(document.querySelectorAll("button, a[href], input:not([type=password]):not([type=hidden]):not([type=file]), textarea, [role=button], [role=link]"));
+      const nodes = all.filter(visible).filter((element) => {
+        if (element.tagName.toLowerCase() !== "input") return true;
+        return supportedInputTypes.has((element as HTMLInputElement).type || "text");
+      }).slice(0, 80);
       const candidates: BrowserCandidate[] = nodes.map((element, index) => {
         const ref = `r${index + 1}`;
         element.setAttribute("data-adk-ref", ref);
@@ -93,7 +98,7 @@ export class BrowserManager {
         const kind = tag === "input" ? (input.type || "text") : tag;
         const label = labelFor(element) || `${role} ${index + 1}`;
         const button = element as HTMLButtonElement;
-        const risky = input.type === "submit" || input.type === "image" || (tag === "button" && Boolean(button.form) && (button.type === "submit" || !button.hasAttribute("type"))) || /\b(pay|payment|purchase|buy now|checkout|submit|send|publish|post|delete|remove|transfer|confirm order|place order|unsubscribe|share publicly)\b/i.test(label);
+        const risky = input.type === "submit" || input.type === "image" || input.type === "reset" || (tag === "button" && Boolean(button.form) && (button.type === "submit" || !button.hasAttribute("type"))) || /\b(pay|payment|purchase|buy now|checkout|submit|send|publish|post|delete|remove|transfer|confirm order|place order|unsubscribe|share publicly)\b/i.test(label);
         return { ref, role, label, kind, risk: risky ? "approval-required" : "low" as const };
       });
       const heading = Array.from(document.querySelectorAll("h1,h2")).slice(0, 8).map((element) => element.textContent?.trim()).filter(Boolean);
@@ -111,9 +116,43 @@ export class BrowserManager {
       return {
         status: "visual-only-page",
         snapshot: { title: snapshot.title, url: snapshot.url, headings: snapshot.headings, textExcerpt: snapshot.textExcerpt },
+        candidateCount: 0,
         visualFallbackAvailable: true,
         suggestedTool: "browser_visual_inspect",
         note: "No visible DOM actions were found. This fast response skips model loading; call browser_visual_inspect only when a local screenshot description would help. Visual inspection is slower and cannot perform actions.",
+      };
+    }
+    const exactLabelMatch = findUniqueQuotedLabel(task, snapshot.candidates);
+    if (exactLabelMatch) {
+      if (exactLabelMatch.risk === "approval-required") {
+        const token = randomUUID();
+        this.pending.set(token, { ref: exactLabelMatch.ref, createdAt: Date.now(), url: snapshot.url, fingerprint: snapshotFingerprint(snapshot) });
+        return {
+          status: "awaiting-user-approval",
+          approvalToken: token,
+          proposedAction: exactLabelMatch,
+          candidateCount: snapshot.candidates.length,
+          provider: "local-literal-match",
+          model: "unique-quoted-label",
+          decisionLatencyMs: 0,
+          confidence: null,
+          calibration: "not-applicable-rule",
+          selectionRule: "unique-exact-quoted-label",
+          note: "The task quoted one exact visible control label. The local match does not skip the separate confirmation required for this action.",
+        };
+      }
+      const effect = await this.perform(exactLabelMatch);
+      return {
+        status: "action-executed",
+        action: exactLabelMatch,
+        candidateCount: snapshot.candidates.length,
+        provider: "local-literal-match",
+        model: "unique-quoted-label",
+        decisionLatencyMs: 0,
+        confidence: null,
+        calibration: "not-applicable-rule",
+        selectionRule: "unique-exact-quoted-label",
+        effect,
       };
     }
     if (provider.id !== "semantic-local" && process.env.AGENT_ALLOW_REMOTE_BROWSER_CONTEXT !== "true") {
@@ -125,19 +164,19 @@ export class BrowserManager {
     });
     const selectedRef = decision.answers.action?.type === "choice" ? decision.answers.action.choice : "";
     const selected = this.candidates.get(selectedRef);
-    if (!selected) return { status: "no-safe-selection", provider: decision.provider, model: decision.model, decision: decision.answers.action, candidates: snapshot.candidates, note: "No available page action matched the task confidently enough to execute safely. The semantic provider's confidence is not calibrated." };
+    if (!selected) return { status: "no-safe-selection", provider: decision.provider, model: decision.model, decisionLatencyMs: Math.round(decision.latencyMs), decision: decision.answers.action, candidateCount: snapshot.candidates.length, candidates: snapshot.candidates, note: "No available page action matched the task confidently enough to execute safely. The semantic provider's confidence is not calibrated." };
     if (selected.risk === "approval-required") {
       const token = randomUUID();
       this.pending.set(token, { ref: selected.ref, createdAt: Date.now(), url: snapshot.url, fingerprint: snapshotFingerprint(snapshot) });
-      return { status: "awaiting-user-approval", approvalToken: token, proposedAction: selected, confidence: decision.answers.action?.confidence, calibration: decision.answers.action?.calibration, note: "Call browser_confirm with this token and approve=true only after reviewing the proposed action. The separate tool call is the user confirmation." };
+      return { status: "awaiting-user-approval", approvalToken: token, proposedAction: selected, candidateCount: snapshot.candidates.length, provider: decision.provider, model: decision.model, decisionLatencyMs: Math.round(decision.latencyMs), confidence: decision.answers.action?.confidence, calibration: decision.answers.action?.calibration, note: "Call browser_confirm with this token and approve=true only after reviewing the proposed action. The separate tool call is the user confirmation." };
     }
     const probabilities = decision.answers.action?.type === "choice" ? Object.values(decision.answers.action.probabilities ?? {}) : [];
     const sorted = [...probabilities].sort((left, right) => right - left);
     if (sorted.length > 1 && (sorted[0]! < 0.4 || sorted[0]! - sorted[1]! < 0.015)) {
-      return { status: "ambiguous-selection", decision: decision.answers.action, candidates: snapshot.candidates, note: "The uncalibrated semantic scores are too close to choose a browser action automatically. Call browser_action with the ref you want." };
+      return { status: "ambiguous-selection", decision: decision.answers.action, candidateCount: snapshot.candidates.length, provider: decision.provider, model: decision.model, decisionLatencyMs: Math.round(decision.latencyMs), candidates: snapshot.candidates, note: "The uncalibrated semantic scores are too close to choose a browser action automatically. Call browser_action with the ref you want." };
     }
     const effect = await this.perform(selected);
-    return { status: "action-executed", action: selected, confidence: decision.answers.action?.confidence, calibration: decision.answers.action?.calibration, effect };
+    return { status: "action-executed", action: selected, candidateCount: snapshot.candidates.length, provider: decision.provider, model: decision.model, decisionLatencyMs: Math.round(decision.latencyMs), confidence: decision.answers.action?.confidence, calibration: decision.answers.action?.calibration, effect };
   }
 
   async confirm(token: string, approve: boolean) {
@@ -198,7 +237,11 @@ export class BrowserManager {
   private async perform(candidate: BrowserCandidate) {
     const page = this.requirePage();
     const locator = page.locator(`[data-adk-ref="${candidate.ref}"]`).first();
-    if (candidate.role === "input" || candidate.role === "textarea" || candidate.role === "select") {
+    if (candidate.role === "input" && ["checkbox", "radio"].includes(candidate.kind)) {
+      await locator.click({ timeout: 5_000 });
+      return { checked: await locator.isChecked().catch(() => null), note: "The selected checkbox or radio control was toggled without submitting its form." };
+    }
+    if (candidate.role === "textarea" || (candidate.role === "input" && ["text", "search", "email", "tel", "url", "number"].includes(candidate.kind))) {
       await locator.focus();
       return { focused: true, note: "Text entry is deliberately separate; no user-provided text was entered." };
     }
@@ -231,4 +274,21 @@ function diffExcerpt(before: string, after: string) {
 function snapshotFingerprint(snapshot: { title: string; url: string; headings: string[]; textExcerpt: string; candidates: BrowserCandidate[] }) {
   const stable = JSON.stringify({ title: snapshot.title, url: snapshot.url, headings: snapshot.headings, textExcerpt: snapshot.textExcerpt, candidates: snapshot.candidates.map(({ ref, role, label, kind, risk }) => ({ ref, role, label, kind, risk })) });
   return createHash("sha256").update(stable).digest("hex");
+}
+
+function findUniqueQuotedLabel(task: string, candidates: BrowserCandidate[]) {
+  const phrases = [...task.matchAll(/"([^"\r\n]{1,100})"|“([^”\r\n]{1,100})”/gu)]
+    .map((match) => match[1] ?? match[2] ?? "")
+    .map(normalizeLabel)
+    .filter(Boolean);
+  if (!phrases.length) return undefined;
+  const matches = candidates.filter((candidate) => {
+    const parts = candidate.label.split(/\s*[—–|:]\s*/u).map(normalizeLabel);
+    return phrases.some((phrase) => parts.includes(phrase));
+  });
+  return matches.length === 1 ? matches[0] : undefined;
+}
+
+function normalizeLabel(value: string) {
+  return value.normalize("NFKC").toLocaleLowerCase("en-US").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
 }
