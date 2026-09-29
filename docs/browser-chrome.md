@@ -57,7 +57,7 @@ The browser tools do not return cookies, storage, password fields, file inputs, 
 
 For most tasks, the default `browser_launch` tool is simpler: it opens a separate persistent Playwright profile without requiring Chrome's debugging port.
 
-## Pages without accessible controls
+## Pages without semantic controls or pointer-text targets
 
 When `browser_decide_and_act` finds no visible DOM actions, use `browser_visual_text` first for a bounded local OCR pass. It returns recognized lines and word boxes in screenshot pixels and masks editable text-entry controls. Its confidence field is the OCR engine's score, not a calibrated probability. English is the default language; set `AGENT_DECISION_OCR_LANG=eng+tur` for a local English/Turkish OCR worker. The first use downloads language data into `~/.agent-decision-kit/ocr-cache` unless `AGENT_DECISION_OCR_LANG_PATH` points to a different source. The screenshot stays local, but returned page text enters the agent context.
 

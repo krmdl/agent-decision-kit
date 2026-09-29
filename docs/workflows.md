@@ -35,7 +35,7 @@ This is a local, transparent baseline. It does not summarize, rewrite, or judge 
 ## A bounded browser loop
 
 1. `browser_launch` opens a separate persistent Chromium profile. To connect to Chrome, call `browser_connect` once to list loopback tabs, then call it again with the `pageIndex` you chose; it does not silently attach to the first tab.
-2. `browser_inspect` returns the page title, bounded text excerpt, and visible control labels/refs. Form values and browser storage are omitted.
+2. `browser_inspect` returns the page title, bounded text excerpt, and visible control labels/refs. Alongside semantic controls, it detects custom text elements whose computed cursor explicitly changes to `pointer`; these candidates have no semantic role and always require approval. Form values and browser storage are omitted.
 3. Ask `browser_decide_and_act` for one task, or choose a ref explicitly with `browser_action`. Unique quoted labels, numbered tabs, named checkbox targets, and clear disclosure steps can match locally without provider inference.
 4. Read the short DOM delta. A destructive or externally consequential control returns an approval token instead of clicking.
 5. Inspect the proposed action, then call `browser_confirm` separately. Approval is invalidated when the page fingerprint changes.

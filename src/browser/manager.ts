@@ -124,23 +124,42 @@ export class BrowserManager {
       };
       const supportedInputTypes = new Set(["text", "search", "email", "tel", "url", "number", "date", "datetime-local", "time", "month", "week", "checkbox", "radio", "submit", "image", "button", "reset"]);
       const semanticRoles = "[role=button], [role=link], [role=tab], [role=checkbox], [role=radio], [role=switch], [role=menuitem], [role=menuitemcheckbox], [role=menuitemradio], [role=option]";
-      const all = Array.from(document.querySelectorAll(`button, a[href], input:not([type=password]):not([type=hidden]):not([type=file]), textarea, select, ${semanticRoles}`));
-      const nodes = all.filter(visible).filter((element) => {
+      const semanticSelector = `button, a[href], input:not([type=password]):not([type=hidden]):not([type=file]), textarea, select, ${semanticRoles}`;
+      const all = Array.from(document.querySelectorAll(semanticSelector));
+      const semanticNodes = all.filter(visible).filter((element) => {
         if (element.tagName.toLowerCase() !== "input") return true;
         return supportedInputTypes.has((element as HTMLInputElement).type || "text");
-      }).slice(0, 80);
+      });
+      const semanticSet = new Set(semanticNodes);
+      const customPointerNodes = semanticNodes.length === 0 ? Array.from(document.querySelectorAll("body *"))
+        .filter((element) => {
+          if (semanticSet.has(element) || element.closest(semanticSelector) || element.closest(`${semanticSelector}, [contenteditable]:not([contenteditable=\"false\"])`)) return false;
+          if (!visible(element)) return false;
+          const label = (element.textContent ?? "").replace(/\s+/g, " ").trim();
+          if (!label || label.length > 240) return false;
+          const style = getComputedStyle(element);
+          if (style.cursor !== "pointer") return false;
+          // Ignore inherited cursor styles: only expose the element that declares
+          // a pointer target, not every text node below it.
+          if (element.parentElement && getComputedStyle(element.parentElement).cursor === "pointer") return false;
+          return true;
+        })
+        .slice(0, 80) : [];
+      const nodes = [...semanticNodes, ...customPointerNodes].slice(0, 80);
+      const customPointerSet = new Set(customPointerNodes);
       const candidates: BrowserCandidate[] = nodes.map((element, index) => {
         const ref = `r${index + 1}`;
         element.setAttribute("data-adk-ref", ref);
         const tag = element.tagName.toLowerCase();
-        const role = element.getAttribute("role") ?? (tag === "a" ? "link" : tag === "button" ? "button" : tag === "select" ? "combobox" : tag);
+        const customPointer = customPointerSet.has(element);
+        const role = customPointer ? "pointer-target" : element.getAttribute("role") ?? (tag === "a" ? "link" : tag === "button" ? "button" : tag === "select" ? "combobox" : tag);
         const input = element as HTMLInputElement;
-        const kind = tag === "input" ? (input.type || "text") : tag === "select" ? ((element as HTMLSelectElement).multiple ? "select-multiple" : "select-one") : tag;
+        const kind = customPointer ? "custom-pointer" : tag === "input" ? (input.type || "text") : tag === "select" ? ((element as HTMLSelectElement).multiple ? "select-multiple" : "select-one") : tag;
         const label = labelFor(element) || `${role} ${index + 1}`;
         const button = element as HTMLButtonElement;
         const riskyInput = tag === "input" && ["submit", "image", "reset"].includes(input.type);
         const riskyButton = tag === "button" && Boolean(button.form) && ["submit", "reset"].includes(button.type);
-        const risky = riskyInput || riskyButton || /\b(pay|payment|purchase|buy now|checkout|submit|send|publish|post|delete|remove|transfer|confirm order|place order|unsubscribe|share publicly)\b/i.test(label);
+        const risky = customPointer || riskyInput || riskyButton || /\b(pay|payment|purchase|buy now|checkout|submit|send|publish|post|delete|remove|transfer|confirm order|place order|unsubscribe|share publicly)\b/i.test(label);
         const checked = ["checkbox", "radio"].includes(input.type) ? input.checked : ["checkbox", "radio", "switch", "menuitemcheckbox", "menuitemradio"].includes(role) && ["true", "false"].includes(element.getAttribute("aria-checked") ?? "") ? element.getAttribute("aria-checked") === "true" : undefined;
         const expanded = element.getAttribute("aria-expanded");
         const selected = element.getAttribute("aria-selected");
@@ -163,7 +182,7 @@ export class BrowserManager {
     });
     this.candidates = new Map(result.candidates.map((candidate) => [candidate.ref, candidate]));
     this.lastInspectionFingerprint = snapshotFingerprint(result);
-    return { ...result, url: redactBrowserUrl(result.url), candidates: result.candidates.map(({ ref, role, label, kind, risk, checked, expanded, selected, readOnly }) => ({ ref, role, label, kind, risk, ...(checked === undefined ? {} : { checked }), ...(expanded === undefined ? {} : { expanded }), ...(selected === undefined ? {} : { selected }), ...(readOnly === undefined ? {} : { readOnly }) })), inspectMs: Math.round(performance.now() - before), candidateLimit: 80, note: "Bounded visible DOM/accessibility-derived snapshot. Native select options are limited to 12 visible labels; input values, passwords, cookies and storage are not included. URL credentials, query and hash are redacted." };
+    return { ...result, url: redactBrowserUrl(result.url), candidates: result.candidates.map(({ ref, role, label, kind, risk, checked, expanded, selected, readOnly }) => ({ ref, role, label, kind, risk, ...(checked === undefined ? {} : { checked }), ...(expanded === undefined ? {} : { expanded }), ...(selected === undefined ? {} : { selected }), ...(readOnly === undefined ? {} : { readOnly }) })), inspectMs: Math.round(performance.now() - before), candidateLimit: 80, note: "Bounded visible DOM/accessibility snapshot. Only when no semantic controls exist, it also scans clear CSS pointer-only text targets; custom targets have no semantic role and always require a separate approval. Native select options are limited to 12 visible labels; input values, passwords, cookies and storage are not included. URL credentials, query and hash are redacted." };
   }
 
   async decideAndAct(task: string, provider: DecisionProvider) {
@@ -568,7 +587,7 @@ function findUniqueExplicitCommandLabel(task: string, candidates: BrowserCandida
   const normalized = normalizeLabel(target);
   if (!normalized) return undefined;
   const matches = candidates.filter((candidate) =>
-    ["button", "link", "tab", "menuitem", "menuitemcheckbox", "menuitemradio"].includes(candidate.role)
+    ["button", "link", "tab", "menuitem", "menuitemcheckbox", "menuitemradio", "pointer-target"].includes(candidate.role)
     || ["button", "submit"].includes(candidate.kind),
   ).filter((candidate) => labelParts(candidate).includes(normalized));
   return matches.length === 1 ? matches[0] : undefined;

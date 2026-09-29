@@ -17,6 +17,7 @@ describe("Playwright browser safety flow", () => {
   let browser: BrowserManager;
   let debugContext: BrowserContext | undefined;
   let visualHtml: Buffer;
+  let pointerTextHtml: Buffer;
   let checkboxHtml: Buffer;
   let submitHtml: Buffer;
   let checkboxTaskHtml: Buffer;
@@ -28,6 +29,7 @@ describe("Playwright browser safety flow", () => {
   beforeAll(async () => {
     const html = await readFile(path.resolve("examples/browser-demo.html"));
     visualHtml = await readFile(path.resolve("examples/visual-only-demo.html"));
+    pointerTextHtml = Buffer.from('<!doctype html><style>.faux-link { cursor: pointer; color: blue; text-decoration: underline }</style><span id="target" class="faux-link">adipiscing.</span><p id="status">Not clicked</p><script>document.querySelector("#target").addEventListener("click",()=>document.querySelector("#status").textContent="Clicked locally")</script>');
     ambiguousLabelsHtml = Buffer.from('<!doctype html><button type="button">Continue</button><a href="#next">Continue</a><p id="status">No action</p>');
     checkboxHtml = Buffer.from('<!doctype html><label><input type="checkbox" name="updates"> Receive product updates</label>');
     submitHtml = Buffer.from('<!doctype html><form onsubmit="event.preventDefault(); document.querySelector(\'#status\').textContent = \'Submitted locally\'"><input type="submit" value="Send test"></form><p id="status">Not sent</p>');
@@ -47,7 +49,7 @@ describe("Playwright browser safety flow", () => {
         return;
       }
       response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-      response.end(request.url === "/visual-only" ? visualHtml : request.url === "/checkbox" ? checkboxHtml : request.url === "/submit" ? submitHtml : request.url === "/checkbox-task" ? checkboxTaskHtml : request.url === "/tabs" ? tabHtml : request.url === "/expand" ? expandHtml : request.url === "/native-fields" ? nativeFieldsHtml : request.url === "/ambiguous-labels" ? ambiguousLabelsHtml : html);
+      response.end(request.url === "/visual-only" ? visualHtml : request.url === "/pointer-text" ? pointerTextHtml : request.url === "/checkbox" ? checkboxHtml : request.url === "/submit" ? submitHtml : request.url === "/checkbox-task" ? checkboxTaskHtml : request.url === "/tabs" ? tabHtml : request.url === "/expand" ? expandHtml : request.url === "/native-fields" ? nativeFieldsHtml : request.url === "/ambiguous-labels" ? ambiguousLabelsHtml : html);
     });
     await new Promise<void>((resolve, reject) => {
       server.once("error", reject);
@@ -201,6 +203,33 @@ describe("Playwright browser safety flow", () => {
     expect(result.suggestedTool).toBe("browser_visual_text");
     expect(result.descriptionTool).toBe("browser_visual_inspect");
     expect("visual" in result).toBe(false);
+  }, 45_000);
+
+  it("finds non-semantic CSS pointer targets but requires explicit approval", async () => {
+    profile = await mkdtemp(path.join(os.tmpdir(), "adk-browser-pointer-target-test-"));
+    browser = new BrowserManager({ headless: true, profileDir: path.join(profile, "chromium") });
+    await browser.launch(`${baseUrl}pointer-text`);
+    const provider: DecisionProvider = {
+      id: "semantic-local",
+      model: "unused-test-provider",
+      decide: vi.fn(async () => { throw new Error("An exact pointer target must resolve without model inference"); }),
+    };
+
+    const snapshot = await browser.inspect();
+    expect(snapshot.candidates).toHaveLength(1);
+    expect(snapshot.candidates[0]).toMatchObject({ role: "pointer-target", kind: "custom-pointer", label: "adipiscing.", risk: "approval-required" });
+
+    const cancelledProposal = await browser.decideAndAct('Click on the link "adipiscing.".', provider);
+    expect(cancelledProposal).toMatchObject({ status: "awaiting-user-approval", selectionRule: "unique-exact-quoted-label" });
+    const cancelToken = "approvalToken" in cancelledProposal ? cancelledProposal.approvalToken : "";
+    expect(await browser.confirm(cancelToken, false)).toMatchObject({ status: "cancelled" });
+    expect(await browser.inspect().then((result) => result.textExcerpt)).toContain("Not clicked");
+
+    const approvedProposal = await browser.decideAndAct('Click on the link "adipiscing.".', provider);
+    const approvalToken = "approvalToken" in approvedProposal ? approvedProposal.approvalToken : "";
+    expect(await browser.confirm(approvalToken, true)).toMatchObject({ status: "action-executed-after-approval" });
+    expect(await browser.inspect().then((result) => result.textExcerpt)).toContain("Clicked locally");
+    expect(provider.decide).not.toHaveBeenCalled();
   }, 45_000);
 
   it("clicks a visible checkbox without submitting its form", async () => {
