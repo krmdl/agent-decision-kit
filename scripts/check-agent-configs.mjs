@@ -40,6 +40,7 @@ for (const [client, guide, format] of clients) {
         ? example.mcp?.servers?.["agent-decision-kit"]
         : example.mcpServers?.["agent-decision-kit"];
     assert.ok(server, `${client}: config does not define agent-decision-kit`);
+    if (client === "cursor") assert.equal(server.type, "stdio", "cursor: stdio server type must be explicit");
     const command = Array.isArray(server.command) ? server.command : [server.command, ...(server.args ?? [])];
     assert.equal(command[0], "node", `${client}: server command must launch Node.js`);
     assert.ok(command[1]?.endsWith("/dist/cli.js"), `${client}: command must target the built CLI`);

@@ -129,7 +129,7 @@ function agentConfig(agent: string) {
     claudecode: { file: "~/.claude.json or project .mcp.json", snippet: { mcpServers: { "agent-decision-kit": entry } } },
     codex: { file: "~/.codex/config.toml", snippet: '[mcp_servers.agent-decision-kit]\ncommand = "npx"\nargs = ["-y", "agent-decision-kit", "mcp"]' },
     codexcli: { file: "~/.codex/config.toml", snippet: '[mcp_servers.agent-decision-kit]\ncommand = "npx"\nargs = ["-y", "agent-decision-kit", "mcp"]' },
-    cursor: { file: ".cursor/mcp.json", snippet: { mcpServers: { "agent-decision-kit": entry } } },
+    cursor: { file: ".cursor/mcp.json", snippet: { mcpServers: { "agent-decision-kit": { type: "stdio", ...entry } } } },
     gemini: { file: "~/.gemini/settings.json", snippet: { mcpServers: { "agent-decision-kit": entry } } },
     geminicli: { file: "~/.gemini/settings.json", snippet: { mcpServers: { "agent-decision-kit": entry } } },
     windsurf: { file: "~/.codeium/windsurf/mcp_config.json", snippet: { mcpServers: { "agent-decision-kit": entry } } },
@@ -139,7 +139,7 @@ function agentConfig(agent: string) {
     copilotcli: { file: "~/.copilot/mcp-config.json", snippet: { mcpServers: { "agent-decision-kit": { type: "local", ...entry, env: {}, tools: ["*"] } } } },
     githubcopilotcli: { file: "~/.copilot/mcp-config.json", snippet: { mcpServers: { "agent-decision-kit": { type: "local", ...entry, env: {}, tools: ["*"] } } } },
     vscodecopilotchat: { file: ".vscode/mcp.json", snippet: { servers: { "agent-decision-kit": { type: "stdio", ...entry } } } },
-    cline: { file: "~/.cline/mcp.json (CLI), or Cline MCP Servers → Configure in the IDE", snippet: { mcpServers: { "agent-decision-kit": { ...entry, disabled: false, autoApprove: [] } } } },
+    cline: { file: "~/.cline/data/settings/cline_mcp_settings.json (CLI default), or Cline MCP Servers → Configure in the IDE", snippet: { mcpServers: { "agent-decision-kit": { ...entry, disabled: false, autoApprove: [] } } } },
     opencode: { file: "opencode.json", snippet: { "$schema": "https://opencode.ai/config.json", mcp: { servers: { "agent-decision-kit": { type: "local", command: [command, ...args] } } } } },
   };
   const found = configurations[normalized];

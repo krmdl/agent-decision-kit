@@ -6,6 +6,7 @@ Cursor reads local MCP servers from `.cursor/mcp.json` for a project or `~/.curs
 {
   "mcpServers": {
     "agent-decision-kit": {
+      "type": "stdio",
       "command": "node",
       "args": ["/absolute/path/to/agent-decision-kit/dist/cli.js", "mcp"]
     }
