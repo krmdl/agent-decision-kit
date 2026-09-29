@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#08111f">
+  <meta name="description" content="Open the fake-data, canvas-only task board used to demonstrate local visual inspection when a browser page has no accessible DOM controls.">
+  <meta name="robots" content="noindex,nofollow">
+  <meta property="og:title" content="Canvas-only task board · Local visual demo">
+  <meta property="og:description" content="A local fake-data browser page painted into a canvas for visual inspection demos.">
+  <meta property="og:type" content="website">
+  <title>Canvas-only task board · Local visual demo</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-width: 320px; background: #08111f; }
+    body { display: grid; min-height: 100vh; place-items: center; font-family: "Segoe UI", Arial, sans-serif; }
+    canvas { display: block; width: min(100vw, 1280px); height: auto; }
+  </style>
+</head>
+<body>
+  <canvas id="screen" width="1280" height="800" aria-hidden="true"></canvas>
+  <script>
+    const canvas = document.querySelector("#screen");
+    const ctx = canvas.getContext("2d");
+    const colors = { bg: "#08111f", panel: "#0d1b2b", line: "#284159", text: "#edf3fb", muted: "#a9bbcd", mint: "#75e2c2" };
+
+    function rounded(x, y, w, h, radius, fill, stroke) {
+      ctx.beginPath();
+      ctx.roundRect(x, y, w, h, radius);
+      ctx.fillStyle = fill;
+      ctx.fill();
+      if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 1; ctx.stroke(); }
+    }
+    function label(text, x, y, size = 18, color = colors.text, weight = 500) {
+      ctx.fillStyle = color;
+      ctx.font = `${weight} ${size}px "Segoe UI", Arial, sans-serif`;
+      ctx.fillText(text, x, y);
+    }
+
+    ctx.fillStyle = colors.bg;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    rounded(36, 32, 1208, 736, 22, "#0a1725", colors.line);
+    label("AGENT DECISION KIT · LOCAL VISUAL DEMO", 76, 83, 15, colors.mint, 800);
+    label("Canvas-only task board", 76, 145, 44, colors.text, 750);
+    label("Sample interface painted into one image; it exposes no DOM controls.", 76, 184, 18, colors.muted);
+
+    rounded(76, 225, 540, 460, 18, colors.panel, colors.line);
+    label("Task inbox", 108, 273, 23, colors.text, 700);
+    label("3 sample tasks", 108, 310, 16, colors.muted);
+    rounded(102, 342, 488, 106, 12, "#102236", colors.line);
+    label("Review browser setup", 128, 385, 21, colors.text, 650);
+    label("A local guide is ready to open", 128, 417, 16, colors.muted);
+    rounded(408, 366, 154, 56, 10, "#164a42", "#247d6a");
+    label("Open task", 438, 401, 18, colors.mint, 750);
+    rounded(102, 470, 488, 106, 12, "#102236", colors.line);
+    label("Draft release notes", 128, 513, 21, colors.text, 650);
+    label("Fake data · local preview", 128, 545, 16, colors.muted);
+
+    rounded(646, 225, 558, 460, 18, colors.panel, colors.line);
+    label("Draft workspace", 680, 273, 23, colors.text, 700);
+    label("Release note draft", 680, 318, 17, colors.muted);
+    rounded(674, 337, 502, 86, 10, "#091321", colors.line);
+    label("Shipped a clearer local browser demo", 698, 389, 19, colors.text, 500);
+    rounded(674, 447, 172, 58, 10, "#164a42", "#247d6a");
+    label("Save draft", 711, 484, 18, colors.mint, 750);
+    rounded(864, 447, 148, 58, 10, "#3b2630", "#754454");
+    label("Delete draft", 888, 484, 17, "#ffc2cc", 700);
+    label("No account · no real user data", 680, 558, 16, colors.muted);
+    label("Nothing is sent, published, charged, or deleted outside this image.", 680, 590, 16, colors.muted);
+    label("VISIBLE LABELS ARE SYNTHETIC TEST DATA", 76, 730, 13, "#7890a7", 700);
+  </script>
+</body>
+</html>

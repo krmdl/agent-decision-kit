@@ -108,8 +108,13 @@ export class BrowserManager {
   async decideAndAct(task: string, provider: DecisionProvider) {
     const snapshot = await this.inspect();
     if (!snapshot.candidates.length) {
-      const visual = await this.visualInspect();
-      return { status: "visual-only-page", snapshot: { title: snapshot.title, url: snapshot.url, headings: snapshot.headings }, visual, note: "No visible DOM actions were found. Local vision captioning was attempted; this slower result is descriptive and does not perform an action." };
+      return {
+        status: "visual-only-page",
+        snapshot: { title: snapshot.title, url: snapshot.url, headings: snapshot.headings, textExcerpt: snapshot.textExcerpt },
+        visualFallbackAvailable: true,
+        suggestedTool: "browser_visual_inspect",
+        note: "No visible DOM actions were found. This fast response skips model loading; call browser_visual_inspect only when a local screenshot description would help. Visual inspection is slower and cannot perform actions.",
+      };
     }
     if (provider.id !== "semantic-local" && process.env.AGENT_ALLOW_REMOTE_BROWSER_CONTEXT !== "true") {
       return { status: "remote-provider-blocked-for-browser-privacy", provider: provider.id, candidates: snapshot.candidates, note: "Page labels and text are untrusted browser data. Set AGENT_ALLOW_REMOTE_BROWSER_CONTEXT=true only if you intend to send these bounded labels to the configured remote provider." };
@@ -175,12 +180,12 @@ export class BrowserManager {
     return { status: "filled", ref, characterCount: text.length, valueReturned: false, note: "Text was entered only into the page field; it was not submitted." };
   }
 
-  async visualInspect() {
+  async visualInspect(question?: string) {
     const page = this.requirePage();
     const image = await page.screenshot({ type: "png", animations: "disabled" });
     const { describeScreenshot } = await import("./vision.js");
-    const result = await describeScreenshot(image);
-    return { ...result, note: "Local screenshot captioning uses a separate vision model and can be much slower than DOM inspection. The image remains on this machine." };
+    const result = await describeScreenshot(image, question);
+    return { ...result, note: `${result.note} Inference can take tens of seconds on CPU; the screenshot remains on this machine.` };
   }
 
   async close() {

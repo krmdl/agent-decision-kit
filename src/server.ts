@@ -130,9 +130,9 @@ export function createServer() {
 
   server.registerTool("browser_visual_inspect", {
     title: "Inspect visual-only page locally",
-    description: "Capture a screenshot and caption it with a local vision model. First use may download model files and take substantially longer than DOM inspection.",
-    inputSchema: {},
-  }, async () => asToolResult(await browser.visualInspect()));
+    description: "Capture a screenshot and describe the visible interface with a local vision-language model. Optionally ask a question about the image. First use downloads model files; CPU inference is much slower than DOM inspection. The model does not perform actions.",
+    inputSchema: { question: z.string().max(1_000).optional() },
+  }, async ({ question }) => asToolResult(await browser.visualInspect(question)));
 
   server.registerTool("browser_close", {
     title: "Close browser session",

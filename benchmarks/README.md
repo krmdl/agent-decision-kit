@@ -1,6 +1,6 @@
 # Benchmarks
 
-No benchmark numbers are published. The files here define a reproducible start point and report schema; the repository does not include mock timings or charts.
+Every result must include its raw episode data and enough environment detail to reproduce it. Do not turn a small smoke run into a broad quality or performance claim. No aggregate charts are published until repeated, comparable runs support them.
 
 ## Decision quality and latency
 
@@ -15,11 +15,31 @@ The script reports per-case labels, probabilities, calibration labels and latenc
 
 The starter fixtures are public and tiny. They are useful for verifying the harness, not for proving broad quality, calibration or performance. Keep additional test cases held out and source their labels independently from both tested providers.
 
+`results/decision-cases-smoke.json` is a raw run over the included 11 starter labels using the default local provider on CPU. This particular run scored 8/11 (72.7%) with a 0.370 mean Brier score; first call was 484 ms and later within-process p95 was 25 ms on the recorded Ryzen 5 5600H machine. The artifacts were cached before the process started. The labels are not held out, the estimates are uncalibrated, and these measurements do not establish real-world quality, general speed, or the consumer-GPU target. Recreate it with `npm run build` followed by `node benchmarks/run-decisions.mjs --output benchmarks/results/decision-cases-smoke.json`.
+
 ## Browser task success
 
-The included Playwright integration test covers a local, fake-data browser demo and the approval gate. It is not a BrowserGym benchmark.
+`results/miniwob-click-test-smoke.json` is one successful BrowserGym MiniWoB integration smoke episode using the local semantic provider and a synthetic, local-only task. The runner attaches the real Agent Decision Kit `BrowserManager` to BrowserGym's live Chromium page through loopback CDP, checks BrowserGym's task validator, and confirms that detaching does not close BrowserGym's browser. The record is deliberately not a representative BrowserGym benchmark, model-quality estimate, or speed claim. Its `latencyMs` includes environment reset time; `agentActionLatencyMs` is the action-path time for this one episode. The action required an explicit benchmark-only approval flag because the task uses a form button. Never enable that flag for a non-local page.
 
-BrowserGym provides MiniWoB, WebArena and VisualWebArena environments. Follow its [official setup](https://github.com/ServiceNow/BrowserGym#setup); each suite has further environment setup. Record the exact BrowserGym commit, environment/task IDs, browser version, OS, model/provider, cold/warm status, and any required service configuration. For each episode, capture success, action count, elapsed milliseconds, timeouts, and failure reason. Evaluate visual and DOM paths separately. Exclude payments, account changes, and any live external side effects.
+To reproduce the recorded smoke run, use Node.js 20+, Python 3.10+, and the exact MiniWoB++ revision from the raw record. Install BrowserGym in a separate virtual environment (it is not a runtime dependency of this package):
+
+```sh
+python -m venv .venv-browsergym
+# Activate the environment, then:
+python -m pip install "browsergym-miniwob==0.14.3" "playwright==1.44.0"
+python -m playwright install chromium
+git clone https://github.com/ServiceNow/miniwob-plusplus.git /tmp/miniwob-plusplus
+git -C /tmp/miniwob-plusplus checkout 7fd85d71a4b60325c6585396ec4f48377d049838
+npm ci
+npm run build
+python benchmarks/run-browsergym-miniwob.py \
+  --task click-test \
+  --miniwob-root /tmp/miniwob-plusplus/miniwob/html/miniwob \
+  --approve-synthetic-actions \
+  --output benchmarks/results/miniwob-click-test-smoke.json
+```
+
+Use a PowerShell-appropriate path for `--miniwob-root` on Windows. The approval flag is guarded by an exact local `file://` task URL in the runner. The recorded package version comes from BrowserGym 0.14.3, whose source commit is recorded in the JSON. For larger runs across MiniWoB, WebArena, and VisualWebArena, follow BrowserGym's [official setup](https://github.com/ServiceNow/BrowserGym#setup); each suite needs additional environment setup. Record exact BrowserGym and environment revisions, browser version, OS, model/provider, cold/warm status, and service configuration. Capture success, action count, elapsed time, timeouts, and failure reasons for every episode. Evaluate visual and DOM paths separately. Exclude payments, account changes, and any live external side effects.
 
 Aggregate a JSON file with `benchmarks/aggregate-browsergym.py`:
 

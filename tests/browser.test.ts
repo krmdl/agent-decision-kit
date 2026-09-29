@@ -4,18 +4,21 @@ import os from "node:os";
 import path from "node:path";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { BrowserManager } from "../src/browser/manager.js";
+import type { DecisionProvider } from "../src/core/types.js";
 
 describe("Playwright browser safety flow", () => {
   let server: Server;
   let baseUrl = "";
   let profile = "";
   let browser: BrowserManager;
+  let visualHtml: Buffer;
 
   beforeAll(async () => {
     const html = await readFile(path.resolve("examples/browser-demo.html"));
-    server = createServer((_request, response) => {
+    visualHtml = await readFile(path.resolve("examples/visual-only-demo.html"));
+    server = createServer((request, response) => {
       response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-      response.end(html);
+      response.end(request.url === "/visual-only" ? visualHtml : html);
     });
     await new Promise<void>((resolve, reject) => {
       server.once("error", reject);
@@ -60,5 +63,22 @@ describe("Playwright browser safety flow", () => {
 
     const updated = await browser.inspect();
     expect(updated.candidates.some((item) => item.label === "Setup task complete")).toBe(true);
+  }, 45_000);
+
+  it("returns a visual-only page without loading the slower vision model", async () => {
+    profile = await mkdtemp(path.join(os.tmpdir(), "adk-browser-visual-test-"));
+    browser = new BrowserManager({ headless: true, profileDir: path.join(profile, "chromium") });
+    await browser.launch(`${baseUrl}visual-only`);
+    const provider: DecisionProvider = {
+      id: "semantic-local",
+      model: "unused-test-provider",
+      decide: async () => { throw new Error("A page without DOM actions must not ask the decision provider"); },
+    };
+
+    const result = await browser.decideAndAct("Open the task", provider);
+    expect(result.status).toBe("visual-only-page");
+    expect(result.visualFallbackAvailable).toBe(true);
+    expect(result.suggestedTool).toBe("browser_visual_inspect");
+    expect("visual" in result).toBe(false);
   }, 45_000);
 });

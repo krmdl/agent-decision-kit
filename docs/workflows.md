@@ -41,7 +41,7 @@ This is a local, transparent baseline. It does not summarize, rewrite, or judge 
 5. Inspect the proposed action, then call `browser_confirm` separately. Approval is invalidated when the page fingerprint changes.
 6. Fill text through `browser_fill`; submitting remains a distinct action.
 
-DOM inspection is the fast path. `browser_visual_inspect` runs a local screenshot caption model for visual-only pages. It downloads model weights on first use, can take much longer, and only describes the page; it does not infer coordinates or automatically click based on the image.
+DOM inspection is the fast path. If no visible DOM actions exist, `browser_decide_and_act` returns a `visual-only-page` status immediately rather than loading a model. Call `browser_visual_inspect` when a screenshot description is useful; it accepts an optional question and runs the Apache-2.0 [SmolVLM2 500M](https://huggingface.co/HuggingFaceTB/SmolVLM2-500M-Video-Instruct) model locally. It downloads model weights on first use and can take tens of seconds per screenshot on CPU. Its description is uncalibrated and cannot select controls, infer click coordinates, or perform actions. See the [canvas-only fake-data demo](../examples/visual-only-demo.html) and try the repeatable smoke check with `npm run vision:verify`.
 
 ## Compose with a generative model
 

@@ -27,7 +27,7 @@ It uses ordinary code to constrain choices and execute actions. Its default deci
 - **Structured decisions.** Batch up to eight `Choice`, `Score`, and `Noul` questions in one request, with probability estimates and an explicit calibration label.
 - **Coding workflows.** Find relevant files, prune context while keeping requested strings verbatim, suggest a model route, pre-screen a diff, rerank, classify, screen, extract from caller-supplied candidates, and check completion evidence.
 - **CLI and MCP.** Use the same functions in a shell pipeline or from an MCP-compatible coding agent.
-- **Local vision fallback.** Pages without visible actionable DOM controls can be captioned with a local image model. First use downloads model files and is slower than DOM inspection.
+- **Local vision fallback.** When a page has no visible DOM actions, `browser_decide_and_act` returns immediately and points to `browser_visual_inspect`; that separate tool can answer a question about the screenshot with [SmolVLM2 500M](https://huggingface.co/HuggingFaceTB/SmolVLM2-500M-Video-Instruct), an Apache-2.0 vision-language model. First use downloads model files; CPU inference can take tens of seconds. The screenshot stays local. Its description is uncalibrated and never triggers an action.
 
 ![Architecture diagram](website/public/images/architecture.svg)
 
@@ -68,7 +68,13 @@ The demo is a local static page with fictional tasks. Start any static server fr
 
 > Open the local browser demo, inspect the visible tasks, and mark the setup task complete. Show me the page change.
 
-The included page is [`examples/browser-demo.html`](examples/browser-demo.html). The screenshot above was captured from that page with Playwright; the repository also includes a short recording at [`website/public/images/browser-demo.gif`](website/public/images/browser-demo.gif). Neither visual contains real user data.
+The accessible demo is [`examples/browser-demo.html`](examples/browser-demo.html). The screenshot above and short recording at [`website/public/images/browser-demo.gif`](website/public/images/browser-demo.gif) were captured with Playwright. The second example draws its interface into a canvas so there are no DOM controls for Playwright to inspect; it is designed to exercise the optional vision path:
+
+[Open the canvas-only demo](website/public/demos/visual-only-demo.html) · [`npm run vision:verify`](package.json) runs a local model smoke check (first use downloads model weights).
+
+![Canvas-only fake task board used to check local screenshot understanding](website/public/images/visual-only-demo.png)
+
+Both demos use synthetic data. They do not send, publish, charge, or delete anything outside the page.
 
 The browser tool does not bypass CAPTCHAs, site access controls, or authentication. For remote model providers, browser labels are blocked by default; set `AGENT_ALLOW_REMOTE_BROWSER_CONTEXT=true` only when you intend to share bounded page labels with that provider.
 

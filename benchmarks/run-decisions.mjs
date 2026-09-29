@@ -1,7 +1,14 @@
 #!/usr/bin/env node
-import { readFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import { createProvider } from "../dist/providers/index.js";
 
+const outputIndex = process.argv.indexOf("--output");
+const outputPath = outputIndex >= 0 ? process.argv[outputIndex + 1] : undefined;
+if (outputIndex >= 0 && (!outputPath || outputPath.startsWith("--"))) {
+  throw new Error("--output requires a file path");
+}
 const cases = (await readFile(new URL("./fixtures/decision-cases.jsonl", import.meta.url), "utf8"))
   .split(/\r?\n/).filter(Boolean).map((line) => JSON.parse(line));
 const provider = createProvider();
@@ -25,11 +32,19 @@ const warmRecords = records.filter((item) => item.warmWithinProcess);
 const warmOrdered = warmRecords.map((item) => item.latencyMs).sort((a, b) => a - b);
 const percentile = (fraction) => warmOrdered[Math.max(0, Math.ceil(warmOrdered.length * fraction) - 1)] ?? 0;
 const brierRecords = records.filter((item) => item.brierScore !== null);
-process.stdout.write(`${JSON.stringify({
+const report = `${JSON.stringify({
   provider: provider.id,
   model: provider.model,
   sampleCount: records.length,
-  runtime: { node: process.version, platform: process.platform, architecture: process.arch },
+  runtime: {
+    node: process.version,
+    platform: process.platform,
+    architecture: process.arch,
+    osVersion: os.release(),
+    cpuModel: os.cpus()[0]?.model ?? "not reported",
+    accelerator: "CPU (Transformers.js default backend)",
+    modelCacheState: "model artifacts were already cached before this process; first measured call includes pipeline initialization",
+  },
   accuracy: records.filter((item) => item.correct).length / records.length,
   meanBrierScore: brierRecords.length ? brierRecords.reduce((sum, item) => sum + item.brierScore, 0) / brierRecords.length : null,
   latencyMs: {
@@ -37,5 +52,11 @@ process.stdout.write(`${JSON.stringify({
     withinProcessSteadyState: { sampleCount: warmRecords.length, p50: percentile(0.5), p95: percentile(0.95) },
   },
   records,
-  note: "The first call includes pipeline initialization and may include model download. warmWithinProcess only means later calls in this process. This small starter set is not a general quality, calibration, or performance claim; report hardware, accelerator, model-cache state, provider setup, and held-out data.",
-}, null, 2)}\n`);
+  note: "The first call includes pipeline initialization. warmWithinProcess only means later calls in this process. This small starter set is not a general quality, calibration, or performance claim; all probabilities remain uncalibrated.",
+}, null, 2)}\n`;
+if (outputPath) {
+  const resolvedOutput = path.resolve(outputPath);
+  await mkdir(path.dirname(resolvedOutput), { recursive: true });
+  await writeFile(resolvedOutput, report, "utf8");
+}
+process.stdout.write(report);

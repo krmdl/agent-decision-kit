@@ -6,7 +6,8 @@ const root = path.resolve(import.meta.dirname, "..", "website", "dist");
 const site = new URL(process.env.SITE_URL ?? "https://krmdl.github.io/agent-decision-kit/");
 const basePath = site.pathname.endsWith("/") ? site.pathname : `${site.pathname}/`;
 const files = await walk(root);
-const htmlFiles = files.filter((file) => file.endsWith(".html"));
+const demoAsset = path.join(root, "demos", "visual-only-demo.html");
+const htmlFiles = files.filter((file) => file.endsWith(".html") && path.resolve(file) !== demoAsset);
 const canonicals = new Set();
 const failures = [];
 
@@ -59,6 +60,8 @@ check(htmlFiles.length >= 20, `expected at least 20 useful HTML pages, found ${h
 
 const robots = await readFile(path.join(root, "robots.txt"), "utf8");
 check(robots.includes(new URL("sitemap-index.xml", site).href), "robots.txt does not point to the sitemap index");
+const visualDemo = await readFile(demoAsset, "utf8");
+check(/<meta\s+name="robots"\s+content="noindex,nofollow"/i.test(visualDemo), "visual-only demo asset must stay out of search results");
 const sitemapIndex = await readFile(path.join(root, "sitemap-index.xml"), "utf8");
 const sitemapLocations = [...sitemapIndex.matchAll(/<loc>(.*?)<\/loc>/g)].map((match) => match[1]);
 check(sitemapLocations.length > 0, "sitemap index contains no sitemap locations");
@@ -75,7 +78,7 @@ try {
   }
 } catch { check(false, "missing sitemap-0.xml"); }
 
-for (const image of ["images/logo.svg", "images/social-preview.png", "images/demo-browser.png", "images/browser-demo.gif", "images/architecture.svg", "images/decision-flow.svg"]) {
+for (const image of ["images/logo.svg", "images/social-preview.png", "images/demo-browser.png", "images/visual-only-demo.png", "images/browser-demo.gif", "images/architecture.svg", "images/decision-flow.svg", "demos/visual-only-demo.html"]) {
   try { await stat(path.join(root, image)); }
   catch { check(false, `missing visual asset ${image}`); }
 }

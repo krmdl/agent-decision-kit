@@ -1,11 +1,11 @@
 export const features = [
   {
     slug: "browser-agent", title: "Playwright Browser Automation for Coding Agents", short: "Browser actions",
-    description: "Use Playwright's visible DOM controls as bounded action candidates, return concise page changes, and request separate approval before consequential actions.",
+    description: "Automate local Playwright pages with bounded DOM actions, concise page deltas, and confirmation before sensitive browser actions.",
     canonicalPath: "features/browser-agent/",
     intro: "Most browser-agent loops send a whole page or screenshot into a general model, then translate generated prose back into a click. Agent Decision Kit keeps the browser state local and offers only a short list of visible, labeled controls for a decision.",
-    steps: ["Launch an isolated Chromium profile or attach to the Chrome tab you selected over a local CDP endpoint.", "Inspect up to 80 visible buttons, links, and supported text inputs. Passwords, hidden fields, cookies, and storage are excluded.", "Let the configured decision provider pick a control, or pass a ref directly. Deterministic Playwright code performs the selected click or text fill.", "Read a small DOM change summary instead of pulling the full page back into the agent context."],
-    caveat: "Labels can be ambiguous and webpages can contain prompt injection. The local semantic baseline is uncalibrated and can choose the wrong benign control. Sensitive actions pause for a second confirmation call, but the risk detector is heuristic.",
+    steps: ["Launch an isolated Chromium profile or attach to the Chrome tab you selected over a local CDP endpoint.", "Inspect up to 80 visible buttons, links, and supported text inputs. Passwords, hidden fields, cookies, and storage are excluded.", "Let the configured decision provider pick a control, or pass a ref directly. Deterministic Playwright code performs the selected click or text fill.", "Read a small DOM change summary instead of pulling the full page back into the agent context.", "For canvas-based or visual-only pages, call browser_visual_inspect with an optional question. It runs SmolVLM2 locally and describes the screenshot without acting."],
+    caveat: "DOM labels can be ambiguous and webpages can contain prompt injection. The local semantic baseline is uncalibrated and can choose the wrong benign control. The vision-language model is slower on CPU and can misread a screenshot. Sensitive actions pause for a second confirmation call, but the risk detector is heuristic.",
     related: ["typed-decisions", "context-pruning"],
   },
   {
