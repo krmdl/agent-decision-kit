@@ -118,7 +118,7 @@ We do not claim the 500 ms p95 target, 7-second browsing demo, Jev equivalence, 
 npm install
 npm run typecheck
 npm test
-npm run build
+npm run package:verify
 npm run mcp:verify
 npm run hook:verify
 npm run agents:verify

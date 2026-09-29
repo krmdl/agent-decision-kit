@@ -35,12 +35,14 @@
     "dist",
     "README.md",
     "LICENSE",
-    "docs"
+    "docs",
+    "integrations"
   ],
   "scripts": {
     "dev": "tsx src/cli.ts",
     "mcp": "tsx src/cli.ts mcp",
     "build": "tsc -p tsconfig.json",
+    "package:verify": "npm run build && node scripts/check-package.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",

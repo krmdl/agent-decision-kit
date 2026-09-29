@@ -14,6 +14,8 @@
 - Add exact-phrase OCR click proposals for visual-only pages; every coordinate click requires a separate approval and a pixel-identical current screenshot.
 - Retry an exact visual-click target once with local sparse-text OCR when the default OCR pass misses it; verify the same URL, viewport, and screenshot before proposing a click.
 - Extend the curated MiniWoB harness to exercise OCR-grounded visual clicks under an exact local-file approval guard.
+- Include the optional Claude Code hook in the npm package and verify required release files in CI.
+- Include the optional Claude Code hook in the npm package and verify required release files in CI.
 
 ## 0.1.0-alpha.1 — 2026-09-29
 
