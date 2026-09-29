@@ -45,6 +45,12 @@ for await (const line of input) {
       case "visual-inspect":
         result = await browser.visualInspect(request.question);
         break;
+      case "visual-text":
+        result = await browser.visualText(request.maxLines ?? 40);
+        break;
+      case "visual-action":
+        result = await browser.visualAction(request.text);
+        break;
       case "decide-and-act":
         result = await browser.decideAndAct(request.task, provider);
         break;

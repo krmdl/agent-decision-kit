@@ -29,6 +29,11 @@ try {
   const recognizedText = result.lines.map((line) => line.text).join(" ");
   const labelsFound = expectedLabels.filter((label) => recognizedText.toLowerCase().includes(label.toLowerCase()));
   const optionalSmallLabelFound = recognizedText.toLowerCase().includes(sampleSmallLabel.toLowerCase());
+  const smallLabelProposal = await browser.visualAction(sampleSmallLabel);
+  const smallLabelWasProposed = smallLabelProposal.status === "awaiting-user-approval";
+  const smallLabelCancellation = smallLabelWasProposed ? await browser.confirm(smallLabelProposal.approvalToken, false) : undefined;
+  if (!optionalSmallLabelFound) assert.ok(smallLabelProposal.sparseTextFallback || smallLabelProposal.proposedAction?.matchSource === "sparse-text-fallback", "a default OCR miss should trigger the sparse-text fallback");
+  if (smallLabelCancellation) assert.equal(smallLabelCancellation.status, "cancelled");
   const firstProposal = await browser.visualAction("Save draft");
   assert.equal(firstProposal.status, "awaiting-user-approval", "OCR must propose an exact unique target without clicking");
   const cancelled = await browser.confirm(firstProposal.approvalToken, false);
@@ -55,6 +60,13 @@ try {
     expectedLabels,
     labelsFound,
     optionalSmallLabel: { text: sampleSmallLabel, found: optionalSmallLabelFound },
+    sparseTextFallbackSmoke: {
+      target: sampleSmallLabel,
+      status: smallLabelProposal.status,
+      matchSource: smallLabelProposal.proposedAction?.matchSource ?? (smallLabelProposal.sparseTextFallback ? "sparse-text-fallback" : "automatic"),
+      latencyMs: smallLabelProposal.proposedAction?.fallbackLatencyMs ?? smallLabelProposal.sparseTextFallback?.latencyMs ?? null,
+      proposalCancelled: smallLabelCancellation?.status === "cancelled",
+    },
     visualClickSmoke: { proposedWithoutClick: true, cancellationChecked: true, approvedClickReachedLocalCanvasTarget: true, staleScreenshotApprovalRejected: true, click: approvedAction.clickedAtCss },
     lines: result.lines.map(({ text, confidence, box }) => ({ text, confidence, box })),
     runtime: { node: process.version, platform: process.platform, architecture: process.arch, cpuModel: os.cpus()[0]?.model ?? "not reported" },

@@ -10,6 +10,18 @@ SPEC.loader.exec_module(RUNNER)
 
 
 class MultiToolPlanningTests(unittest.TestCase):
+    def test_extracts_only_an_explicitly_quoted_visual_link_target(self):
+        self.assertEqual(RUNNER.extract_visual_click_target('Click on the link "adipiscing.".'), "adipiscing.")
+        self.assertEqual(RUNNER.extract_visual_click_target("Click the link “Continue” now."), "Continue")
+        self.assertIsNone(RUNNER.extract_visual_click_target("Click on the link adipiscing."))
+        self.assertIsNone(RUNNER.extract_visual_click_target('Click the button "Continue".'))
+
+    def test_synthetic_visual_approval_requires_the_exact_local_task_url(self):
+        base_url = "file:///MINIWOB/"
+        self.assertTrue(RUNNER.is_expected_local_task_url("file:///MINIWOB/click-link.html", base_url, "click-link"))
+        self.assertFalse(RUNNER.is_expected_local_task_url("https://example.test/click-link.html", base_url, "click-link"))
+        self.assertFalse(RUNNER.is_expected_local_task_url("file:///MINIWOB/click-test.html", base_url, "click-link"))
+
     def test_extracts_and_transforms_an_explicit_text_value(self):
         candidates = [{"ref": "r1", "role": "input", "kind": "text", "label": "Text input"}]
         planned = RUNNER.multi_tool_action(

@@ -1,7 +1,7 @@
 import { mkdir } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { createWorker } from "tesseract.js";
+import { createWorker, PSM } from "tesseract.js";
 
 export type OcrBox = { x0: number; y0: number; x1: number; y1: number };
 export type OcrWord = { text: string; confidence: number; box: OcrBox };
@@ -123,19 +123,21 @@ function normalizeOcrTokens(value: string) {
   return value.normalize("NFKC").toLocaleLowerCase("en-US").replace(/[^\p{L}\p{N}]+/gu, " ").trim().split(/\s+/u).filter(Boolean);
 }
 
-export function recognizeScreenshotText(png: Buffer, maxLines = 40) {
+export function recognizeScreenshotText(png: Buffer, maxLines = 40, segmentationMode: "automatic" | "sparse-text" = "automatic") {
   return serialize(async () => {
     const startedAt = performance.now();
     const languages = parseLanguages();
     const workerStartedAt = performance.now();
     const worker = await getWorker(languages);
     const initializationMs = Math.round(performance.now() - workerStartedAt);
+    await worker.setParameters({ tessedit_pageseg_mode: segmentationMode === "sparse-text" ? PSM.SPARSE_TEXT : PSM.AUTO });
     const recognitionStartedAt = performance.now();
     const { data } = await worker.recognize(png, {}, { blocks: true });
     const recognitionMs = Math.round(performance.now() - recognitionStartedAt);
     return {
       engine: "tesseract.js",
       language: languages.join("+"),
+      segmentationMode,
       initializationMs,
       recognitionMs,
       latencyMs: Math.round(performance.now() - startedAt),

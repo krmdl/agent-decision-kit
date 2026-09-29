@@ -103,7 +103,19 @@ Report task success rate, action-count distribution, latency p50/p95, and timeou
 
 The checked-in run recognized the label on CPU in 21,634 ms with model files already present in the local cache. The timing includes model initialization and generation. Confidence is unavailable; this is an integration smoke check, not a quality, calibration, or speed benchmark. If the model is not cached, the first run downloads its weights. The screenshot and model inference remain local.
 
-`results/ocr-smoke.json` is a one-page local OCR integration check on the same synthetic canvas demo. It checks two prominent draft controls, records recognized text and box output, and also reports whether the smaller `Open task` label was found. It is a one-sample integration check, not a general OCR quality or latency claim; line confidence is uncalibrated and OCR may miss small labels.
+`results/ocr-smoke.json` is a one-page local OCR and approval-gated visual-click integration check on the synthetic canvas demo. It recognizes the prominent `Save draft` and `Delete draft` labels, proposes the exact unique `Save draft` phrase without clicking, checks cancellation, then separately approves that local click. A second pending proposal is rejected after the screenshot changes. OCR missed the smaller `Open task` label. This one-sample smoke result is not a general OCR quality or latency claim; engine confidence is uncalibrated and OCR may miss small labels.
+
+`results/miniwob-ocr-click-link-smoke.json` and `results/miniwob-ocr-click-link-smoke-click-link.json` record the quoted-target OCR integration run on the pinned MiniWoB `click-link` page. On Linux x64 CPU, the default pass recognized four short lines but missed the requested `adipiscing.` link. The sparse-text retry recognized seven lines in 82 ms but also missed the target. The task therefore failed validation (0/1 success, zero clicks); end-to-end latency including reset was 2,085 ms and the bounded tool loop took 807 ms. No semantic model call occurred. This is a single integration smoke sample, not a quality or speed benchmark. The runner extracts only the explicitly quoted link label, and synthetic confirmation is refused unless the page URL is the exact local `file://` task. Keep this separate from the historical vision-only result; retain OCR misses and unsuccessful task validation as failures.
+
+Reproduce that focused run from the repository root with the pinned MiniWoB++ checkout:
+
+```sh
+python benchmarks/run-browsergym-miniwob-suite.py \
+  --miniwob-root /tmp/miniwob-plusplus/miniwob/html/miniwob \
+  --multi-tool --visual-ocr-actions --tasks click-link \
+  --approve-synthetic-actions \
+  --output benchmarks/results/miniwob-ocr-click-link-smoke.json
+```
 
 ## Calibration
 

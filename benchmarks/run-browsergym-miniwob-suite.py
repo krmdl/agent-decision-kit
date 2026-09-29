@@ -43,7 +43,8 @@ def main():
     parser.add_argument("--max-actions", type=int, default=5)
     parser.add_argument("--timeout-seconds", type=int, default=120, help="Outer time limit per task process")
     parser.add_argument("--approve-synthetic-actions", action="store_true", help="Allow gated actions only when the runner confirms the exact local file:// task URL")
-    parser.add_argument("--multi-tool", action="store_true", help="Run the explicit value extraction and visual inspection tool-integration smoke path")
+    parser.add_argument("--multi-tool", action="store_true", help="Run the explicit value extraction and local visual tool-integration smoke path")
+    parser.add_argument("--visual-ocr-actions", action="store_true", help="In multi-tool mode, try an exact quoted visual target with local OCR and the mandatory approval gate")
     args = parser.parse_args()
 
     miniwob_root = args.miniwob_root.resolve()
@@ -54,6 +55,8 @@ def main():
         raise SystemExit(f"MiniWoB task file(s) not found: {', '.join(missing)}")
     if args.timeout_seconds < 1:
         raise SystemExit("--timeout-seconds must be positive")
+    if args.visual_ocr_actions and not args.multi_tool:
+        raise SystemExit("--visual-ocr-actions requires --multi-tool")
 
     records = []
     episode_files = []
@@ -73,6 +76,8 @@ def main():
             command.append("--approve-synthetic-actions")
         if args.multi_tool:
             command.append("--multi-tool")
+        if args.visual_ocr_actions:
+            command.append("--visual-ocr-actions")
 
         start = time.perf_counter()
         try:
@@ -125,23 +130,24 @@ def main():
 
     summary = load_aggregator().summarize(records)
     exercised_tools = sorted({tool for record in records for tool in record.get("toolCoverage", [])})
-    supported_tools = {"browser_connect", "browser_decide_and_act", "browser_confirm", "browser_action", "browser_fill", "browser_select_option", "browser_visual_inspect"}
+    supported_tools = {"browser_connect", "browser_decide_and_act", "browser_confirm", "browser_action", "browser_fill", "browser_select_option", "browser_visual_inspect", "browser_visual_text", "browser_visual_action"}
     summary["suite"] = {
-        "name": "miniwob-multi-tool-smoke" if args.multi_tool else "miniwob-smoke",
-        "runnerMode": "bounded-multi-tool-integration-smoke" if args.multi_tool else "bounded-repeated-browser-decide-and-act",
+        "name": "miniwob-visual-ocr-smoke" if args.visual_ocr_actions else ("miniwob-multi-tool-smoke" if args.multi_tool else "miniwob-smoke"),
+        "runnerMode": "bounded-visual-ocr-approval-smoke" if args.visual_ocr_actions else ("bounded-multi-tool-integration-smoke" if args.multi_tool else "bounded-repeated-browser-decide-and-act"),
         "toolCoverage": exercised_tools,
         "notExercisedTools": sorted(supported_tools - set(exercised_tools)),
-        "limitation": "This is a curated integration harness, not a full autonomous agent or representative BrowserGym benchmark. In multi-tool mode, it extracts only explicit values from synthetic task instructions, selects exact visible options, and requests local screenshot descriptions; it does not infer arbitrary field data or use vision to click.",
+        "limitation": "This is a curated integration harness, not a full autonomous agent or representative BrowserGym benchmark. In multi-tool mode, it extracts only explicit values from synthetic task instructions and selects exact visible options. The optional visual OCR path tries only an explicitly quoted link label, and its coordinate click is approved only for the exact local file:// task page.",
         "seed": args.seed,
         "maxActionsPerTask": args.max_actions,
         "timeoutSecondsPerTask": args.timeout_seconds,
         "syntheticApprovalsEnabled": args.approve_synthetic_actions,
+        "visualOcrActionsEnabled": args.visual_ocr_actions,
         "miniwobRoot": str(miniwob_root),
         "episodeFiles": [str(path.relative_to(ROOT)) if path.is_relative_to(ROOT) else str(path) for path in episode_files],
         "pythonVersion": platform.python_version(),
         "operatingSystem": platform.platform(),
     }
-    summary["note"] += " The selected MiniWoB task set is a reproducible smoke suite, not a representative BrowserGym sample. The runner measures a bounded repeated decide-and-act tool loop, not a complete coding agent."
+    summary["note"] += " The selected MiniWoB task set is a reproducible smoke suite, not a representative BrowserGym sample. It measures bounded tool integration, not a complete coding agent."
     summary = sanitize_record(summary)
     rendered = json.dumps(summary, indent=2) + "\n"
     args.output.parent.mkdir(parents=True, exist_ok=True)

@@ -12,6 +12,8 @@
 - Verify Claude Code's MCP health check and Codex CLI config loading on installed Windows clients using isolated temporary config directories; no vendor-model turns or paid inference were used.
 - Add a local, bounded OCR fast path for visual-only pages; mask editable fields and keep the slower local vision-language question tool available for OCR misses.
 - Add exact-phrase OCR click proposals for visual-only pages; every coordinate click requires a separate approval and a pixel-identical current screenshot.
+- Retry an exact visual-click target once with local sparse-text OCR when the default OCR pass misses it; verify the same URL, viewport, and screenshot before proposing a click.
+- Extend the curated MiniWoB harness to exercise OCR-grounded visual clicks under an exact local-file approval guard.
 
 ## 0.1.0-alpha.1 — 2026-09-29
 

@@ -27,6 +27,18 @@ def normalized(value):
     return re.sub(r"[^\w]+", " ", value.casefold()).strip()
 
 
+def extract_visual_click_target(task):
+    if not re.search(r"\bclick(?:\s+on)?\s+(?:the\s+)?link\b", task, re.IGNORECASE):
+        return None
+    match = re.search(r'"([^"\r\n]+)"|“([^”\r\n]+)”', task)
+    target = (match.group(1) or match.group(2)).strip() if match else ""
+    return target or None
+
+
+def is_expected_local_task_url(current_url, base_url, task):
+    return base_url.startswith("file://") and current_url == base_url + f"{task}.html"
+
+
 def multi_tool_action(task, candidates, completed_fields, visible_text=""):
     """Extract only explicit MiniWoB task values for the tool integration smoke path."""
     date_match = re.search(r"\b(\d{1,2}/\d{1,2}/\d{4})\b", task)
@@ -163,11 +175,14 @@ def main():
     parser.add_argument("--seed", type=int, default=7)
     parser.add_argument("--max-actions", type=int, default=5, help="Maximum BrowserManager decision/action rounds for this task")
     parser.add_argument("--approve-synthetic-actions", action="store_true", help="Confirm approval-gated actions only when the benchmark page uses a local file:// URL")
-    parser.add_argument("--multi-tool", action="store_true", help="Exercise explicit text/date/select tool flows and visual inspection; this is a tool-integration harness, not an autonomous agent")
+    parser.add_argument("--multi-tool", action="store_true", help="Exercise explicit text/date/select tool flows and optional local visual tools; this is a tool-integration harness, not an autonomous agent")
+    parser.add_argument("--visual-ocr-actions", action="store_true", help="On visual-only pages, try only a quoted link target with local OCR and the mandatory approval gate")
     parser.add_argument("--output", type=Path, help="Optional path for one raw JSON episode record")
     args = parser.parse_args()
     if args.max_actions < 1 or args.max_actions > 20:
         raise SystemExit("--max-actions must be between 1 and 20")
+    if args.visual_ocr_actions and not args.multi_tool:
+        raise SystemExit("--visual-ocr-actions requires --multi-tool")
 
     miniwob_root = args.miniwob_root.resolve()
     if not (miniwob_root / f"{args.task}.html").is_file():
@@ -213,6 +228,12 @@ def main():
     tool_coverage = {"browser_connect"}
     action_count = 0
     synthetic_approval_count = 0
+    ocr_cache_dir = Path(os.environ.get("AGENT_DECISION_OCR_CACHE_DIR", Path.home() / ".agent-decision-kit" / "ocr-cache"))
+    try:
+        ocr_language_cache_existed = ocr_cache_dir.is_dir() and any("eng.traineddata" in path.name for path in ocr_cache_dir.rglob("*"))
+    except OSError:
+        ocr_language_cache_existed = None
+    visual_ocr_used = False
     current_search_page = 1
     search_page_size = None
     attempted_search_results = set()
@@ -294,8 +315,7 @@ def main():
                     action_count += 1
                     tool_action_trace.append({"step": step_index + 1, "tool": "browser_action", "status": action_result.get("status"), "targetOrdinal": target_ordinal, "targetRole": "link", "targetLabel": target["label"], "page": current_search_page, "pageOrdinal": local_ordinal, "visibleResultLabels": [candidate["label"] for candidate in result_links]})
                     if action_result.get("status") == "awaiting-user-approval":
-                        expected_url = base_url + f"{args.task}.html"
-                        if not args.approve_synthetic_actions or env.unwrapped.page.url != expected_url:
+                        if not args.approve_synthetic_actions or not is_expected_local_task_url(env.unwrapped.page.url, base_url, args.task):
                             break
                         action_result = bridge.call("confirm", approvalToken=action_result["approvalToken"], approve=True)
                         synthetic_approval_count += 1
@@ -306,6 +326,53 @@ def main():
                     continue
 
                 if not inspected.get("candidates"):
+                    visual_target = extract_visual_click_target(task) if args.visual_ocr_actions else None
+                    if visual_target:
+                        visual_ocr_used = True
+                        ocr_result = bridge.call("visual-text", maxLines=40)
+                        tool_coverage.add("browser_visual_text")
+                        tool_action_trace.append({
+                            "step": step_index + 1,
+                            "tool": "browser_visual_text",
+                            "status": ocr_result.get("status", "read"),
+                            "engine": ocr_result.get("engine"),
+                            "lineCount": len(ocr_result.get("lines", [])),
+                            "latencyMs": ocr_result.get("latencyMs"),
+                            "targetPresentInText": normalized(visual_target) in normalized(" ".join(line.get("text", "") for line in ocr_result.get("lines", []))),
+                            "recognizedLines": [{"text": line.get("text", ""), "confidence": line.get("confidence")} for line in ocr_result.get("lines", [])],
+                        })
+                        proposed = bridge.call("visual-action", text=visual_target)
+                        tool_coverage.add("browser_visual_action")
+                        action_count += int(proposed.get("status") == "awaiting-user-approval")
+                        decision = proposed
+                        decision_provider = "local-ocr-exact-match"
+                        decision_model = ocr_result.get("engine", "tesseract.js")
+                        selected_action = proposed.get("proposedAction")
+                        candidate_count = 0
+                        proposal_trace = {
+                            "step": step_index + 1,
+                            "tool": "browser_visual_action",
+                            "status": proposed.get("status"),
+                            "requestedText": visual_target,
+                            "proposedAction": proposed.get("proposedAction"),
+                            "matchSource": proposed.get("proposedAction", {}).get("matchSource"),
+                            "fallbackLatencyMs": proposed.get("proposedAction", {}).get("fallbackLatencyMs"),
+                            "sparseTextFallback": proposed.get("sparseTextFallback"),
+                        }
+                        if proposed.get("status") == "awaiting-user-approval":
+                            if args.approve_synthetic_actions and is_expected_local_task_url(env.unwrapped.page.url, base_url, args.task):
+                                decision = bridge.call("confirm", approvalToken=proposed["approvalToken"], approve=True)
+                                synthetic_approval_count += 1
+                                tool_coverage.add("browser_confirm")
+                                proposal_trace["executionStatus"] = decision.get("status")
+                            else:
+                                proposal_trace["executionStatus"] = "awaiting-explicit-local-benchmark-approval"
+                        tool_action_trace.append(proposal_trace)
+                        if proposed.get("status") == "awaiting-user-approval" and decision.get("status") != "action-executed-after-approval":
+                            decision["status"] = proposal_trace["executionStatus"]
+                        reward, terminated, _, task_info = env.unwrapped.task.validate(env.unwrapped.page, env.unwrapped.chat.messages)
+                        break
+
                     decision = bridge.call("visual-inspect", question=task)
                     decision_provider = decision.get("provider", decision_provider)
                     decision_model = decision.get("model", decision_model)
@@ -343,8 +410,7 @@ def main():
             if decision.get("status") == "awaiting-user-approval":
                 if not args.approve_synthetic_actions:
                     break
-                expected_url = base_url + f"{args.task}.html"
-                if not base_url.startswith("file://") or env.unwrapped.page.url != expected_url:
+                if not is_expected_local_task_url(env.unwrapped.page.url, base_url, args.task):
                     raise RuntimeError("Refusing benchmark auto-approval: the page is not the expected local MiniWoB file")
                 decision = bridge.call("confirm", approvalToken=decision["approvalToken"], approve=True)
                 synthetic_approval_count += 1
@@ -372,9 +438,9 @@ def main():
             "benchmark": "miniwob",
             "task": args.task,
             "taskPrompt": task,
-            "runnerMode": "bounded-multi-tool-integration-smoke" if args.multi_tool else "bounded-repeated-browser-decide-and-act",
+            "runnerMode": "bounded-visual-ocr-approval-smoke" if visual_ocr_used else ("bounded-multi-tool-integration-smoke" if args.multi_tool else "bounded-repeated-browser-decide-and-act"),
             "toolCoverage": sorted(tool_coverage),
-            "notExercisedTools": sorted({"browser_connect", "browser_decide_and_act", "browser_confirm", "browser_action", "browser_fill", "browser_select_option", "browser_visual_inspect"} - tool_coverage),
+            "notExercisedTools": sorted({"browser_connect", "browser_decide_and_act", "browser_confirm", "browser_action", "browser_fill", "browser_select_option", "browser_visual_inspect", "browser_visual_text", "browser_visual_action"} - tool_coverage),
             "toolActionTrace": tool_action_trace,
             "success": bool(reward > 0),
             "timeout": False,
@@ -409,14 +475,16 @@ def main():
             "operatingSystem": platform.platform(),
             "cpu": platform.processor() or "not reported by Python",
             "accelerator": "CPU",
-            "modelCacheState": "local cache already populated before this episode",
-            "decisionWarmState": ("first semantic provider inference in a fresh Node bridge process; model files are cached" if decision_latencies else "no semantic decision-provider inference occurred; deterministic local rules and explicit tool calls handled the DOM path"),
+            "modelCacheState": ("not-used: the OCR visual path does not invoke the semantic model" if visual_ocr_used else "local cache already populated before this episode"),
+            "ocrLanguageCacheExistedBeforeEpisode": ocr_language_cache_existed if visual_ocr_used else None,
+            "decisionWarmState": ("first semantic provider inference in a fresh Node bridge process; model files are cached" if decision_latencies else "no semantic decision-provider inference occurred; explicit browser/OCR tools handled this episode" if visual_ocr_used else "no semantic decision-provider inference occurred; deterministic local rules and explicit tool calls handled the DOM path"),
             "miniWobCommit": MINIWOB_COMMIT,
             "browserStillOpenAfterDisconnect": browser_still_open,
             "rawTaskInfo": task_info,
             "timestampUtc": datetime.now(timezone.utc).isoformat(),
             "maxActions": args.max_actions,
-            "note": "A curated MiniWoB integration smoke check, not a representative BrowserGym benchmark or a full autonomous agent. Multi-tool mode extracts only explicit task values and visible native options; field values are omitted from the raw record. Visual inspection describes a screenshot but does not perform an action. Synthetic approvals are possible only for the exact local MiniWoB file URL.",
+            "note": "A curated MiniWoB integration smoke check, not a representative BrowserGym benchmark or a full autonomous agent. Multi-tool mode extracts only explicit task values and visible native options; field values are omitted from the raw record. The optional OCR path attempts only the quoted link target and its coordinate click remains behind the standard one-use approval gate; synthetic approval is possible only for the exact local MiniWoB file URL.",
+            "visualOcrActionsEnabled": args.visual_ocr_actions,
         }
         if args.output:
             args.output.parent.mkdir(parents=True, exist_ok=True)
@@ -433,9 +501,9 @@ def main():
                 "benchmark": "miniwob",
                 "task": args.task,
                 "taskPrompt": task,
-                "runnerMode": "bounded-multi-tool-integration-smoke" if args.multi_tool else "bounded-repeated-browser-decide-and-act",
+                "runnerMode": "bounded-visual-ocr-approval-smoke" if visual_ocr_used else ("bounded-multi-tool-integration-smoke" if args.multi_tool else "bounded-repeated-browser-decide-and-act"),
                 "toolCoverage": sorted(tool_coverage),
-                "notExercisedTools": sorted({"browser_connect", "browser_decide_and_act", "browser_confirm", "browser_action", "browser_fill", "browser_select_option", "browser_visual_inspect"} - tool_coverage),
+                "notExercisedTools": sorted({"browser_connect", "browser_decide_and_act", "browser_confirm", "browser_action", "browser_fill", "browser_select_option", "browser_visual_inspect", "browser_visual_text", "browser_visual_action"} - tool_coverage),
                 "toolActionTrace": tool_action_trace,
                 "success": False,
                 "timeout": timed_out,
@@ -458,9 +526,12 @@ def main():
                 "decisionStatus": decision.get("status", "error"),
                 "decisionProvider": decision_provider,
                 "decisionModel": decision_model or "not-reported",
+                "modelCacheState": "not-used: the OCR visual path does not invoke the semantic model" if visual_ocr_used else None,
+                "ocrLanguageCacheExistedBeforeEpisode": ocr_language_cache_existed if visual_ocr_used else None,
                 "miniWobCommit": MINIWOB_COMMIT,
                 "timestampUtc": datetime.now(timezone.utc).isoformat(),
-                "note": "Failed episode record from the bounded repeated decide-and-act loop, not a full autonomous agent. It does not orchestrate field filling, native select choices, or visual inspection. Timeout is detected from the harness deadline or a reported timeout; inspect failureReason for the source.",
+                "visualOcrActionsEnabled": args.visual_ocr_actions,
+                "note": "Failed episode record from the bounded BrowserGym integration runner, not a full autonomous agent. Timeout is detected from the harness deadline or a reported timeout; inspect failureReason for the source.",
             }
             if args.output:
                 args.output.parent.mkdir(parents=True, exist_ok=True)

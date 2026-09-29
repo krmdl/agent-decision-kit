@@ -11,10 +11,11 @@ export type BrowserManagerOptions = { headless?: boolean; profileDir?: string; i
 
 type ViewportMetrics = { width: number; height: number; devicePixelRatio: number };
 type ScreenshotPixels = { width: number; height: number };
-type VisualSnapshot = { url: string; fingerprint: string; lines: OcrLine[]; viewport: ViewportMetrics; screenshotPixels: ScreenshotPixels; createdAt: number };
+type VisualMatchSource = "automatic" | "sparse-text-fallback";
+type VisualSnapshot = { url: string; fingerprint: string; lines: OcrLine[]; matchSource: VisualMatchSource; viewport: ViewportMetrics; screenshotPixels: ScreenshotPixels; createdAt: number };
 type PendingBrowserApproval =
   | { kind: "dom"; ref: string; createdAt: number; url: string; fingerprint: string }
-  | { kind: "visual"; text: string; box: OcrBox; confidence: number; createdAt: number; url: string; fingerprint: string; viewport: ViewportMetrics; screenshotPixels: ScreenshotPixels };
+  | { kind: "visual"; text: string; box: OcrBox; confidence: number; matchSource: VisualMatchSource; createdAt: number; url: string; fingerprint: string; viewport: ViewportMetrics; screenshotPixels: ScreenshotPixels };
 
 const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "::1", "[::1]"]);
 const OCR_MASK_SELECTOR = 'input:not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="image"]), textarea, select, [contenteditable]:not([contenteditable="false"])';
@@ -234,7 +235,7 @@ export class BrowserManager {
         throw new Error("The OCR target is outside the current viewport. Read the page again and choose a visible exact target.");
       }
       await page.mouse.click(x, y);
-      return { status: "action-executed-after-approval", action: { kind: "visual-text-click", text: pending.text, screenshotPixelBox: pending.box, engineConfidence: pending.confidence, calibration: "uncalibrated OCR engine score" }, clickedAtCss: { x: Math.round(x), y: Math.round(y) }, effect: { url: redactBrowserUrl(this.requirePage().url()), title: await this.requirePage().title().catch(() => "") }, note: "An OCR-grounded coordinate was clicked after explicit approval. OCR confidence is not a calibrated probability and the page may interpret the click in unexpected ways." };
+      return { status: "action-executed-after-approval", action: { kind: "visual-text-click", text: pending.text, screenshotPixelBox: pending.box, engineConfidence: pending.confidence, calibration: "uncalibrated OCR engine score", matchSource: pending.matchSource }, clickedAtCss: { x: Math.round(x), y: Math.round(y) }, effect: { url: redactBrowserUrl(this.requirePage().url()), title: await this.requirePage().title().catch(() => "") }, note: "An OCR-grounded coordinate was clicked after explicit approval. OCR confidence is not a calibrated probability and the page may interpret the click in unexpected ways." };
     }
     const snapshot = await this.inspect();
     const candidate = this.candidates.get(pending.ref);
@@ -329,6 +330,7 @@ export class BrowserManager {
         url: capture.url,
         fingerprint: createHash("sha256").update(capture.image).digest("hex"),
         lines: ocr.lines,
+        matchSource: "automatic",
         viewport: capture.viewport,
         screenshotPixels: capture.screenshotPixels,
         createdAt: Date.now(),
@@ -358,19 +360,50 @@ export class BrowserManager {
       this.lastVisualSnapshot = undefined;
       return { status: "page-changed", matches: 0, note: "The URL or masked screenshot changed after OCR. No click was proposed; call browser_visual_text again on the current page." };
     }
-    const matches = findExactOcrTextMatches(snapshot.lines, text);
-    if (matches.length === 0) return { status: "text-not-found", requestedText: text, matches: 0, note: "No exact OCR word sequence with sufficient engine score matched. Nothing was clicked. Read the current OCR lines and choose a visible exact phrase." };
-    if (matches.length > 1) return { status: "ambiguous-text", requestedText: text, matches: matches.map(({ box, confidence }) => ({ screenshotPixelBox: box, engineConfidence: confidence })), note: "The text occurs more than once. Nothing was clicked; choose a more specific exact phrase." };
+    let matches = findExactOcrTextMatches(snapshot.lines, text);
+    let matchSource: VisualMatchSource = snapshot.matchSource;
+    let fallbackLines: OcrLine[] | undefined;
+    let fallbackLatencyMs: number | undefined;
+    if (matches.length === 0) {
+      const fallback = await recognizeScreenshotText(capture.image, 40, "sparse-text");
+      fallbackLines = fallback.lines;
+      fallbackLatencyMs = fallback.latencyMs;
+      const verified = await this.captureMaskedViewport();
+      const verifiedFingerprint = createHash("sha256").update(verified.image).digest("hex");
+      if (verified.url !== snapshot.url || verified.urlAfter !== snapshot.url || this.requirePage().url() !== snapshot.url || verifiedFingerprint !== snapshot.fingerprint || !sameViewport(verified.viewport, snapshot.viewport) || !sameScreenshotPixels(verified.screenshotPixels, snapshot.screenshotPixels)) {
+        this.lastVisualSnapshot = undefined;
+        return { status: "page-changed", matches: 0, note: "The URL or masked screenshot changed during the sparse-text OCR fallback. No click was proposed; call browser_visual_text again on the current page." };
+      }
+      matches = findExactOcrTextMatches(fallback.lines, text);
+      matchSource = "sparse-text-fallback";
+      this.lastVisualSnapshot = { ...snapshot, lines: fallback.lines, matchSource, createdAt: Date.now() };
+    }
+    if (matches.length === 0) {
+      return {
+        status: "text-not-found",
+        requestedText: text,
+        matches: 0,
+        ...(fallbackLines ? {
+          sparseTextFallback: {
+            lineCount: fallbackLines.length,
+            lines: fallbackLines.map(({ text: lineText, confidence, box }) => ({ text: lineText, confidence, box })),
+            latencyMs: fallbackLatencyMs,
+          },
+        } : {}),
+        note: "No exact OCR word sequence with sufficient engine score matched. Nothing was clicked. Read the current OCR lines and choose a visible exact phrase.",
+      };
+    }
+    if (matches.length > 1) return { status: "ambiguous-text", requestedText: text, matchSource, ...(fallbackLatencyMs === undefined ? {} : { fallbackLatencyMs }), matches: matches.map(({ box, confidence }) => ({ screenshotPixelBox: box, engineConfidence: confidence })), note: "The text occurs more than once. Nothing was clicked; choose a more specific exact phrase." };
 
     const match = matches[0]!;
     const token = randomUUID();
-    this.pending.set(token, { kind: "visual", text, box: match.box, confidence: match.confidence, createdAt: Date.now(), url: snapshot.url, fingerprint: snapshot.fingerprint, viewport: snapshot.viewport, screenshotPixels: snapshot.screenshotPixels });
+    this.pending.set(token, { kind: "visual", text, box: match.box, confidence: match.confidence, matchSource, createdAt: Date.now(), url: snapshot.url, fingerprint: snapshot.fingerprint, viewport: snapshot.viewport, screenshotPixels: snapshot.screenshotPixels });
     const x = Math.round(((match.box.x0 + match.box.x1) / 2) * snapshot.viewport.width / snapshot.screenshotPixels.width);
     const y = Math.round(((match.box.y0 + match.box.y1) / 2) * snapshot.viewport.height / snapshot.screenshotPixels.height);
     return {
       status: "awaiting-user-approval",
       approvalToken: token,
-      proposedAction: { kind: "visual-text-click", text, screenshotPixelBox: match.box, clickAtCss: { x, y }, engineConfidence: match.confidence, calibration: "uncalibrated OCR engine score" },
+      proposedAction: { kind: "visual-text-click", text, screenshotPixelBox: match.box, clickAtCss: { x, y }, engineConfidence: match.confidence, calibration: "uncalibrated OCR engine score", matchSource, ...(fallbackLatencyMs === undefined ? {} : { fallbackLatencyMs }) },
       note: "This is only an OCR-grounded proposal. It may target the wrong element or perform a sensitive action. Review the exact text and click location, then call browser_confirm with approve=true to click; call it with approve=false to cancel. The page must remain pixel-identical and on the same URL. OCR never infers what the control does.",
     };
   }

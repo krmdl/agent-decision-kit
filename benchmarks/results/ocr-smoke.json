@@ -4,10 +4,10 @@
   "success": true,
   "engine": "tesseract.js",
   "language": "eng",
-  "screenshotMs": 70,
-  "initializationMs": 186,
-  "recognitionMs": 716,
-  "latencyMs": 973,
+  "screenshotMs": 59,
+  "initializationMs": 199,
+  "recognitionMs": 819,
+  "latencyMs": 1078,
   "sampleCount": 1,
   "expectedLabels": [
     "Save draft",
@@ -20,6 +20,13 @@
   "optionalSmallLabel": {
     "text": "Open task",
     "found": false
+  },
+  "sparseTextFallbackSmoke": {
+    "target": "Open task",
+    "status": "awaiting-user-approval",
+    "matchSource": "sparse-text-fallback",
+    "latencyMs": 694,
+    "proposalCancelled": true
   },
   "visualClickSmoke": {
     "proposedWithoutClick": true,
@@ -34,7 +41,7 @@
   "lines": [
     {
       "text": "AGENT DECISION KIT - LOCAL VISUAL DEMO",
-      "confidence": 90,
+      "confidence": 86,
       "box": {
         "x0": 76,
         "y0": 72,
@@ -43,8 +50,18 @@
       }
     },
     {
-      "text": "Sample interface painted into one image; it exposes no DOM controls.",
+      "text": "Canvas-only task board",
       "confidence": 95,
+      "box": {
+        "x0": 77,
+        "y0": 112,
+        "x1": 556,
+        "y1": 155
+      }
+    },
+    {
+      "text": "Sample interface painted into one image; it exposes no DOM controls.",
+      "confidence": 94,
       "box": {
         "x0": 77,
         "y0": 170,
@@ -63,8 +80,8 @@
       }
     },
     {
-      "text": "BEES Release note draft",
-      "confidence": 67,
+      "text": "3 sample tasks Release note draft",
+      "confidence": 96,
       "box": {
         "x0": 109,
         "y0": 298,
@@ -73,22 +90,32 @@
       }
     },
     {
-      "text": "Review browser setup ( — ) Shipped a clearer local browser demo",
-      "confidence": 90,
+      "text": "Review browser setu| ( ) i",
+      "confidence": 74,
       "box": {
         "x0": 129,
         "y0": 368,
+        "x1": 724,
+        "y1": 385
+      }
+    },
+    {
+      "text": "Pp — Shipped a clearer local browser demo",
+      "confidence": 84,
+      "box": {
+        "x0": 332,
+        "y0": 369,
         "x1": 1021,
         "y1": 401
       }
     },
     {
-      "text": "A local guide is ready to open i )",
-      "confidence": 69,
+      "text": "Alocal guide is ready to open",
+      "confidence": 90,
       "box": {
         "x0": 128,
-        "y0": 392,
-        "x1": 560,
+        "y0": 405,
+        "x1": 343,
         "y1": 421
       }
     },
@@ -103,18 +130,18 @@
       }
     },
     {
-      "text": "Draft release notes . a .",
-      "confidence": 30,
+      "text": "Draft release notes",
+      "confidence": 96,
       "box": {
         "x0": 129,
         "y0": 497,
-        "x1": 1010,
+        "x1": 315,
         "y1": 513
       }
     },
     {
       "text": "Fake data - local preview",
-      "confidence": 93,
+      "confidence": 92,
       "box": {
         "x0": 129,
         "y0": 533,
@@ -124,7 +151,7 @@
     },
     {
       "text": "No account - no real user data",
-      "confidence": 93,
+      "confidence": 95,
       "box": {
         "x0": 681,
         "y0": 546,
@@ -134,7 +161,7 @@
     },
     {
       "text": "Nothing is sent, published, charged, or deleted outside this image.",
-      "confidence": 96,
+      "confidence": 95,
       "box": {
         "x0": 681,
         "y0": 578,
@@ -159,6 +186,6 @@
     "architecture": "x64",
     "cpuModel": "AMD Ryzen 5 5600H with Radeon Graphics         "
   },
-  "timestampUtc": "2026-09-29T21:54:29.530Z",
+  "timestampUtc": "2026-09-29T22:34:03.195Z",
   "note": "One synthetic canvas screenshot and local click smoke sample, not a quality or speed benchmark. Editable fields are masked. OCR engine scores are not calibrated. The click proposal required an exact unique match and a separate explicit confirmation; the harness checked cancellation and rejection of a stale screenshot. Its demo handler changes only local synthetic canvas pixels and the document title. A miss on small button text can happen; use local visual question answering when OCR is insufficient."
 }
