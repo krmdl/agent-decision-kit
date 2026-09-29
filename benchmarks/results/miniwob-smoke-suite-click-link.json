@@ -13,7 +13,7 @@
   "decisionCallLatenciesMs": [],
   "decisionSnapshot": {
     "title": "Click Link Task",
-    "url": "file:///MINIWOB/click-link.html",
+    "url": "file://[local file]",
     "headings": [],
     "textExcerpt": "Cursus donec adipiscing. Id id sagittis, mauris sagittis cursus. Massa. Quis enim mi. Ultrices. Amet, morbi ultricies bibendum aliquet aenean."
   },
@@ -37,8 +37,8 @@
   "candidateCount": 0,
   "selectionRule": null,
   "syntheticApprovalCount": 0,
-  "latencyMs": 1432,
-  "environmentResetLatencyMs": 1421,
+  "latencyMs": 1440,
+  "environmentResetLatencyMs": 1429,
   "agentActionLatencyMs": 11,
   "reward": 0.0,
   "terminated": false,
@@ -67,7 +67,7 @@
     "EPISODE_ID": 0,
     "TASK_READY": true
   },
-  "timestampUtc": "2026-09-29T17:45:37.316684+00:00",
+  "timestampUtc": "2026-09-29T18:18:09.738403+00:00",
   "maxActions": 5,
   "note": "Single-task integration smoke check. The runner repeats bounded BrowserManager calls up to maxActions. Not a representative BrowserGym benchmark, model-quality estimate, or speed claim. Synthetic approvals are possible only for the exact local MiniWoB file URL."
 }

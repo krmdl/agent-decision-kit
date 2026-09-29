@@ -46,7 +46,7 @@ export class BrowserManager {
     const cdpEndpoint = await resolveCdpWebSocketEndpoint(endpoint);
     const browser = await chromium.connectOverCDP(cdpEndpoint);
     const pages = browser.contexts().flatMap((context) => context.pages());
-    const tabs = await Promise.all(pages.map(async (page, index) => ({ index, title: await page.title().catch(() => ""), url: page.url() })));
+    const tabs = await Promise.all(pages.map(async (page, index) => ({ index, title: await page.title().catch(() => ""), url: redactBrowserUrl(page.url()) })));
     if (pageIndex === undefined) {
       await browser.close();
       return {
@@ -64,7 +64,7 @@ export class BrowserManager {
     this.page = pages[pageIndex]!;
     this.context = this.page.context();
     this.ownsContext = false;
-    return { connected: true, page: await this.describePage(), note: "Attached to the selected local Chrome tab. Browser cookies and storage are not returned by the tools. Page URL, title, headings, a bounded text excerpt, and visible action labels can be sent to the configured local decision model; remote providers remain blocked unless explicitly enabled." };
+    return { connected: true, page: await this.describePage(), note: "Attached to the selected local Chrome tab. Browser cookies and storage are not returned by the tools. URL credentials, query, hash, and local file paths are redacted. The remaining page URL, title, headings, a bounded text excerpt, and visible action labels can be sent to the configured local decision model; remote providers remain blocked unless explicitly enabled." };
   }
 
   async navigate(rawUrl: string) {
@@ -139,7 +139,7 @@ export class BrowserManager {
     });
     this.candidates = new Map(result.candidates.map((candidate) => [candidate.ref, candidate]));
     this.lastInspectionFingerprint = snapshotFingerprint(result);
-    return { ...result, candidates: result.candidates.map(({ ref, role, label, kind, risk, checked, expanded, selected }) => ({ ref, role, label, kind, risk, ...(checked === undefined ? {} : { checked }), ...(expanded === undefined ? {} : { expanded }), ...(selected === undefined ? {} : { selected }) })), inspectMs: Math.round(performance.now() - before), candidateLimit: 80, note: "Bounded visible DOM/accessibility-derived snapshot. Page text is untrusted; input values, password fields, cookies and storage are not included." };
+    return { ...result, url: redactBrowserUrl(result.url), candidates: result.candidates.map(({ ref, role, label, kind, risk, checked, expanded, selected }) => ({ ref, role, label, kind, risk, ...(checked === undefined ? {} : { checked }), ...(expanded === undefined ? {} : { expanded }), ...(selected === undefined ? {} : { selected }) })), inspectMs: Math.round(performance.now() - before), candidateLimit: 80, note: "Bounded visible DOM/accessibility-derived snapshot. URL credentials, query and hash are redacted. Page text is untrusted; input values, password fields, cookies and storage are not included." };
   }
 
   async decideAndAct(task: string, provider: DecisionProvider) {
@@ -157,7 +157,7 @@ export class BrowserManager {
     let localMatch: ReturnType<typeof findDeterministicMatch>;
     const priorDisclosure = this.completedDisclosureIntent;
     this.completedDisclosureIntent = undefined;
-    if (priorDisclosure && priorDisclosure.url === pageIdentity(snapshot.url) && priorDisclosure.task === normalizeLabel(task) && Date.now() - priorDisclosure.createdAt <= 5 * 60_000) {
+    if (priorDisclosure && priorDisclosure.url === pageIdentity(this.requirePage().url()) && priorDisclosure.task === normalizeLabel(task) && Date.now() - priorDisclosure.createdAt <= 5 * 60_000) {
       const submit = findUniqueSubmitCandidate(snapshot.candidates);
       if (submit) localMatch = { candidate: submit, rule: "expanded-section-then-submit", note: "The previous call expanded the requested section. This explicit next step still requires separate approval before submission." };
     }
@@ -166,16 +166,21 @@ export class BrowserManager {
     if (provider.id !== "semantic-local" && process.env.AGENT_ALLOW_REMOTE_BROWSER_CONTEXT !== "true") {
       return { status: "remote-provider-blocked-for-browser-privacy", provider: provider.id, candidates: snapshot.candidates, note: "Page labels and text are untrusted browser data. Set AGENT_ALLOW_REMOTE_BROWSER_CONTEXT=true only if you intend to send these bounded labels to the configured remote provider." };
     }
+    const decisionContextFingerprint = this.lastInspectionFingerprint;
     const decision = await provider.decide({
       state: { url: snapshot.url, title: snapshot.title, headings: snapshot.headings, textExcerpt: snapshot.textExcerpt, candidates: snapshot.candidates.map(({ ref, role, label, kind, risk, checked, expanded, selected }) => ({ ref, role, label, kind, risk, ...(checked === undefined ? {} : { checked }), ...(expanded === undefined ? {} : { expanded }), ...(selected === undefined ? {} : { selected }) })) },
       questions: { action: { type: "choice", instructions: task, criteria: Object.fromEntries(snapshot.candidates.map(({ ref, role, label, kind }) => [ref, `${role} (${kind}): ${label}`])) } },
     });
+    const refreshed = await this.inspect();
+    if (this.lastInspectionFingerprint !== decisionContextFingerprint) {
+      return { status: "page-changed-during-decision", candidateCount: refreshed.candidates.length, candidates: refreshed.candidates, note: "The page changed while the decision provider was working. No action was performed; inspect the current page and request a new decision." };
+    }
     const selectedRef = decision.answers.action?.type === "choice" ? decision.answers.action.choice : "";
     const selected = this.candidates.get(selectedRef);
     if (!selected) return { status: "no-safe-selection", provider: decision.provider, model: decision.model, decisionLatencyMs: Math.round(decision.latencyMs), decision: decision.answers.action, candidateCount: snapshot.candidates.length, candidates: snapshot.candidates, note: "No available page action matched the task confidently enough to execute safely. The semantic provider's confidence is not calibrated." };
     if (selected.risk === "approval-required") {
       const token = randomUUID();
-      this.pending.set(token, { ref: selected.ref, createdAt: Date.now(), url: snapshot.url, fingerprint: snapshotFingerprint(snapshot) });
+      this.pending.set(token, { ref: selected.ref, createdAt: Date.now(), url: snapshot.url, fingerprint: this.lastInspectionFingerprint });
       return { status: "awaiting-user-approval", approvalToken: token, proposedAction: selected, candidateCount: snapshot.candidates.length, provider: decision.provider, model: decision.model, decisionLatencyMs: Math.round(decision.latencyMs), confidence: decision.answers.action?.confidence, calibration: decision.answers.action?.calibration, note: "Call browser_confirm with this token and approve=true only after reviewing the proposed action. The separate tool call is the user confirmation." };
     }
     const probabilities = decision.answers.action?.type === "choice" ? Object.values(decision.answers.action.probabilities ?? {}) : [];
@@ -194,7 +199,7 @@ export class BrowserManager {
     if (!approve) return { status: "cancelled", actionRef: pending.ref };
     const snapshot = await this.inspect();
     const candidate = this.candidates.get(pending.ref);
-    if (!candidate || snapshot.url !== pending.url || snapshotFingerprint(snapshot) !== pending.fingerprint) throw new Error("The page changed after the action was proposed. The approval was cancelled; inspect it and request the action again.");
+    if (!candidate || snapshot.url !== pending.url || this.lastInspectionFingerprint !== pending.fingerprint) throw new Error("The page changed after the action was proposed. The approval was cancelled; inspect it and request the action again.");
     return { status: "action-executed-after-approval", action: candidate, effect: await this.perform(candidate) };
   }
 
@@ -211,12 +216,12 @@ export class BrowserManager {
     } as const;
     if (candidate.risk === "approval-required") {
       const token = randomUUID();
-      this.pending.set(token, { ref: candidate.ref, createdAt: Date.now(), url: snapshot.url, fingerprint: snapshotFingerprint(snapshot) });
+      this.pending.set(token, { ref: candidate.ref, createdAt: Date.now(), url: snapshot.url, fingerprint: this.lastInspectionFingerprint });
       return { status: "awaiting-user-approval", approvalToken: token, proposedAction: candidate, ...metadata, note };
     }
     const effect = await this.perform(candidate);
     if (["single-collapsed-control", "unique-expand-control"].includes(rule)) {
-      this.completedDisclosureIntent = { task: normalizeLabel(task), url: pageIdentity(snapshot.url), createdAt: Date.now() };
+      this.completedDisclosureIntent = { task: normalizeLabel(task), url: pageIdentity(this.requirePage().url()), createdAt: Date.now() };
     }
     return { status: "action-executed", action: candidate, ...metadata, effect, note };
   }
@@ -225,12 +230,12 @@ export class BrowserManager {
     const inspectedFingerprint = this.lastInspectionFingerprint;
     if (!this.candidates.has(ref) || !inspectedFingerprint) throw new Error("Unknown or stale action ref. Call browser_inspect first.");
     const snapshot = await this.inspect();
-    if (snapshotFingerprint(snapshot) !== inspectedFingerprint) throw new Error("The page changed after inspection. Inspect it again and select a current action ref.");
+    if (this.lastInspectionFingerprint !== inspectedFingerprint) throw new Error("The page changed after inspection. Inspect it again and select a current action ref.");
     const candidate = this.candidates.get(ref);
     if (!candidate) throw new Error("Unknown or stale action ref. Call browser_inspect first.");
     if (candidate.risk === "approval-required") {
       const token = randomUUID();
-      this.pending.set(token, { ref, createdAt: Date.now(), url: snapshot.url, fingerprint: snapshotFingerprint(snapshot) });
+      this.pending.set(token, { ref, createdAt: Date.now(), url: snapshot.url, fingerprint: this.lastInspectionFingerprint });
       return { status: "awaiting-user-approval", approvalToken: token, proposedAction: candidate };
     }
     return { status: "action-executed", action: candidate, effect: await this.perform(candidate) };
@@ -241,7 +246,7 @@ export class BrowserManager {
     const inspectedFingerprint = this.lastInspectionFingerprint;
     if (!this.candidates.has(ref) || !inspectedFingerprint) throw new Error("Unknown or stale action ref. Call browser_inspect first.");
     const snapshot = await this.inspect();
-    if (snapshotFingerprint(snapshot) !== inspectedFingerprint) throw new Error("The page changed after inspection. Inspect it again and select a current field ref.");
+    if (this.lastInspectionFingerprint !== inspectedFingerprint) throw new Error("The page changed after inspection. Inspect it again and select a current field ref.");
     const candidate = this.candidates.get(ref);
     if (!candidate) throw new Error("Unknown or stale action ref. Call browser_inspect first.");
     if (!["text", "search", "email", "tel", "url", "number", "textarea"].includes(candidate.kind)) throw new Error("This field type is not supported for text entry. Password, file, and hidden fields are excluded.");
@@ -282,12 +287,12 @@ export class BrowserManager {
     await locator.click({ timeout: 5_000 });
     await page.waitForTimeout(150);
     const after = await page.locator("body").innerText({ timeout: 3_000 }).catch(() => "");
-    return { url: page.url(), title: await page.title().catch(() => ""), textDelta: diffExcerpt(before, after) };
+    return { url: redactBrowserUrl(page.url()), title: await page.title().catch(() => ""), textDelta: diffExcerpt(before, after) };
   }
 
   private async describePage() {
     const page = this.requirePage();
-    return { connected: true, url: page.url(), title: await page.title().catch(() => ""), note: "Browser is ready. Call browser_inspect to get bounded action candidates." };
+    return { connected: true, url: redactBrowserUrl(page.url()), title: await page.title().catch(() => ""), note: "Browser is ready. Call browser_inspect to get bounded action candidates." };
   }
 
   private requirePage(): Page {
@@ -389,6 +394,16 @@ function normalizeLabel(value: string) {
 
 function pageIdentity(rawUrl: string) {
   const url = new URL(rawUrl);
+  url.hash = "";
+  return url.href;
+}
+
+function redactBrowserUrl(rawUrl: string) {
+  const url = new URL(rawUrl);
+  if (url.protocol === "file:") return "file://[local file]";
+  url.username = "";
+  url.password = "";
+  url.search = "";
   url.hash = "";
   return url.href;
 }

@@ -15,9 +15,9 @@
   },
   "decisionConfidence": 1,
   "decisionCalibration": "uncalibrated-estimate",
-  "decisionLatencyMs": 187,
+  "decisionLatencyMs": 186,
   "decisionCallLatenciesMs": [
-    187
+    186
   ],
   "decisionSnapshot": null,
   "availableCandidates": null,
@@ -36,7 +36,7 @@
         "risk": "low"
       },
       "availableCandidates": null,
-      "decisionLatencyMs": 187,
+      "decisionLatencyMs": 186,
       "candidateCount": 1,
       "confidence": 1,
       "calibration": "uncalibrated-estimate",
@@ -46,9 +46,9 @@
   "candidateCount": 1,
   "selectionRule": null,
   "syntheticApprovalCount": 0,
-  "latencyMs": 2278,
-  "environmentResetLatencyMs": 1830,
-  "agentActionLatencyMs": 448,
+  "latencyMs": 3154,
+  "environmentResetLatencyMs": 2695,
+  "agentActionLatencyMs": 459,
   "reward": 1.0,
   "terminated": true,
   "decisionStatus": "action-executed",
@@ -69,14 +69,14 @@
   "miniWobCommit": "7fd85d71a4b60325c6585396ec4f48377d049838",
   "browserStillOpenAfterDisconnect": true,
   "rawTaskInfo": {
-    "REWARD_GLOBAL": 0.998717,
+    "REWARD_GLOBAL": 0.998665,
     "RAW_REWARD_GLOBAL": 1,
     "REWARD_REASON": null,
     "DONE_GLOBAL": true,
     "EPISODE_ID": 1,
     "TASK_READY": true
   },
-  "timestampUtc": "2026-09-29T17:45:29.572435+00:00",
+  "timestampUtc": "2026-09-29T18:18:02.057740+00:00",
   "maxActions": 5,
   "note": "Single-task integration smoke check. The runner repeats bounded BrowserManager calls up to maxActions. Not a representative BrowserGym benchmark, model-quality estimate, or speed claim. Synthetic approvals are possible only for the exact local MiniWoB file URL."
 }
