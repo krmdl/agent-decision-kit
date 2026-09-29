@@ -6,6 +6,7 @@ import json
 import os
 import platform
 import queue
+import re
 import socket
 import subprocess
 import sys
@@ -20,6 +21,69 @@ ROOT = Path(__file__).resolve().parents[1]
 MARKER = "@@ADK_BROWSERGYM@@"
 MINIWOB_COMMIT = "7fd85d71a4b60325c6585396ec4f48377d049838"
 BROWSERGYM_PACKAGE_COMMIT = "0a785fbed075224ae81ca9c1fe924f66050696fe"
+
+
+def normalized(value):
+    return re.sub(r"[^\w]+", " ", value.casefold()).strip()
+
+
+def multi_tool_action(task, candidates, completed_fields, visible_text=""):
+    """Extract only explicit MiniWoB task values for the tool integration smoke path."""
+    date_match = re.search(r"\b(\d{1,2}/\d{1,2}/\d{4})\b", task)
+    if date_match:
+        try:
+            parsed_date = datetime.strptime(date_match.group(1), "%m/%d/%Y")
+        except ValueError:
+            parsed_date = None
+        if parsed_date:
+            target_date = f"{parsed_date.strftime('%B')} {parsed_date.day}, {parsed_date.year}"
+            date_controls = [item for item in candidates if item.get("role") in {"button", "link"} and field_key(item) not in completed_fields and normalized(target_date) in normalized(item["label"])]
+            if len(date_controls) == 1:
+                return "act", {"ref": date_controls[0]["ref"]}, {"fieldKind": "calendar-day", "dateMatch": "exact-visible-label"}
+            target_month = parsed_date.strftime("%B %Y")
+            if normalized(target_month) in normalized(visible_text):
+                day_matches = [item for item in candidates if item.get("role") in {"button", "link"} and field_key(item) not in completed_fields and normalized(item["label"]) == str(parsed_date.day)]
+                if len(day_matches) == 1:
+                    return "act", {"ref": day_matches[0]["ref"]}, {"fieldKind": "calendar-day", "dateMatch": "visible-month-and-day"}
+            candidate = next((item for item in candidates if item["kind"] in {"date", "text"} and item.get("role") in {"input", "textbox"} and field_key(item) not in completed_fields), None)
+            if candidate:
+                if candidate.get("readOnly"):
+                    return "act", {"ref": candidate["ref"]}, {"fieldKind": "read-only-date-picker"}
+                date_value = parsed_date.strftime("%Y-%m-%d") if candidate["kind"] == "date" else date_match.group(1)
+                return "fill", {"ref": candidate["ref"], "text": date_value}, {"fieldKind": candidate["kind"], "characterCount": len(date_value)}
+
+    list_match = re.search(r"\bselect\s+(.+?)\s+(?:from|in)\s+(?:the\s+)?(?:list|dropdown|menu)\b", task, re.IGNORECASE)
+    if list_match:
+        target = normalized(list_match.group(1))
+        for candidate in candidates:
+            if candidate["kind"] not in {"select-one", "select-multiple"} or field_key(candidate) in completed_fields:
+                continue
+            options_match = re.search(r"\bOptions:\s*(.*)$", candidate["label"])
+            if not options_match:
+                continue
+            options = [option.strip() for option in options_match.group(1).split(",") if option.strip()]
+            matches = [option for option in options if normalized(option) == target]
+            if len(matches) == 1:
+                return "select-option", {"ref": candidate["ref"], "optionLabel": matches[0]}, {"fieldKind": candidate["kind"]}
+
+    quoted = [match.group(1) or match.group(2) for match in re.finditer(r'"([^"\r\n]+)"|“([^”\r\n]+)”', task)]
+    target = next((value for value in quoted if value.strip()), None)
+    if target:
+        if re.search(r"\b(?:all\s+)?upper\s+case\b|\buppercase\b", task, re.IGNORECASE):
+            target = target.upper()
+        text_kinds = {"text", "search", "email", "tel", "url", "number", "textarea"}
+        candidate = next((item for item in candidates if item["kind"] in text_kinds and field_key(item) not in completed_fields), None)
+        if candidate:
+            return "fill", {"ref": candidate["ref"], "text": target}, {"fieldKind": candidate["kind"], "characterCount": len(target)}
+    return None
+
+
+def field_key(candidate):
+    stable_label = re.split(r"\s*[—–]\s*Currently selected:", candidate["label"], maxsplit=1, flags=re.IGNORECASE)[0]
+    if stable_label.casefold().startswith("currently selected:"):
+        stable_label = ""
+    stable_label = re.sub(r"\bOptions:\s*.*$", "", stable_label, flags=re.IGNORECASE)
+    return f"{candidate['ref']}\0{candidate['kind']}\0{candidate.get('role', '')}\0{normalized(stable_label)}"
 
 
 def free_port():
@@ -99,6 +163,7 @@ def main():
     parser.add_argument("--seed", type=int, default=7)
     parser.add_argument("--max-actions", type=int, default=5, help="Maximum BrowserManager decision/action rounds for this task")
     parser.add_argument("--approve-synthetic-actions", action="store_true", help="Confirm approval-gated actions only when the benchmark page uses a local file:// URL")
+    parser.add_argument("--multi-tool", action="store_true", help="Exercise explicit text/date/select tool flows and visual inspection; this is a tool-integration harness, not an autonomous agent")
     parser.add_argument("--output", type=Path, help="Optional path for one raw JSON episode record")
     args = parser.parse_args()
     if args.max_actions < 1 or args.max_actions > 20:
@@ -144,10 +209,16 @@ def main():
     candidate_count = None
     decision_latencies = []
     decision_trace = []
+    tool_action_trace = []
+    tool_coverage = {"browser_connect"}
     action_count = 0
     synthetic_approval_count = 0
+    current_search_page = 1
+    search_page_size = None
+    attempted_search_results = set()
     task = args.task_prompt or ""
     record = None
+    completed_fields = set()
     try:
         observation, _ = env.reset(seed=args.seed)
         reset_latency_ms = round((time.perf_counter() - reset_start) * 1000)
@@ -166,7 +237,85 @@ def main():
 
         action_start = time.perf_counter()
         for step_index in range(args.max_actions):
+            if args.multi_tool:
+                inspected = bridge.call("inspect")
+                planned = multi_tool_action(task, inspected.get("candidates", []), completed_fields, inspected.get("textExcerpt", ""))
+                if planned:
+                    operation, fields, metadata = planned
+                    action_result = bridge.call(operation, **fields)
+                    tool_name = {"select-option": "browser_select_option", "fill": "browser_fill", "act": "browser_action"}[operation]
+                    tool_coverage.add(tool_name)
+                    action_count += 1
+                    if operation in {"fill", "select-option", "act"}:
+                        candidate = next(item for item in inspected["candidates"] if item["ref"] == fields["ref"])
+                        completed_fields.add(field_key(candidate))
+                    tool_action_trace.append({"step": step_index + 1, "tool": tool_name, "status": action_result.get("status"), **metadata})
+                    reward, terminated, _, task_info = env.unwrapped.task.validate(env.unwrapped.page, env.unwrapped.chat.messages)
+                    if reward > 0 or terminated:
+                        break
+                    continue
+
+                links = [candidate for candidate in inspected.get("candidates", []) if candidate.get("role") == "link"]
+                ordinal = re.search(r"\b(\d+)(?:st|nd|rd|th)\s+(?:search\s+)?result\b", task, re.IGNORECASE)
+                result_links = [candidate for candidate in links if not candidate["label"].strip().isdigit() and candidate["label"].strip() not in {">", "›", "Next", "next"}]
+                if ordinal and result_links:
+                    target_ordinal = int(ordinal.group(1))
+                    search_page_size = search_page_size or len(result_links)
+                    target_page = (target_ordinal + search_page_size - 1) // search_page_size
+                    if current_search_page < target_page:
+                        page_link = next((candidate for candidate in links if candidate["label"].strip() == str(target_page)), None)
+                        if page_link is None:
+                            page_link = next((candidate for candidate in links if candidate["label"].strip() in {">", "›", "Next", "next"}), None)
+                            if page_link:
+                                current_search_page += 1
+                        else:
+                            current_search_page = target_page
+                        if page_link is None:
+                            break
+                        action_result = bridge.call("act", ref=page_link["ref"])
+                        tool_coverage.add("browser_action")
+                        action_count += 1
+                        tool_action_trace.append({"step": step_index + 1, "tool": "browser_action", "status": action_result.get("status"), "targetPage": current_search_page, "targetLabel": page_link["label"], "targetRole": "pagination-link"})
+                        reward, terminated, _, task_info = env.unwrapped.task.validate(env.unwrapped.page, env.unwrapped.chat.messages)
+                        if reward > 0 or terminated:
+                            break
+                        continue
+
+                    local_ordinal = target_ordinal - ((target_page - 1) * search_page_size)
+                    if local_ordinal < 1 or local_ordinal > len(result_links):
+                        break
+                    result_key = (current_search_page, local_ordinal)
+                    if result_key in attempted_search_results:
+                        break
+                    attempted_search_results.add(result_key)
+                    target = result_links[local_ordinal - 1]
+                    action_result = bridge.call("act", ref=target["ref"])
+                    tool_coverage.add("browser_action")
+                    action_count += 1
+                    tool_action_trace.append({"step": step_index + 1, "tool": "browser_action", "status": action_result.get("status"), "targetOrdinal": target_ordinal, "targetRole": "link", "targetLabel": target["label"], "page": current_search_page, "pageOrdinal": local_ordinal, "visibleResultLabels": [candidate["label"] for candidate in result_links]})
+                    if action_result.get("status") == "awaiting-user-approval":
+                        expected_url = base_url + f"{args.task}.html"
+                        if not args.approve_synthetic_actions or env.unwrapped.page.url != expected_url:
+                            break
+                        action_result = bridge.call("confirm", approvalToken=action_result["approvalToken"], approve=True)
+                        synthetic_approval_count += 1
+                        tool_coverage.add("browser_confirm")
+                    reward, terminated, _, task_info = env.unwrapped.task.validate(env.unwrapped.page, env.unwrapped.chat.messages)
+                    if reward > 0 or terminated:
+                        break
+                    continue
+
+                if not inspected.get("candidates"):
+                    decision = bridge.call("visual-inspect", question=task)
+                    decision_provider = decision.get("provider", decision_provider)
+                    decision_model = decision.get("model", decision_model)
+                    tool_coverage.add("browser_visual_inspect")
+                    tool_action_trace.append({"step": step_index + 1, "tool": "browser_visual_inspect", "status": decision.get("status", "described"), "latencyMs": decision.get("latencyMs"), "descriptionReturned": bool(decision.get("description"))})
+                    reward, terminated, _, task_info = env.unwrapped.task.validate(env.unwrapped.page, env.unwrapped.chat.messages)
+                    break
+
             decision = bridge.call("decide-and-act", task=task)
+            tool_coverage.add("browser_decide_and_act")
             selected_action = decision.get("proposedAction") or decision.get("action")
             decision_provider = decision.get("provider", "semantic-local")
             decision_model = decision.get("model")
@@ -199,6 +348,7 @@ def main():
                     raise RuntimeError("Refusing benchmark auto-approval: the page is not the expected local MiniWoB file")
                 decision = bridge.call("confirm", approvalToken=decision["approvalToken"], approve=True)
                 synthetic_approval_count += 1
+                tool_coverage.add("browser_confirm")
             trace_item["executionStatus"] = decision.get("status")
 
             if decision.get("status") not in {"action-executed", "action-executed-after-approval"}:
@@ -222,9 +372,10 @@ def main():
             "benchmark": "miniwob",
             "task": args.task,
             "taskPrompt": task,
-            "runnerMode": "bounded-repeated-browser-decide-and-act",
-            "toolCoverage": ["browser_connect", "browser_decide_and_act", "browser_confirm"],
-            "notExercisedTools": ["browser_fill", "browser_select_option", "browser_visual_inspect"],
+            "runnerMode": "bounded-multi-tool-integration-smoke" if args.multi_tool else "bounded-repeated-browser-decide-and-act",
+            "toolCoverage": sorted(tool_coverage),
+            "notExercisedTools": sorted({"browser_connect", "browser_decide_and_act", "browser_confirm", "browser_action", "browser_fill", "browser_select_option", "browser_visual_inspect"} - tool_coverage),
+            "toolActionTrace": tool_action_trace,
             "success": bool(reward > 0),
             "timeout": False,
             "failureReason": None if reward > 0 else (task_info.get("REWARD_REASON") or "task-goal-not-achieved"),
@@ -259,13 +410,13 @@ def main():
             "cpu": platform.processor() or "not reported by Python",
             "accelerator": "CPU",
             "modelCacheState": "local cache already populated before this episode",
-            "decisionWarmState": "first provider inference in a fresh Node bridge process; model files are cached",
+            "decisionWarmState": ("first semantic provider inference in a fresh Node bridge process; model files are cached" if decision_latencies else "no semantic decision-provider inference occurred; deterministic local rules and explicit tool calls handled the DOM path"),
             "miniWobCommit": MINIWOB_COMMIT,
             "browserStillOpenAfterDisconnect": browser_still_open,
             "rawTaskInfo": task_info,
             "timestampUtc": datetime.now(timezone.utc).isoformat(),
             "maxActions": args.max_actions,
-            "note": "Single-task integration smoke check of a bounded repeated decide-and-act loop, not a full autonomous agent. It does not orchestrate field filling, native select choices, or visual inspection. Not a representative BrowserGym benchmark, model-quality estimate, or speed claim. Synthetic approvals are possible only for the exact local MiniWoB file URL.",
+            "note": "A curated MiniWoB integration smoke check, not a representative BrowserGym benchmark or a full autonomous agent. Multi-tool mode extracts only explicit task values and visible native options; field values are omitted from the raw record. Visual inspection describes a screenshot but does not perform an action. Synthetic approvals are possible only for the exact local MiniWoB file URL.",
         }
         if args.output:
             args.output.parent.mkdir(parents=True, exist_ok=True)
@@ -282,9 +433,10 @@ def main():
                 "benchmark": "miniwob",
                 "task": args.task,
                 "taskPrompt": task,
-                "runnerMode": "bounded-repeated-browser-decide-and-act",
-                "toolCoverage": ["browser_connect", "browser_decide_and_act", "browser_confirm"],
-                "notExercisedTools": ["browser_fill", "browser_select_option", "browser_visual_inspect"],
+                "runnerMode": "bounded-multi-tool-integration-smoke" if args.multi_tool else "bounded-repeated-browser-decide-and-act",
+                "toolCoverage": sorted(tool_coverage),
+                "notExercisedTools": sorted({"browser_connect", "browser_decide_and_act", "browser_confirm", "browser_action", "browser_fill", "browser_select_option", "browser_visual_inspect"} - tool_coverage),
+                "toolActionTrace": tool_action_trace,
                 "success": False,
                 "timeout": timed_out,
                 "failureReason": message[:500],

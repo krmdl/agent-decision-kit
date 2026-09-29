@@ -34,7 +34,20 @@ The checked-in run completed 7/8 tasks (87.5%) with no harness timeouts. End-to-
 
 `results/miniwob-expanded-smoke-suite.json` and the 26 per-task files preserve a broader curated run across visual-only, menu, tab, form, search, and widget tasks. It completed 3/26 tasks with no harness timeouts. End-to-end latency was p50 3,318 ms and p95 4,658 ms; the bounded browser action loop was p50 840 ms and p95 2,147 ms; 51 provider calls had p50 111 ms and p95 789 ms. Five episodes ended on pages with no DOM action candidates, six ended with ambiguous selection, and the action cap was eight rounds. This CPU run used a cached local model on Windows 10 with a Ryzen 5 5600H.
 
-Interpret this as a limited tool-loop integration result, not a full coding-agent task-success score: the runner repeatedly invokes `browser_decide_and_act` and can confirm only the exact local fake-page actions. The current code exposes `browser_fill`, `browser_select_option`, and `browser_visual_inspect`, but this runner does not orchestrate those tools or generate field values. It records ambiguous and visual-only states instead of guessing. Native date/select tools have dedicated Playwright tests, but they have not yet been evaluated by a multi-tool BrowserGym agent. The focused eight-task run and this more varied 26-task run are not directly comparable; neither represents the full benchmark distribution or verifies the GPU latency target. The raw suite metadata lists exactly which tools this harness exercises.
+Interpret these as limited tool-loop integration results, not full coding-agent task-success scores. The original runners repeatedly invoke `browser_decide_and_act`; the 26-task run does not orchestrate field values, native select options, or visual inspection. Both record ambiguous and visual-only states instead of guessing. The focused eight-task and varied 26-task runs are not directly comparable; neither represents the full benchmark distribution or verifies the GPU latency target. The raw suite metadata lists exactly which tools each harness exercises.
+
+`results/miniwob-multi-tool-smoke.json` exercises the form and visual tools in a separate five-task curated run: `enter-text-2`, `choose-date-easy`, `choose-list`, `search-engine`, and `click-link`, with seed 7 and an eight-action cap. The harness copies only explicit values from these synthetic task instructions, chooses an exact enabled visible select label, opens a read-only date picker before selecting its visible day, and clicks the requested paginated search result. It completed 4/5 tasks without harness timeouts. The visual-only `click-link` page triggered local screenshot description but remained unacted, as the vision API does not click controls. End-to-end latency, including environment reset and vision, was p50 2,195 ms and p95 34,812 ms; the browser/tool action loop was p50 698 ms and p95 33,411 ms. No semantic decision-provider call was made in this run; the single visual call took 33,344 ms on CPU. These numbers describe this explicit-value integration harness, not an autonomous agent, general browser success, or speed advantage. Raw records omit the entered fake field values.
+
+Reproduce the multi-tool fixture with the same BrowserGym setup:
+
+```sh
+python benchmarks/run-browsergym-miniwob-suite.py \
+  --miniwob-root /tmp/miniwob-plusplus/miniwob/html/miniwob \
+  --tasks enter-text-2 choose-date-easy choose-list search-engine click-link \
+  --seed 7 --max-actions 8 --timeout-seconds 180 \
+  --multi-tool --approve-synthetic-actions \
+  --output benchmarks/results/miniwob-multi-tool-smoke.json
+```
 
 Reproduce the expanded task mix with the same runner and action cap:
 

@@ -22,7 +22,7 @@ It uses ordinary code to constrain choices and execute actions. Its default deci
 
 ## What it does
 
-- **Browser loop first.** Playwright inspects a bounded set of visible controls, chooses from those controls, and returns a short page delta. Launch an isolated profile or [list and explicitly select a local Chrome tab](docs/browser-chrome.md) over loopback CDP.
+- **Browser loop first.** Playwright inspects a bounded set of visible controls, chooses from those controls, and returns a short page delta. Launch an isolated profile or [list and explicitly select a local Chrome tab](docs/browser-chrome.md) over loopback CDP. Read-only date widgets are marked in the snapshot and opened through a separate click before choosing a visible date; they are never passed to `browser_fill`.
 - **Approval for consequential actions.** Payment, sending, publishing, deletion, and form submission candidates pause for a distinct confirmation call. Password and file inputs are excluded. Text and date/time fields can be filled, and native select options can be chosen, without submitting the page.
 - **Structured decisions.** Batch up to eight `Choice`, `Score`, and yes/no (`noul`) questions in one request, with probability estimates and an explicit calibration label.
 - **Fast local browser paths.** Unique quoted labels, numbered tabs, named checkboxes, and clear expand-then-submit steps can resolve without model inference. These rule-based choices return no probability and keep sensitive actions behind the approval gate.
@@ -107,7 +107,7 @@ Claude Code users can also opt into the [prompt-routing hook](integrations/claud
 
 ## Benchmarks and honest claims
 
-`benchmarks/` contains labeled fixtures, an evaluation protocol, raw records, and metric definitions. One small CPU MiniWoB smoke run completed 7 of 8 tasks; it is not a representative quality or speed result. A 30-case project-specific decision fixture scored 7/10 on Choice, 5/10 on yes/no, and 1.04 mean absolute error on Score; it is not held out and its probability estimates are uncalibrated. Report decision accuracy, score error, calibration, browser task success, action count, and latency separately. Broader WebArena/VisualWebArena evaluation and live cross-agent runtime checks remain evaluation work; CI does not generate fabricated benchmark charts.
+`benchmarks/` contains labeled fixtures, an evaluation protocol, raw records, and metric definitions. Small CPU MiniWoB checks include a 7/8 decide/action run and a separate 4/5 multi-tool integration harness. The latter uses explicit values from synthetic task instructions, covers form entry, date-picker selection, native selects, paginated search, and a read-only visual description; it is not a full agent or representative quality/speed result. A 30-case project-specific decision fixture scored 7/10 on Choice, 5/10 on yes/no, and 1.04 mean absolute error on Score; it is not held out and its probability estimates are uncalibrated. Report decision accuracy, score error, calibration, browser task success, action count, and latency separately. Broader WebArena/VisualWebArena evaluation and live cross-agent runtime checks remain evaluation work; CI does not generate fabricated benchmark charts.
 
 We do not claim the 500 ms p95 target, 7-second browsing demo, Jev equivalence, or any other speedup until a reproducible run is published with hardware, versions, sample counts, and raw results.
 

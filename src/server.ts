@@ -99,7 +99,7 @@ export function createServer() {
 
   server.registerTool("browser_inspect", {
     title: "Inspect browser page",
-    description: "Return a bounded visible DOM/accessibility snapshot. Includes at most 12 enabled labels per native select, but not input values, passwords, cookies, or storage.",
+    description: "Return a bounded visible DOM/accessibility snapshot. Includes at most 12 enabled labels per native select and marks read-only picker fields, but never returns field values, passwords, cookies, or storage.",
     inputSchema: {},
   }, async () => asToolResult(await browser.inspect()));
 
@@ -111,13 +111,13 @@ export function createServer() {
 
   server.registerTool("browser_action", {
     title: "Run selected browser action",
-    description: "Click a control or focus a supported field ref returned by browser_inspect. Sensitive actions return an approval token and do not run until browser_confirm is called.",
+    description: "Click a control, open a read-only field picker, or focus a supported field ref returned by browser_inspect. Sensitive actions return an approval token and do not run until browser_confirm is called.",
     inputSchema: { ref: z.string().regex(/^r\d+$/) },
   }, async ({ ref }) => asToolResult(await browser.act(ref)));
 
   server.registerTool("browser_fill", {
     title: "Fill a visible browser field",
-    description: "Fill a supported visible text, number, or date/time field selected by a fresh browser_inspect ref. The value is never returned or submitted; it remains in the page until a separate action is taken.",
+    description: "Fill a supported visible editable text, number, or date/time field selected by a fresh browser_inspect ref. Read-only fields must use their visible picker controls. The value is never returned or submitted; it remains in the page until a separate action is taken.",
     inputSchema: { ref: z.string().regex(/^r\d+$/), text: z.string().max(20_000) },
   }, async ({ ref, text }) => asToolResult(await browser.fill(ref, text)));
 

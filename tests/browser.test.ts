@@ -32,7 +32,7 @@ describe("Playwright browser safety flow", () => {
     checkboxTaskHtml = Buffer.from('<!doctype html><form id="sample" onsubmit="event.preventDefault(); document.querySelector(\'#status\').textContent = \'Submitted locally\'"><label><input type="checkbox" name="target"> Neb</label><button type="submit">Submit</button></form><p id="status">Not sent</p>');
     tabHtml = Buffer.from('<!doctype html><div role="tab">Tab #1</div><div role="tab">Tab #2</div><div role="tab">Tab #3</div>');
     expandHtml = Buffer.from('<!doctype html><button id="toggle" aria-expanded="false" aria-controls="details">Section details</button><div id="details" hidden><p role="tab" aria-expanded="false">Submit</p><form onsubmit="event.preventDefault(); document.querySelector(\'#status\').textContent = \'Submitted locally\'"><button type="submit">Submit</button></form></div><p id="status">Not sent</p><script>document.querySelector(\'#toggle\').addEventListener(\'click\',e=>{const open=e.currentTarget.getAttribute(\'aria-expanded\')!==\'true\';e.currentTarget.setAttribute(\'aria-expanded\',String(open));document.querySelector(\'#details\').hidden=!open;location.hash=\'details\'})</script>');
-    nativeFieldsHtml = Buffer.from('<!doctype html><form id="native-form" onsubmit="event.preventDefault(); document.querySelector(\'#status\').textContent = \'Submitted\'"><label for="country">Country</label><select id="country" name="country"><option value="">Choose one</option><option value="ca">Canada</option><option value="cn">China</option><optgroup label="Disabled" disabled><option value="blocked">Unavailable</option></optgroup></select><label for="date">Date</label><input id="date" name="date" type="date"><button type="submit">Submit</button></form><p id="status">Not submitted</p><script>document.querySelector(\'#country\').addEventListener(\'change\',()=>document.querySelector(\'#status\').textContent=\'Selected country\');document.querySelector(\'#date\').addEventListener(\'change\',()=>document.querySelector(\'#status\').textContent=\'Date entry updated\')</script>');
+    nativeFieldsHtml = Buffer.from(`<!doctype html><form id="native-form" onsubmit="event.preventDefault(); document.querySelector('#status').textContent = 'Submitted'"><label for="country">Country</label><select id="country" name="country"><option value="">Choose one</option><option value="ca">Canada</option><option value="cn">China</option><optgroup label="Disabled" disabled><option value="blocked">Unavailable</option></optgroup></select><label for="date">Date</label><input id="date" name="date" type="date"><label for="datepicker">Appointment date</label><input id="datepicker" name="appointment" type="text" aria-label="Appointment date" readonly><div id="picker" role="group" aria-label="December 2016 date picker" hidden><button id="day22" type="button" aria-label="December 22, 2016">22</button></div><button type="submit">Submit</button></form><p id="status">Not submitted</p><script>document.querySelector('#country').addEventListener('change',()=>document.querySelector('#status').textContent='Selected country');document.querySelector('#date').addEventListener('change',()=>document.querySelector('#status').textContent='Date entry updated');document.querySelector('#datepicker').addEventListener('click',()=>document.querySelector('#picker').hidden=false);document.querySelector('#day22').addEventListener('click',()=>{document.querySelector('#datepicker').value='12/22/2016';document.querySelector('#picker').hidden=true;document.querySelector('#status').textContent='Date selected'})</script>`);
     server = createServer((request, response) => {
       if (request.url === "/json/version") {
         if (cdpRedirect) {
@@ -254,6 +254,28 @@ describe("Playwright browser safety flow", () => {
     expect(result.textExcerpt).not.toContain("Submitted");
   }, 45_000);
 
+  it("opens a read-only date picker without exposing or filling its value", async () => {
+    profile = await mkdtemp(path.join(os.tmpdir(), "adk-browser-readonly-date-test-"));
+    browser = new BrowserManager({ headless: true, profileDir: path.join(profile, "chromium") });
+    await browser.launch(`${baseUrl}native-fields`);
+
+    const snapshot = await browser.inspect();
+    const datePicker = snapshot.candidates.find((candidate) => candidate.label.includes("Appointment date"));
+    expect(datePicker).toMatchObject({ kind: "text", readOnly: true, risk: "low" });
+    expect(JSON.stringify(snapshot)).not.toContain("12/22/2016");
+    await expect(browser.fill(datePicker!.ref, "12/22/2016")).rejects.toThrow("field is read-only");
+
+    const opened = await browser.act(datePicker!.ref);
+    expect(opened.effect).toMatchObject({ openedPicker: true, valueReturned: false });
+    const picker = await browser.inspect();
+    const day = picker.candidates.find((candidate) => candidate.label.includes("December 22, 2016"));
+    expect(day).toMatchObject({ role: "button", risk: "low" });
+    const selected = await browser.act(day!.ref);
+    expect(selected.status).toBe("action-executed");
+    expect((await browser.inspect()).textExcerpt).toContain("Date selected");
+    expect(JSON.stringify(selected)).not.toContain("12/22/2016");
+  }, 45_000);
+
   it("uses an exact quoted visible label locally and still gates a risky action", async () => {
     profile = await mkdtemp(path.join(os.tmpdir(), "adk-browser-label-test-"));
     browser = new BrowserManager({ headless: true, profileDir: path.join(profile, "chromium") });
@@ -280,8 +302,14 @@ describe("Playwright browser safety flow", () => {
     const submit = snapshot.candidates.find((candidate) => candidate.kind === "submit");
     expect(submit?.risk).toBe("approval-required");
 
-    const proposed = await browser.act(submit!.ref);
+    const provider: DecisionProvider = {
+      id: "remote-test-provider",
+      model: "unused-test-provider",
+      decide: async () => { throw new Error("An explicit submit request should match locally"); },
+    };
+    const proposed = await browser.decideAndAct("Press Submit", provider);
     expect(proposed.status).toBe("awaiting-user-approval");
+    expect(proposed.selectionRule).toBe("unique-explicit-submit-control");
     const token = "approvalToken" in proposed ? proposed.approvalToken : "";
     const result = await browser.confirm(token, true);
     expect(result.status).toBe("action-executed-after-approval");

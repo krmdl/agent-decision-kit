@@ -43,6 +43,7 @@ def main():
     parser.add_argument("--max-actions", type=int, default=5)
     parser.add_argument("--timeout-seconds", type=int, default=120, help="Outer time limit per task process")
     parser.add_argument("--approve-synthetic-actions", action="store_true", help="Allow gated actions only when the runner confirms the exact local file:// task URL")
+    parser.add_argument("--multi-tool", action="store_true", help="Run the explicit value extraction and visual inspection tool-integration smoke path")
     args = parser.parse_args()
 
     miniwob_root = args.miniwob_root.resolve()
@@ -70,6 +71,8 @@ def main():
         ]
         if args.approve_synthetic_actions:
             command.append("--approve-synthetic-actions")
+        if args.multi_tool:
+            command.append("--multi-tool")
 
         start = time.perf_counter()
         try:
@@ -121,12 +124,14 @@ def main():
         print(f"{task}: {'PASS' if record['success'] else 'FAIL'}; actions={record['actions']}; timeout={record.get('timeout', False)}; latencyMs={record['latencyMs']}")
 
     summary = load_aggregator().summarize(records)
+    exercised_tools = sorted({tool for record in records for tool in record.get("toolCoverage", [])})
+    supported_tools = {"browser_connect", "browser_decide_and_act", "browser_confirm", "browser_action", "browser_fill", "browser_select_option", "browser_visual_inspect"}
     summary["suite"] = {
-        "name": "miniwob-smoke",
-        "runnerMode": "bounded-repeated-browser-decide-and-act",
-        "toolCoverage": ["browser_connect", "browser_decide_and_act", "browser_confirm"],
-        "notExercisedTools": ["browser_fill", "browser_select_option", "browser_visual_inspect"],
-        "limitation": "This runner is not a full autonomous agent. It does not generate or enter field values, choose native select options, or request visual inspection; it records ambiguous and visual-only states as outcomes.",
+        "name": "miniwob-multi-tool-smoke" if args.multi_tool else "miniwob-smoke",
+        "runnerMode": "bounded-multi-tool-integration-smoke" if args.multi_tool else "bounded-repeated-browser-decide-and-act",
+        "toolCoverage": exercised_tools,
+        "notExercisedTools": sorted(supported_tools - set(exercised_tools)),
+        "limitation": "This is a curated integration harness, not a full autonomous agent or representative BrowserGym benchmark. In multi-tool mode, it extracts only explicit values from synthetic task instructions, selects exact visible options, and requests local screenshot descriptions; it does not infer arbitrary field data or use vision to click.",
         "seed": args.seed,
         "maxActionsPerTask": args.max_actions,
         "timeoutSecondsPerTask": args.timeout_seconds,

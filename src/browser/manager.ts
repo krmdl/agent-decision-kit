@@ -5,7 +5,7 @@ import path from "node:path";
 import { chromium, type Browser, type BrowserContext, type Page } from "playwright";
 import type { DecisionProvider } from "../core/types.js";
 
-export type BrowserCandidate = { ref: string; role: string; label: string; kind: string; risk: "low" | "approval-required"; checked?: boolean; expanded?: boolean; selected?: boolean };
+export type BrowserCandidate = { ref: string; role: string; label: string; kind: string; risk: "low" | "approval-required"; checked?: boolean; expanded?: boolean; selected?: boolean; readOnly?: boolean };
 export type BrowserManagerOptions = { headless?: boolean; profileDir?: string; includeCandidateSnapshot?: boolean };
 
 const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "::1", "[::1]"]);
@@ -130,6 +130,7 @@ export class BrowserManager {
         const checked = ["checkbox", "radio"].includes(input.type) ? input.checked : ["checkbox", "radio", "switch", "menuitemcheckbox", "menuitemradio"].includes(role) && ["true", "false"].includes(element.getAttribute("aria-checked") ?? "") ? element.getAttribute("aria-checked") === "true" : undefined;
         const expanded = element.getAttribute("aria-expanded");
         const selected = element.getAttribute("aria-selected");
+        const readOnly = (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) && element.readOnly ? true : undefined;
         return {
           ref,
           role,
@@ -139,6 +140,7 @@ export class BrowserManager {
           ...(checked === undefined ? {} : { checked }),
           ...(expanded === "true" || expanded === "false" ? { expanded: expanded === "true" } : {}),
           ...(selected === "true" || selected === "false" ? { selected: selected === "true" } : {}),
+          ...(readOnly === undefined ? {} : { readOnly }),
         };
       });
       const heading = Array.from(document.querySelectorAll("h1,h2")).slice(0, 8).map((element) => element.textContent?.trim()).filter(Boolean);
@@ -147,7 +149,7 @@ export class BrowserManager {
     });
     this.candidates = new Map(result.candidates.map((candidate) => [candidate.ref, candidate]));
     this.lastInspectionFingerprint = snapshotFingerprint(result);
-    return { ...result, url: redactBrowserUrl(result.url), candidates: result.candidates.map(({ ref, role, label, kind, risk, checked, expanded, selected }) => ({ ref, role, label, kind, risk, ...(checked === undefined ? {} : { checked }), ...(expanded === undefined ? {} : { expanded }), ...(selected === undefined ? {} : { selected }) })), inspectMs: Math.round(performance.now() - before), candidateLimit: 80, note: "Bounded visible DOM/accessibility-derived snapshot. Native select options are limited to 12 visible labels; input values, passwords, cookies and storage are not included. URL credentials, query and hash are redacted." };
+    return { ...result, url: redactBrowserUrl(result.url), candidates: result.candidates.map(({ ref, role, label, kind, risk, checked, expanded, selected, readOnly }) => ({ ref, role, label, kind, risk, ...(checked === undefined ? {} : { checked }), ...(expanded === undefined ? {} : { expanded }), ...(selected === undefined ? {} : { selected }), ...(readOnly === undefined ? {} : { readOnly }) })), inspectMs: Math.round(performance.now() - before), candidateLimit: 80, note: "Bounded visible DOM/accessibility-derived snapshot. Native select options are limited to 12 visible labels; input values, passwords, cookies and storage are not included. URL credentials, query and hash are redacted." };
   }
 
   async decideAndAct(task: string, provider: DecisionProvider) {
@@ -176,7 +178,7 @@ export class BrowserManager {
     }
     const decisionContextFingerprint = this.lastInspectionFingerprint;
     const decision = await provider.decide({
-      state: { url: snapshot.url, title: snapshot.title, headings: snapshot.headings, textExcerpt: snapshot.textExcerpt, candidates: snapshot.candidates.map(({ ref, role, label, kind, risk, checked, expanded, selected }) => ({ ref, role, label, kind, risk, ...(checked === undefined ? {} : { checked }), ...(expanded === undefined ? {} : { expanded }), ...(selected === undefined ? {} : { selected }) })) },
+      state: { url: snapshot.url, title: snapshot.title, headings: snapshot.headings, textExcerpt: snapshot.textExcerpt, candidates: snapshot.candidates.map(({ ref, role, label, kind, risk, checked, expanded, selected, readOnly }) => ({ ref, role, label, kind, risk, ...(checked === undefined ? {} : { checked }), ...(expanded === undefined ? {} : { expanded }), ...(selected === undefined ? {} : { selected }), ...(readOnly === undefined ? {} : { readOnly }) })) },
       questions: { action: { type: "choice", instructions: task, criteria: Object.fromEntries(snapshot.candidates.map(({ ref, role, label, kind }) => [ref, `${role} (${kind}): ${label}`])) } },
     });
     const refreshed = await this.inspect();
@@ -257,6 +259,7 @@ export class BrowserManager {
     if (this.lastInspectionFingerprint !== inspectedFingerprint) throw new Error("The page changed after inspection. Inspect it again and select a current field ref.");
     const candidate = this.candidates.get(ref);
     if (!candidate) throw new Error("Unknown or stale action ref. Call browser_inspect first.");
+    if (candidate.readOnly) throw new Error("This field is read-only. Open its visible picker control and choose a current option instead.");
     if (!["text", "search", "email", "tel", "url", "number", "date", "datetime-local", "time", "month", "week", "textarea"].includes(candidate.kind)) throw new Error("This field type is not supported for text entry. Password, file, and hidden fields are excluded.");
     const locator = this.requirePage().locator(`[data-adk-ref="${candidate.ref}"]`).first();
     await locator.fill(text, { timeout: 5_000 });
@@ -303,6 +306,10 @@ export class BrowserManager {
       const checked = nativeInput ? await locator.isChecked().catch(() => null) : await locator.getAttribute("aria-checked").then((value) => value === "true").catch(() => null);
       return { checked, note: "The selected checkbox or radio control changed state without submitting its form." };
     }
+    if (candidate.readOnly) {
+      await locator.click({ timeout: 5_000 });
+      return { openedPicker: true, valueReturned: false, note: "The read-only field was clicked to reveal its page-controlled picker. No value was entered or submitted." };
+    }
     if (["select-one", "select-multiple"].includes(candidate.kind)) {
       await locator.focus();
       return { focused: true, note: "Choose a visible option with browser_select_option; the page was not submitted." };
@@ -338,7 +345,7 @@ function diffExcerpt(before: string, after: string) {
 }
 
 function snapshotFingerprint(snapshot: { title: string; url: string; headings: string[]; textExcerpt: string; candidates: BrowserCandidate[] }) {
-  const stable = JSON.stringify({ title: snapshot.title, url: snapshot.url, headings: snapshot.headings, textExcerpt: snapshot.textExcerpt, candidates: snapshot.candidates.map(({ ref, role, label, kind, risk, checked, expanded, selected }) => ({ ref, role, label, kind, risk, checked, expanded, selected })) });
+    const stable = JSON.stringify({ title: snapshot.title, url: snapshot.url, headings: snapshot.headings, textExcerpt: snapshot.textExcerpt, candidates: snapshot.candidates.map(({ ref, role, label, kind, risk, checked, expanded, selected, readOnly }) => ({ ref, role, label, kind, risk, checked, expanded, selected, readOnly })) });
   return createHash("sha256").update(stable).digest("hex");
 }
 
@@ -384,6 +391,11 @@ function findDeterministicMatch(task: string, candidates: BrowserCandidate[]) {
     if (named.length === 1) return { candidate: named[0]!, rule: "unique-expand-control", note: "One visible disclosure control matches the task's expand intent." };
     if (collapsed.length > 1 || named.length > 1) return undefined;
     if (normalized.includes("and click submit")) return undefined;
+  }
+
+  if (/\b(?:click|press|tap|hit)\s+(?:the\s+)?submit\b/i.test(task)) {
+    const submission = findUniqueSubmitCandidate(candidates);
+    if (submission) return { candidate: submission, rule: "unique-explicit-submit-control", note: "The task explicitly requests the one visible submit control. Sensitive form submission still requires a separate approval call." };
   }
 
   const quoted = findUniqueQuotedLabel(task, candidates);

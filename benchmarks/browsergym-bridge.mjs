@@ -33,6 +33,18 @@ for await (const line of input) {
       case "inspect":
         result = await browser.inspect();
         break;
+      case "fill":
+        result = await browser.fill(request.ref, request.text);
+        break;
+      case "select-option":
+        result = await browser.selectOption(request.ref, request.optionLabel);
+        break;
+      case "act":
+        result = await browser.act(request.ref);
+        break;
+      case "visual-inspect":
+        result = await browser.visualInspect(request.question);
+        break;
       case "decide-and-act":
         result = await browser.decideAndAct(request.task, provider);
         break;
