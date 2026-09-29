@@ -93,7 +93,7 @@ The browser tool does not bypass CAPTCHAs, site access controls, or authenticati
 | Cline | [Guide](docs/agents/cline.md) | `~/.cline/mcp.json` or IDE settings |
 | OpenCode | [Guide](docs/agents/opencode.md) | `opencode.json` |
 
-All integrations use the standard MCP stdio transport. The generic MCP handshake and tool schemas are covered by project tests. We have not claimed that every agent version was installed and end-to-end tested in this checkout.
+All integrations use the standard MCP stdio transport. CI starts the actual CLI subprocess, discovers its MCP tools, and calls a local workflow tool; separate protocol tests cover the in-memory transport. We have not claimed that every vendor agent version was installed and end-to-end tested in this checkout.
 
 Claude Code users can also opt into the [prompt-routing hook](integrations/claude-code-hooks/README.md). It adds a local, unbenchmarked route suggestion to submitted prompts; it never changes the active model.
 
@@ -118,6 +118,7 @@ npm install
 npm run typecheck
 npm test
 npm run build
+npm run mcp:verify
 npm run hook:verify
 npm run agents:verify
 npm --prefix website install

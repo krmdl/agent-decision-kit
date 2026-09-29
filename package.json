@@ -44,6 +44,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "mcp:verify": "node scripts/check-mcp-stdio.mjs",
     "benchmark:decisions": "npm run build && node benchmarks/run-decisions.mjs",
     "hook:verify": "npm run build && node scripts/check-hook.mjs",
     "agents:verify": "npm run build && node scripts/check-agent-configs.mjs",
