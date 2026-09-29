@@ -18,4 +18,4 @@ Open the MCP configuration and use its start action, or run **MCP: List Servers*
 
 **Try it:** “Use `browser_inspect` to list the local page actions, then call `browser_action` only for the sample setup completion button. Explain any approval token before confirming.”
 
-VS Code's [MCP server guide](https://code.visualstudio.com/docs/agent-customization/mcp-servers) uses a top-level `servers` key in `.vscode/mcp.json` and distinguishes that format from portable `.mcp.json`.
+VS Code's [MCP configuration reference](https://code.visualstudio.com/docs/agents/reference/mcp-configuration) uses a top-level `servers` key in `.vscode/mcp.json` and distinguishes that format from portable `.mcp.json`.

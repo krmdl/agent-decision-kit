@@ -19,4 +19,4 @@ The server supports typed decisions, browser inspection and approval, local cont
 
 **Try it:** “Use `code_navigate` to find the browser action manager, then use `diff_risk_review` on the current staged diff. Tell me that this is a pre-review, not a security audit.”
 
-OpenAI's [Codex MCP docs](https://developers.openai.com/codex/mcp) list `codex mcp add NAME -- COMMAND` and the `[mcp_servers.NAME]` table.
+OpenAI's [Codex MCP docs](https://learn.chatgpt.com/docs/extend/mcp) list `codex mcp add NAME -- COMMAND` and the `[mcp_servers.NAME]` table.

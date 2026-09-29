@@ -3,7 +3,7 @@
 Gemini CLI supports stdio MCP servers through its `mcpServers` configuration. The `gemini mcp add` command writes the entry for you:
 
 ```sh
-gemini mcp add agent-decision-kit node /absolute/path/to/agent-decision-kit/dist/cli.js mcp --scope user
+gemini mcp add --scope user agent-decision-kit node /absolute/path/to/agent-decision-kit/dist/cli.js mcp
 gemini mcp list
 ```
 

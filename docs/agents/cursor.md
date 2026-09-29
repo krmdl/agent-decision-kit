@@ -17,4 +17,4 @@ Restart Cursor or refresh the MCP list. Select the tools needed for the current 
 
 **Try it:** “Use `browser_inspect` on the local demo. Fill the draft with a short sentence, but do not submit or delete anything.” `browser_fill` reports the character count and does not return the entered text.
 
-See Cursor's [MCP documentation](https://docs.cursor.com/context/model-context-protocol) for project/global paths, `mcpServers` configuration, tool selection, and approval behavior.
+See Cursor's [MCP documentation](https://cursor.com/docs/mcp) for project/global paths, `mcpServers` configuration, tool selection, and approval behavior.
