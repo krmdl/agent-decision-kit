@@ -6,12 +6,12 @@
     "choice": {
       "sampleCount": 6,
       "accuracy": 0.8333333333333334,
-      "meanBrierScore": 0.26614245306657475
+      "meanBrierScore": 0.2661431483894077
     },
     "noul": {
       "sampleCount": 5,
       "accuracy": 0.6,
-      "meanBrierScore": 0.4956543923777342
+      "meanBrierScore": 0.49566392453881775
     },
     "score": {
       "sampleCount": 0,
@@ -22,11 +22,11 @@
     }
   },
   "runtime": {
-    "node": "v22.14.0",
-    "platform": "win32",
+    "node": "v24.20.0",
+    "platform": "linux",
     "architecture": "x64",
-    "osVersion": "10.0.19045",
-    "cpuModel": "AMD Ryzen 5 5600H with Radeon Graphics         ",
+    "osVersion": "5.15.0-37-generic",
+    "cpuModel": "Intel(R) Xeon(R) Gold 6140 CPU @ 2.30GHz",
     "accelerator": "CPU (Transformers.js default backend)",
     "modelCacheDirectoryPresentBeforeRun": true,
     "modelCacheState": "model cache directory existed before this process; required files were not individually verified"
@@ -34,13 +34,13 @@
   "classificationAccuracy": 0.7272727272727273,
   "scoreMeanAbsoluteError": null,
   "scoreWithinHalfPointRate": null,
-  "meanBrierScore": 0.3704660618443745,
+  "meanBrierScore": 0.3704707739118669,
   "latencyMs": {
-    "firstCallIncludingInitialization": 246,
+    "firstCallIncludingInitialization": 310,
     "withinProcessSteadyState": {
       "sampleCount": 10,
-      "p50": 11,
-      "p95": 14
+      "p50": 13,
+      "p95": 19
     }
   },
   "records": [
@@ -56,7 +56,7 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": false,
-      "latencyMs": 246,
+      "latencyMs": 310,
       "brierScore": 0.2676151693241965
     },
     {
@@ -66,13 +66,13 @@
       "prediction": "demo",
       "correct": true,
       "probabilities": {
-        "demo": 0.7504009727225762,
-        "manager": 0.24959902727742372
+        "demo": 0.7503967919072124,
+        "manager": 0.24960320809278752
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 13,
-      "brierScore": 0.12459934883567225
+      "latencyMs": 17,
+      "brierScore": 0.1246035229804228
     },
     {
       "id": "approval",
@@ -81,13 +81,13 @@
       "prediction": true,
       "correct": true,
       "probabilities": {
-        "true": 0.5129501628554487,
-        "false": 0.4870498371445513
+        "true": 0.5129501634527831,
+        "false": 0.4870498365472169
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 11,
-      "brierScore": 0.47443508772506787
+      "latencyMs": 15,
+      "brierScore": 0.47443508656134137
     },
     {
       "id": "form-fill",
@@ -101,7 +101,7 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 14,
+      "latencyMs": 13,
       "brierScore": 0.8189131451079124
     },
     {
@@ -116,7 +116,7 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 10,
+      "latencyMs": 13,
       "brierScore": 0.46628806499954883
     },
     {
@@ -126,13 +126,13 @@
       "prediction": "visual",
       "correct": true,
       "probabilities": {
-        "visual": 0.7893215819444691,
-        "miniwob": 0.21067841805553086
+        "visual": 0.7893215934883133,
+        "miniwob": 0.2106784065116867
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 12,
-      "brierScore": 0.08877079166876208
+      "latencyMs": 13,
+      "brierScore": 0.08877078194060702
     },
     {
       "id": "pruning",
@@ -141,13 +141,13 @@
       "prediction": true,
       "correct": false,
       "probabilities": {
-        "true": 0.504068262895245,
-        "false": 0.495931737104755
+        "true": 0.5040682626710223,
+        "false": 0.49593173732897766
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 12,
-      "brierScore": 0.5081696273164596
+      "latencyMs": 15,
+      "brierScore": 0.5081696268643655
     },
     {
       "id": "route",
@@ -156,13 +156,13 @@
       "prediction": "local-fast",
       "correct": true,
       "probabilities": {
-        "local-fast": 0.7134092064850092,
-        "reasoning": 0.28659079351499084
+        "local-fast": 0.7134091999247824,
+        "reasoning": 0.2865908000752177
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
       "latencyMs": 11,
-      "brierScore": 0.16426856585510424
+      "brierScore": 0.16426857337550677
     },
     {
       "id": "diff-secret",
@@ -176,7 +176,7 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 12,
+      "latencyMs": 19,
       "brierScore": 0.4886891419485635
     },
     {
@@ -186,13 +186,13 @@
       "prediction": true,
       "correct": false,
       "probabilities": {
-        "true": 0.519947131879305,
-        "false": 0.48005286812069503
+        "true": 0.5199700483298386,
+        "false": 0.4800299516701614
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 9,
-      "brierScore": 0.5406900398990307
+      "latencyMs": 12,
+      "brierScore": 0.5407377023202694
     },
     {
       "id": "candidate-extraction",
@@ -206,7 +206,7 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 9,
+      "latencyMs": 14,
       "brierScore": 0.132687697607801
     }
   ],

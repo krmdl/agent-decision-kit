@@ -1,8 +1,23 @@
 #!/usr/bin/env node
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { env } from "@huggingface/transformers";
 import { createProvider } from "../dist/providers/index.js";
+
+async function modelCacheDirectoryExists(modelId) {
+  if (typeof modelId !== "string" || !env.cacheDir || !/^[\w.-]+(?:\/[\w.-]+)+$/.test(modelId)) return null;
+  const cacheRoot = path.resolve(env.cacheDir);
+  const modelCachePath = path.resolve(cacheRoot, ...modelId.split("/"));
+  const relativePath = path.relative(cacheRoot, modelCachePath);
+  if (!relativePath || relativePath.startsWith(`..${path.sep}`) || path.isAbsolute(relativePath)) return null;
+  try {
+    return (await stat(modelCachePath)).isDirectory();
+  } catch (error) {
+    if (error?.code === "ENOENT") return false;
+    return null;
+  }
+}
 
 const outputIndex = process.argv.indexOf("--output");
 const outputPath = outputIndex >= 0 ? process.argv[outputIndex + 1] : undefined;
@@ -19,6 +34,9 @@ const cases = (await readFile(fixtureSource, "utf8"))
   .split(/\r?\n/).filter(Boolean).map((line) => JSON.parse(line));
 if (cases.length === 0) throw new Error("The decision fixture file must contain at least one JSONL record");
 const provider = createProvider();
+const modelCacheDirectoryPresentBeforeRun = provider.id === "semantic-local"
+  ? await modelCacheDirectoryExists(provider.model)
+  : null;
 const records = [];
 for (const item of cases) {
   const start = performance.now();
@@ -83,8 +101,15 @@ const report = `${JSON.stringify({
     architecture: process.arch,
     osVersion: os.release(),
     cpuModel: os.cpus()[0]?.model ?? "not reported",
-    accelerator: "CPU (Transformers.js default backend)",
-    modelCacheState: "model artifacts were already cached before this process; first measured call includes pipeline initialization",
+    accelerator: provider.id === "semantic-local" ? "CPU (Transformers.js default backend)" : "provider-specific; not inspected",
+    modelCacheDirectoryPresentBeforeRun,
+    modelCacheState: provider.id !== "semantic-local"
+      ? "not applicable; provider does not use the Transformers.js model cache"
+      : modelCacheDirectoryPresentBeforeRun === true
+        ? "model cache directory existed before this process; required files were not individually verified"
+        : modelCacheDirectoryPresentBeforeRun === false
+          ? "model cache directory was absent before this process; first call may include model retrieval"
+          : "model cache directory was not safely inspected; cache state is unknown",
   },
   classificationAccuracy: classificationRecords.length ? classificationRecords.filter((item) => item.correct).length / classificationRecords.length : null,
   scoreMeanAbsoluteError: mean(scoreRecords, "scoreAbsoluteError"),
@@ -95,7 +120,7 @@ const report = `${JSON.stringify({
     withinProcessSteadyState: { sampleCount: warmRecords.length, p50: percentile(0.5), p95: percentile(0.95) },
   },
   records,
-  note: "The first call includes pipeline initialization. warmWithinProcess only means later calls in this process. Choice/yes-no accuracy and score error are reported separately. This small human-labeled fixture is not a general quality, calibration, or performance claim; all probabilities remain uncalibrated.",
+  note: "The first call includes provider initialization and may include model retrieval if files were missing. For the Transformers.js local provider, cache inspection only checks whether the model cache directory existed before the process; it does not verify every required file. warmWithinProcess only means later calls in this process. Choice/yes-no accuracy and score error are reported separately. This small human-labeled fixture is not a general quality, calibration, or performance claim; all probabilities remain uncalibrated.",
 }, null, 2)}\n`;
 if (outputPath) {
   const resolvedOutput = path.resolve(outputPath);

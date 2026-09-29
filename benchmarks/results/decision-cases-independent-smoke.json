@@ -28,18 +28,19 @@
     "osVersion": "10.0.19045",
     "cpuModel": "AMD Ryzen 5 5600H with Radeon Graphics         ",
     "accelerator": "CPU (Transformers.js default backend)",
-    "modelCacheState": "model artifacts were already cached before this process; first measured call includes pipeline initialization"
+    "modelCacheDirectoryPresentBeforeRun": true,
+    "modelCacheState": "model cache directory existed before this process; required files were not individually verified"
   },
   "classificationAccuracy": 0.6,
   "scoreMeanAbsoluteError": 1.041736458879806,
   "scoreWithinHalfPointRate": 0.2,
   "meanBrierScore": 0.5328836379250809,
   "latencyMs": {
-    "firstCallIncludingInitialization": 463,
+    "firstCallIncludingInitialization": 246,
     "withinProcessSteadyState": {
       "sampleCount": 29,
-      "p50": 21,
-      "p95": 34
+      "p50": 14,
+      "p95": 21
     }
   },
   "records": [
@@ -55,7 +56,7 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": false,
-      "latencyMs": 463,
+      "latencyMs": 246,
       "brierScore": 0.9324549634643078
     },
     {
@@ -70,7 +71,7 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 20,
+      "latencyMs": 14,
       "brierScore": 0.7845160070712284
     },
     {
@@ -85,7 +86,7 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 31,
+      "latencyMs": 20,
       "brierScore": 0.24849612428864487
     },
     {
@@ -100,7 +101,7 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 26,
+      "latencyMs": 15,
       "brierScore": 0.3918523586987849
     },
     {
@@ -115,7 +116,7 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 19,
+      "latencyMs": 14,
       "brierScore": 0.061808569490894194
     },
     {
@@ -130,7 +131,7 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 22,
+      "latencyMs": 16,
       "brierScore": 0.20048951858449915
     },
     {
@@ -145,7 +146,7 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 20,
+      "latencyMs": 13,
       "brierScore": 0.296650131857195
     },
     {
@@ -160,7 +161,7 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 15,
+      "latencyMs": 11,
       "brierScore": 0.7362855112114542
     },
     {
@@ -175,7 +176,7 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 19,
+      "latencyMs": 13,
       "brierScore": 0.14485058419234964
     },
     {
@@ -190,7 +191,7 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 17,
+      "latencyMs": 20,
       "brierScore": 0.23739480226519308
     },
     {
@@ -205,7 +206,7 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 17,
+      "latencyMs": 14,
       "brierScore": 0.476056593716429
     },
     {
@@ -220,7 +221,7 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 17,
+      "latencyMs": 11,
       "brierScore": 0.483208061442129
     },
     {
@@ -235,7 +236,7 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 15,
+      "latencyMs": 10,
       "brierScore": 0.52748065149351
     },
     {
@@ -250,7 +251,7 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 21,
+      "latencyMs": 12,
       "brierScore": 0.4629937566867812
     },
     {
@@ -265,7 +266,7 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 19,
+      "latencyMs": 12,
       "brierScore": 0.4960143508905777
     },
     {
@@ -280,7 +281,7 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 20,
+      "latencyMs": 12,
       "brierScore": 0.5790849528160326
     },
     {
@@ -295,7 +296,7 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 20,
+      "latencyMs": 11,
       "brierScore": 0.43142012509992184
     },
     {
@@ -310,7 +311,7 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 23,
+      "latencyMs": 12,
       "brierScore": 0.5544401850759737
     },
     {
@@ -325,7 +326,7 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 19,
+      "latencyMs": 10,
       "brierScore": 0.5314718423874377
     },
     {
@@ -340,7 +341,7 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 17,
+      "latencyMs": 13,
       "brierScore": 0.5201837137647042
     },
     {
@@ -360,7 +361,7 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 31,
+      "latencyMs": 17,
       "brierScore": 1.022242595266859
     },
     {
@@ -380,7 +381,7 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 33,
+      "latencyMs": 21,
       "brierScore": 0.682031375621243
     },
     {
@@ -400,7 +401,7 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 33,
+      "latencyMs": 19,
       "brierScore": 0.7397694513204439
     },
     {
@@ -420,7 +421,7 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 31,
+      "latencyMs": 20,
       "brierScore": 0.4413637537727899
     },
     {
@@ -440,7 +441,7 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 28,
+      "latencyMs": 15,
       "brierScore": 0.5741999608253251
     },
     {
@@ -460,7 +461,7 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 30,
+      "latencyMs": 19,
       "brierScore": 0.509062757570476
     },
     {
@@ -480,7 +481,7 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 33,
+      "latencyMs": 16,
       "brierScore": 0.6468812878340506
     },
     {
@@ -500,7 +501,7 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 34,
+      "latencyMs": 17,
       "brierScore": 0.9159070282502958
     },
     {
@@ -520,7 +521,7 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 33,
+      "latencyMs": 21,
       "brierScore": 0.6646256769702255
     },
     {
@@ -540,9 +541,9 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 34,
+      "latencyMs": 16,
       "brierScore": 0.6932724458226723
     }
   ],
-  "note": "The first call includes pipeline initialization. warmWithinProcess only means later calls in this process. Choice/yes-no accuracy and score error are reported separately. This small human-labeled fixture is not a general quality, calibration, or performance claim; all probabilities remain uncalibrated."
+  "note": "The first call includes provider initialization and may include model retrieval if files were missing. For the Transformers.js local provider, cache inspection only checks whether the model cache directory existed before the process; it does not verify every required file. warmWithinProcess only means later calls in this process. Choice/yes-no accuracy and score error are reported separately. This small human-labeled fixture is not a general quality, calibration, or performance claim; all probabilities remain uncalibrated."
 }
