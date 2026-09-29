@@ -1,0 +1,22 @@
+name: Feature request
+description: Propose a bounded decision workflow or agent integration.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: User problem
+      description: Which agent workflow is difficult today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed bounded behavior
+      description: List allowed inputs, outputs, and any irreversible action boundary.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Example or evidence

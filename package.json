@@ -1,0 +1,69 @@
+{
+  "name": "agent-decision-kit",
+  "version": "0.1.0-alpha.1",
+  "description": "Fast, local-first decisions and browser automation for coding agents.",
+  "keywords": [
+    "mcp",
+    "coding-agent",
+    "playwright",
+    "browser-automation",
+    "local-first",
+    "agent-tools",
+    "decision-routing"
+  ],
+  "homepage": "https://krmdl.github.io/agent-decision-kit/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/krmdl/agent-decision-kit.git"
+  },
+  "bugs": {
+    "url": "https://github.com/krmdl/agent-decision-kit/issues"
+  },
+  "license": "Apache-2.0",
+  "type": "module",
+  "engines": {
+    "node": ">=20.19"
+  },
+  "bin": {
+    "agent-decision": "dist/cli.js"
+  },
+  "exports": {
+    ".": "./dist/index.js",
+    "./browser": "./dist/browser/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "docs"
+  ],
+  "scripts": {
+    "dev": "tsx src/cli.ts",
+    "mcp": "tsx src/cli.ts mcp",
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "benchmark:decisions": "npm run build && node benchmarks/run-decisions.mjs",
+    "hook:verify": "npm run build && node scripts/check-hook.mjs",
+    "agents:verify": "npm run build && node scripts/check-agent-configs.mjs",
+    "website:dev": "npm --prefix website run dev",
+    "website:build": "npm --prefix website run build",
+    "website:verify": "npm run website:build && node scripts/check-site.mjs",
+    "browser:install": "playwright install chromium"
+  },
+  "dependencies": {
+    "@huggingface/transformers": "^4.3.0",
+    "@modelcontextprotocol/sdk": "^1.31.0",
+    "commander": "^14.0.3",
+    "playwright": "^1.63.0",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.6",
+    "vitest": "^4.1.11"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "state": {
+    "task": "Find the local sample page and safely mark its setup task complete.",
+    "candidateFiles": ["examples/browser-demo.html", "src/browser/manager.ts"]
+  },
+  "questions": {
+    "nextStep": {
+      "type": "choice",
+      "instructions": "Which file is the interactive browser demo?",
+      "criteria": {
+        "demo": "A local HTML page with sample controls and fake tasks",
+        "manager": "TypeScript code that drives browser tabs"
+      }
+    },
+    "needsApproval": {
+      "type": "noul",
+      "instructions": "Would deleting a saved draft require separate user approval?"
+    },
+    "taskRisk": {
+      "type": "score",
+      "instructions": "Rate the risk of marking a sample-only task complete.",
+      "criteria": ["Low: local reversible demo state", "Medium: visible but reversible external change", "High: consequential external action"]
+    }
+  }
+}

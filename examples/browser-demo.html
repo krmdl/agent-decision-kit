@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Agent Decision Kit — Local Browser Demo</title>
+  <style>
+    :root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, sans-serif; background: #08111f; color: #edf3fb; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 36px; background: radial-gradient(ellipse at 15% 0%, #1b3853 0, transparent 44%), #08111f; }
+    main { width: min(980px, 100%); border: 1px solid #294158; background: rgba(10, 23, 39, .94); border-radius: 24px; padding: 34px; box-shadow: 0 28px 100px #0008; }
+    .top { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+    .eyebrow { color: #75e2c2; text-transform: uppercase; letter-spacing: .16em; font-size: 12px; font-weight: 800; }
+    h1 { margin: 10px 0; font-size: clamp(30px, 5vw, 50px); line-height: 1.05; letter-spacing: -.045em; }
+    p { color: #a9bbcd; line-height: 1.65; }
+    .badge { border: 1px solid #326c60; color: #9df2d5; border-radius: 99px; padding: 8px 12px; white-space: nowrap; font-size: 13px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 28px; }
+    section { border: 1px solid #20364c; background: #0e1c2d; border-radius: 16px; padding: 22px; }
+    h2 { font-size: 16px; margin: 0 0 16px; }
+    label { display: block; color: #afc0d2; font-size: 13px; margin-bottom: 8px; }
+    input { width: 100%; background: #08111f; color: white; border: 1px solid #36516a; border-radius: 10px; padding: 13px; font: inherit; }
+    button { cursor: pointer; border: 1px solid #2b7667; background: #17473f; color: #d3fff1; border-radius: 10px; padding: 11px 15px; font: inherit; font-weight: 700; margin: 7px 5px 0 0; }
+    button:hover { background: #1d6154; }
+    button.danger { border-color: #82474a; background: #40272e; color: #ffcccc; }
+    button.danger:hover { background: #613139; }
+    .task { padding: 12px 0; border-bottom: 1px solid #23384d; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .task:last-child { border: 0; }
+    .status { color: #75e2c2; font-size: 12px; }
+    #activity { min-height: 22px; color: #75e2c2; font-size: 13px; }
+    footer { margin-top: 22px; color: #7f95ab; font-size: 12px; }
+    @media (max-width: 680px) { .grid { grid-template-columns: 1fr; } .top { align-items: flex-start; flex-direction: column; } }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="top">
+      <div><div class="eyebrow">Agent Decision Kit · local demo</div><h1>A small browser task,<br>with clear boundaries.</h1></div>
+      <span class="badge">● No account · fake data</span>
+    </div>
+    <p>Inspect visible controls, pick one bounded action, then review the page delta. A local semantic model selects; ordinary code performs.</p>
+    <div class="grid">
+      <section aria-labelledby="search-title">
+        <h2 id="search-title">Find a demo task</h2>
+        <label for="task-search">Search tasks</label>
+        <input id="task-search" type="search" placeholder="Try: release notes">
+        <button type="button" id="search-button" aria-label="Search demo tasks">Search tasks</button>
+        <p id="search-result">3 sample tasks available</p>
+      </section>
+      <section aria-labelledby="tasks-title">
+        <h2 id="tasks-title">Demo tasks</h2>
+        <div class="task"><span>Review the browser setup guide</span><button type="button" id="complete-button">Mark setup task complete</button></div>
+        <div class="task"><span>Draft release notes</span><span class="status">Draft</span></div>
+      </section>
+      <section aria-labelledby="draft-title">
+        <h2 id="draft-title">Draft workspace</h2>
+        <label for="draft">Release note draft</label>
+        <input id="draft" type="text" value="Shipped a clearer local browser demo" aria-label="Release note draft">
+        <button type="button" id="save-button">Save local draft</button>
+        <button type="button" id="delete-button" class="danger">Delete draft</button>
+      </section>
+      <section aria-labelledby="result-title">
+        <h2 id="result-title">Observed result</h2>
+        <p id="activity" aria-live="polite">Waiting for a local browser action.</p>
+        <p>Risky action buttons in this demo should request separate user approval.</p>
+      </section>
+    </div>
+    <footer>Sample-only browser state. Nothing is sent, published, charged, or deleted outside this page.</footer>
+  </main>
+  <script>
+    const activity = document.querySelector('#activity');
+    document.querySelector('#search-button').addEventListener('click', () => {
+      const query = document.querySelector('#task-search').value.trim();
+      activity.textContent = query ? `Filtered the sample list for “${query}”.` : 'Showing all 3 sample tasks.';
+      document.querySelector('#search-result').textContent = query ? '1 matching sample task' : '3 sample tasks available';
+    });
+    document.querySelector('#complete-button').addEventListener('click', (event) => {
+      event.currentTarget.textContent = 'Setup task complete';
+      event.currentTarget.disabled = true;
+      activity.textContent = 'Marked the sample setup task complete.';
+    });
+    document.querySelector('#save-button').addEventListener('click', () => activity.textContent = 'Saved the local sample draft.');
+    document.querySelector('#delete-button').addEventListener('click', () => activity.textContent = 'Deleted the local sample draft.');
+  </script>
+</body>
+</html>

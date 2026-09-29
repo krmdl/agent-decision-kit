@@ -1,0 +1,36 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { agents } from "../../data/agents.js";
+import { siteBase } from "../../utils/site.js";
+---
+<BaseLayout title="MCP Setup Guides for Coding Agents | Agent Decision Kit" description="Configure the same local-first browser and decision MCP server in Claude Code, Codex, Cursor, Gemini CLI, Windsurf, VS Code, Copilot CLI, Cline, and OpenCode." canonicalPath="agents/">
+  <main class="wrap">
+    <p class="eyebrow">Agent installation guides</p>
+    <h1>One local MCP server.<br><span>Nine agent setups.</span></h1>
+    <p class="lead">Each guide shows a real stdio config shape, a client-specific verification step, and one workflow prompt. The npm package has not shipped yet, so the examples use a local source checkout.</p>
+    <div class="grid">
+      {agents.map((agent) => <a class="card" href={`${siteBase}agents/${agent.slug}/`}>
+        <div class="number">{agent.number}</div><h2>{agent.name}</h2><p>{agent.summary}</p><span>Open setup guide →</span>
+      </a>)}
+    </div>
+    <aside><b>Compatibility status</b><p>The generic MCP transport and tool schemas have an in-process smoke test. These pages were checked against linked client documentation; each vendor executable was not installed and tested in this checkout.</p></aside>
+  </main>
+</BaseLayout>
+<style>
+  .wrap { max-width: 1100px; margin: auto; padding: 76px 28px 0; }
+  .eyebrow { color: var(--mint); text-transform: uppercase; letter-spacing: .16em; font-weight: 750; font-size: 12px; }
+  h1 { margin: 16px 0; font-size: clamp(42px, 7vw, 76px); line-height: .98; letter-spacing: -.055em; }
+  h1 span { color: var(--mint); }
+  .lead { max-width: 720px; color: var(--muted); line-height: 1.7; font-size: 18px; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 38px; }
+  .card { text-decoration: none; display: block; padding: 24px; min-height: 205px; background: var(--panel); border: 1px solid var(--line); border-radius: 16px; transition: transform .18s ease, border-color .18s ease; }
+  .card:hover { transform: translateY(-3px); border-color: #5ab99e; }
+  .number { color: var(--blue); font: 700 12px ui-monospace, monospace; }
+  h2 { color: var(--text); margin: 12px 0 8px; font-size: 20px; }
+  .card p { color: var(--muted); min-height: 52px; font-size: 14px; line-height: 1.5; }
+  .card span { font-size: 13px; }
+  aside { margin-top: 32px; padding: 20px 22px; border-left: 3px solid var(--mint); background: #102437; border-radius: 8px; color: var(--muted); }
+  aside b { color: var(--text); } aside p { line-height: 1.6; margin-bottom: 0; }
+  @media (max-width: 850px) { .grid { grid-template-columns: repeat(2,1fr); } }
+  @media (max-width: 560px) { .grid { grid-template-columns: 1fr; } .wrap { padding: 56px 20px 0; } }
+</style>

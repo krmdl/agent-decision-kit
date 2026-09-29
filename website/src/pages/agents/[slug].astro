@@ -1,0 +1,80 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { agents } from "../../data/agents.js";
+import { siteBase } from "../../utils/site.js";
+
+export function getStaticPaths() {
+  return agents.map((agent) => ({ params: { slug: agent.slug }, props: { agent } }));
+}
+
+const { agent } = Astro.props;
+---
+<BaseLayout title={`${agent.title} | Agent Decision Kit`} description={agent.description} canonicalPath={agent.canonicalPath}>
+  <main class="page">
+    <nav class="breadcrumbs" aria-label="Breadcrumb"><a href={`${siteBase}agents/`}>Agent setup</a><span aria-hidden="true">/</span><span>{agent.name}</span></nav>
+    <p class="eyebrow">{agent.family} · stdio MCP · setup guide {agent.number}</p>
+    <h1>{agent.name}<br /><span>connects locally.</span></h1>
+    <p class="lead">{agent.description}</p>
+
+    <div class="two-col">
+      <section>
+        <p class="step">01 / Build once</p>
+        <h2>Prepare the source checkout</h2>
+        <pre><code>npm install
+npm run build</code></pre>
+        <p>Keep the absolute checkout path ready. The published npm package is not available yet; when it ships, this setup will be shorter.</p>
+      </section>
+      <section>
+        <p class="step">02 / Add the server</p>
+        <h2>{agent.path}</h2>
+        <pre><code>{agent.snippet}</code></pre>
+        <p>{agent.detail}</p>
+      </section>
+    </div>
+
+    <section class="config">
+      <p class="step">Configuration option</p>
+      <h2>Source-checkout server entry</h2>
+      <pre><code>{agent.config}</code></pre>
+    </section>
+
+    <div class="two-col lower">
+      <section>
+        <p class="step">03 / Verify</p>
+        <h2>Check the connection</h2>
+        <p>{agent.verify}</p>
+      </section>
+      <section>
+        <p class="step">04 / Try a real workflow</p>
+        <h2>Start with sample data</h2>
+        <blockquote>{agent.workflow}</blockquote>
+      </section>
+    </div>
+
+    <aside><b>Client-specific note</b><p>{agent.gotcha}</p></aside>
+    <p class="source">Client setup reference: <a href={agent.official} target="_blank" rel="noreferrer">{agent.officialLabel} ↗</a></p>
+    <p><a href={`${siteBase}agents/`}>← Browse all agent guides</a></p>
+  </main>
+</BaseLayout>
+<style>
+  .page { max-width: 1040px; margin: auto; padding: 50px 28px 0; }
+  .breadcrumbs { display:flex; gap:10px; color:#7890a8; font-size:13px; margin-bottom:42px; }
+  .breadcrumbs a { text-decoration:none; }
+  .eyebrow,.step { color:var(--mint); text-transform:uppercase; font-size:11px; letter-spacing:.13em; font-weight:800; }
+  h1 { font-size:clamp(42px,7vw,72px); letter-spacing:-.055em; line-height:.98; margin:14px 0; }
+  h1 span { color:var(--mint); }
+  h2 { font-size:22px; letter-spacing:-.025em; margin:8px 0 14px; }
+  .lead { max-width:780px; font-size:19px; line-height:1.6; color:var(--muted); margin-bottom:38px; }
+  .two-col { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  section { background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:24px; }
+  section p:not(.step) { color:var(--muted); font-size:14px; line-height:1.65; }
+  pre { overflow:auto; background:#06101a; border:1px solid #203449; border-radius:11px; padding:16px; color:#d3e8fc; font:13px/1.65 ui-monospace,SFMono-Regular,Consolas,monospace; white-space:pre-wrap; overflow-wrap:anywhere; }
+  .config { margin-top:16px; }
+  .lower { margin-top:16px; }
+  blockquote { margin:8px 0 0; color:#d5e3ef; border-left:3px solid var(--mint); padding-left:14px; line-height:1.65; }
+  aside { margin-top:18px; padding:20px; background:#102437; border-radius:12px; color:var(--muted); line-height:1.6; }
+  aside b { color:var(--text); }
+  aside p { margin-bottom:0; }
+  .source { margin-top:30px; color:#7890a8; font-size:13px; }
+  @media(max-width:680px){.page{padding:40px 20px 0}.two-col{grid-template-columns:1fr}.breadcrumbs{margin-bottom:30px}}
+</style>

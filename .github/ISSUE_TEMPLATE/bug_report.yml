@@ -1,0 +1,38 @@
+name: Bug report
+description: Report a reproducible issue in the CLI, MCP server, or browser tools.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Please remove private URLs, cookies, tokens, personal data, and page text before sharing logs.
+  - type: input
+    id: version
+    attributes:
+      label: Agent Decision Kit version
+      placeholder: 0.1.0-alpha.1 or git commit
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: OS and Node.js version
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Include the MCP tool name and safe, minimal arguments.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected and actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Redacted logs
+      render: text

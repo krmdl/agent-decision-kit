@@ -1,0 +1,15 @@
+node_modules/
+dist/
+coverage/
+.astro/
+website/dist/
+website/.astro/
+.env
+.env.*
+!.env.example
+.agent-decision/
+playwright-report/
+test-results/
+*.log
+Thumbs.db
+.DS_Store

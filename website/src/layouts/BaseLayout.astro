@@ -1,0 +1,95 @@
+---
+interface Props {
+  title: string;
+  description: string;
+  canonicalPath: string;
+  image?: string;
+  noindex?: boolean;
+}
+const { title, description, canonicalPath, image = "images/social-preview.png", noindex = false } = Astro.props;
+const site = Astro.site ?? new URL("https://krmdl.github.io/agent-decision-kit/");
+const canonical = new URL(canonicalPath.replace(/^\/+/, ""), site).href;
+const socialImage = new URL(image, site).href;
+const structuredData = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: "Agent Decision Kit",
+  applicationCategory: "DeveloperApplication",
+  operatingSystem: "Windows, macOS, Linux",
+  description: "An Apache-2.0 local-first MCP server and CLI for bounded decisions and Playwright browser automation in coding agents.",
+  softwareVersion: "0.1.0-alpha.1",
+  license: "https://www.apache.org/licenses/LICENSE-2.0",
+  codeRepository: "https://github.com/krmdl/agent-decision-kit",
+  isAccessibleForFree: true,
+};
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="generator" content={Astro.generator} />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <meta name="robots" content={noindex ? "noindex,follow" : "index,follow,max-image-preview:large"} />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Agent Decision Kit" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={socialImage} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={socialImage} />
+    <meta name="theme-color" content="#08111f" />
+    <link rel="icon" type="image/svg+xml" href={new URL("images/logo.svg", site)} />
+    <script type="application/ld+json" set:html={JSON.stringify(structuredData)} />
+    <slot name="head" />
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href={Astro.site?.pathname ?? "/"} aria-label="Agent Decision Kit home">
+        <img src={new URL("images/logo.svg", site).pathname} alt="" width="34" height="34" />
+        <span>Agent Decision Kit</span>
+      </a>
+      <nav aria-label="Main navigation">
+        <a href={`${Astro.site?.pathname ?? "/"}features/browser-agent/`}>Browser</a>
+        <a href={`${Astro.site?.pathname ?? "/"}workflows/context-pruning/`}>Workflows</a>
+        <a href={`${Astro.site?.pathname ?? "/"}agents/`}>Agent setup</a>
+        <a class="github-link" href="https://github.com/krmdl/agent-decision-kit">GitHub <span aria-hidden="true">↗</span></a>
+      </nav>
+    </header>
+    <slot />
+    <footer class="site-footer">
+      <div><b>Agent Decision Kit</b><span>Apache-2.0 · Local-first · Experimental alpha</span></div>
+      <nav aria-label="Footer navigation">
+        <a href={`${Astro.site?.pathname ?? "/"}agents/`}>Install guides</a>
+        <a href="https://github.com/krmdl/agent-decision-kit/blob/main/SECURITY.md">Security</a>
+        <a href="https://github.com/krmdl/agent-decision-kit/blob/main/LICENSE">License</a>
+      </nav>
+    </footer>
+  </body>
+</html>
+
+<style is:global>
+  :root { color-scheme: dark; --bg: #08111f; --panel: #0d1b2b; --line: #20364c; --text: #edf3fb; --muted: #a9bbcd; --mint: #75e2c2; --blue: #8dbdff; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-synthesis: none; text-rendering: optimizeLegibility; background: var(--bg); color: var(--text); }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; min-width: 320px; background: radial-gradient(ellipse at 20% -10%, #17324b 0, transparent 38%), var(--bg); }
+  a { color: var(--mint); text-decoration-thickness: .08em; text-underline-offset: .2em; }
+  a:hover { color: white; }
+  .site-header { min-height: 76px; max-width: 1240px; margin: auto; padding: 0 28px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #ffffff12; }
+  .brand { color: var(--text); font-weight: 750; letter-spacing: -.025em; text-decoration: none; display: inline-flex; align-items: center; gap: 10px; }
+  .brand img { display: block; }
+  .site-header nav, .site-footer nav { display: flex; align-items: center; gap: 26px; }
+  .site-header nav a { color: var(--muted); font-size: 14px; text-decoration: none; }
+  .site-header nav a:hover { color: white; }
+  .github-link { padding: 9px 13px; border: 1px solid #34526d; border-radius: 10px; color: white !important; }
+  .site-footer { max-width: 1240px; margin: 80px auto 0; border-top: 1px solid var(--line); padding: 28px; display: flex; justify-content: space-between; align-items: center; gap: 24px; color: var(--muted); }
+  .site-footer div { display: grid; gap: 5px; font-size: 13px; }
+  .site-footer b { color: var(--text); }
+  .site-footer nav a { font-size: 13px; text-decoration: none; }
+  @media (max-width: 740px) { .site-header { padding: 16px 20px; align-items: flex-start; gap: 18px; flex-direction: column; } .site-header nav { flex-wrap: wrap; gap: 14px; } .site-footer { padding: 24px 20px; align-items: flex-start; flex-direction: column; } }
+</style>
