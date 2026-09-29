@@ -52,7 +52,7 @@ npm run build</code></pre>
     </div>
 
     <aside><b>Client-specific note</b><p>{agent.gotcha}</p></aside>
-    <p class="source">Client setup reference: <a href={agent.official} target="_blank" rel="noreferrer">{agent.officialLabel} ↗</a></p>
+    <p class="source">Client setup reference: <a href={agent.official} target="_blank" rel="noreferrer">{agent.officialLabel} ↗</a>{agent.slug === "cline" && <> · <a href="https://github.com/cline/cline/blob/main/sdk/packages/shared/src/storage/paths.ts#L2797" target="_blank" rel="noreferrer">Cline's current MCP settings path resolver ↗</a></>}</p>
     <p><a href={`${siteBase}agents/`}>← Browse all agent guides</a></p>
   </main>
 </BaseLayout>

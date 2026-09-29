@@ -110,7 +110,7 @@ export const agents = [
     title: "Cline CLI and IDE MCP Setup",
     summary: "Install through Cline's MCP wizard or configure its active IDE settings file.",
     description: "Set up the local Agent Decision Kit MCP server in Cline CLI or the IDE extension, preserve tool approval prompts, and verify the live server configuration.",
-    official: "https://github.com/cline/cline/blob/main/docs/cli/cli-reference.mdx", officialLabel: "Cline CLI reference",
+    official: "https://github.com/cline/cline/blob/main/apps/cli/README.md#-mcp-servers", officialLabel: "Cline CLI MCP setup",
     path: "Cline CLI wizard or MCP Servers → Configure in the IDE",
     snippet: "cline mcp install agent-decision-kit -- node /absolute/path/to/agent-decision-kit/dist/cli.js mcp\ncline mcp\ncline config mcp --json",
     config: JSON.stringify({ mcpServers: { "agent-decision-kit": { command: "node", args: ["/absolute/path/to/agent-decision-kit/dist/cli.js", "mcp"], disabled: false, autoApprove: [] } } }, null, 2),
