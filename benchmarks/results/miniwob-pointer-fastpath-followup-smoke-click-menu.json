@@ -1,0 +1,99 @@
+{
+  "benchmark": "miniwob",
+  "task": "click-menu",
+  "taskPrompt": "Select Jenelle",
+  "runnerMode": "bounded-repeated-browser-decide-and-act",
+  "toolCoverage": [
+    "browser_connect",
+    "browser_decide_and_act"
+  ],
+  "notExercisedTools": [
+    "browser_action",
+    "browser_confirm",
+    "browser_fill",
+    "browser_select_option",
+    "browser_visual_action",
+    "browser_visual_inspect",
+    "browser_visual_text"
+  ],
+  "toolActionTrace": [],
+  "success": true,
+  "timeout": false,
+  "failureReason": null,
+  "actions": 1,
+  "selectedAction": {
+    "ref": "r2",
+    "role": "menuitem",
+    "label": "Jenelle",
+    "kind": "div",
+    "risk": "low"
+  },
+  "decisionConfidence": 0.5997014182683266,
+  "decisionCalibration": "uncalibrated-estimate",
+  "decisionLatencyMs": 244,
+  "decisionCallLatenciesMs": [
+    244
+  ],
+  "decisionSnapshot": null,
+  "availableCandidates": null,
+  "decisionTrace": [
+    {
+      "step": 1,
+      "decisionStatus": "action-executed",
+      "provider": "semantic-local",
+      "model": "Xenova/all-MiniLM-L6-v2",
+      "selectionRule": null,
+      "selectedAction": {
+        "ref": "r2",
+        "role": "menuitem",
+        "label": "Jenelle",
+        "kind": "div",
+        "risk": "low"
+      },
+      "availableCandidates": null,
+      "decisionLatencyMs": 244,
+      "candidateCount": 2,
+      "confidence": 0.5997014182683266,
+      "calibration": "uncalibrated-estimate",
+      "executionStatus": "action-executed"
+    }
+  ],
+  "candidateCount": 2,
+  "selectionRule": null,
+  "syntheticApprovalCount": 0,
+  "latencyMs": 1381,
+  "environmentResetLatencyMs": 847,
+  "agentActionLatencyMs": 534,
+  "reward": 1.0,
+  "terminated": true,
+  "decisionStatus": "action-executed",
+  "decisionProvider": "semantic-local",
+  "decisionModel": "Xenova/all-MiniLM-L6-v2",
+  "browserGymVersion": "0.14.3",
+  "browserGymPackageCommit": "0a785fbed075224ae81ca9c1fe924f66050696fe",
+  "playwrightPythonVersion": "1.44.0",
+  "playwrightNodeVersion": "1.63.0",
+  "browserVersion": "HeadlessChrome/125.0.6422.26",
+  "pythonVersion": "3.12.3",
+  "nodeVersion": "v24.20.0",
+  "operatingSystem": "Linux-5.15.0-37-generic-x86_64-with-glibc2.39",
+  "cpu": "x86_64",
+  "accelerator": "CPU",
+  "modelCacheState": "local cache already populated before this episode",
+  "ocrLanguageCacheExistedBeforeEpisode": null,
+  "decisionWarmState": "first semantic provider inference in a fresh Node bridge process; model files are cached",
+  "miniWobCommit": "7fd85d71a4b60325c6585396ec4f48377d049838",
+  "browserStillOpenAfterDisconnect": true,
+  "rawTaskInfo": {
+    "REWARD_GLOBAL": 0.998592,
+    "RAW_REWARD_GLOBAL": 1,
+    "REWARD_REASON": null,
+    "DONE_GLOBAL": true,
+    "EPISODE_ID": 1,
+    "TASK_READY": true
+  },
+  "timestampUtc": "2026-09-29T23:43:40.962906+00:00",
+  "maxActions": 5,
+  "note": "A curated MiniWoB integration smoke check, not a representative BrowserGym benchmark or a full autonomous agent. Multi-tool mode extracts only explicit task values and visible native options; field values are omitted from the raw record. The optional OCR path attempts only the quoted link target and its coordinate click remains behind the standard one-use approval gate; synthetic approval is possible only for the exact local MiniWoB file URL.",
+  "visualOcrActionsEnabled": false
+}
