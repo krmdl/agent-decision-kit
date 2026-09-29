@@ -400,6 +400,8 @@ function findDeterministicMatch(task: string, candidates: BrowserCandidate[]) {
 
   const quoted = findUniqueQuotedLabel(task, candidates);
   if (quoted) return { candidate: quoted, rule: "unique-exact-quoted-label", note: "The task quoted one exact visible control label. The local match does not skip the separate confirmation required for sensitive actions." };
+  const explicitLabel = findUniqueExplicitCommandLabel(task, candidates);
+  if (explicitLabel) return { candidate: explicitLabel, rule: "unique-explicit-command-label", note: "The task names one exact visible control label. Only unique literal matches are performed locally; sensitive actions still require separate approval." };
   return undefined;
 }
 
@@ -410,6 +412,23 @@ function findUniqueQuotedLabel(task: string, candidates: BrowserCandidate[]) {
     .filter(Boolean);
   if (!phrases.length) return undefined;
   const matches = candidates.filter((candidate) => phrases.some((phrase) => labelParts(candidate).includes(phrase)));
+  return matches.length === 1 ? matches[0] : undefined;
+}
+
+function findUniqueExplicitCommandLabel(task: string, candidates: BrowserCandidate[]) {
+  const match = task.match(/^\s*(?:please\s+)?(?:click|tap|open)\s+(?:on\s+)?(?:the\s+)?(.+?)\s*$/i);
+  if (!match || /\b(?:and|then|after|before)\b/i.test(match[1]!)) return undefined;
+  const target = match[1]!
+    .trim()
+    .replace(/[.!?]+$/u, "")
+    .replace(/\s+(?:button|link|tab|menu\s+item|control)$/i, "")
+    .replace(/^["'“”]+|["'“”]+$/gu, "");
+  const normalized = normalizeLabel(target);
+  if (!normalized) return undefined;
+  const matches = candidates.filter((candidate) =>
+    ["button", "link", "tab", "menuitem", "menuitemcheckbox", "menuitemradio"].includes(candidate.role)
+    || ["button", "submit"].includes(candidate.kind),
+  ).filter((candidate) => labelParts(candidate).includes(normalized));
   return matches.length === 1 ? matches[0] : undefined;
 }
 

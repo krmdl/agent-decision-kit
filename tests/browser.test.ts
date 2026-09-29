@@ -23,10 +23,12 @@ describe("Playwright browser safety flow", () => {
   let tabHtml: Buffer;
   let expandHtml: Buffer;
   let nativeFieldsHtml: Buffer;
+  let ambiguousLabelsHtml: Buffer;
 
   beforeAll(async () => {
     const html = await readFile(path.resolve("examples/browser-demo.html"));
     visualHtml = await readFile(path.resolve("examples/visual-only-demo.html"));
+    ambiguousLabelsHtml = Buffer.from('<!doctype html><button type="button">Continue</button><a href="#next">Continue</a><p id="status">No action</p>');
     checkboxHtml = Buffer.from('<!doctype html><label><input type="checkbox" name="updates"> Receive product updates</label>');
     submitHtml = Buffer.from('<!doctype html><form onsubmit="event.preventDefault(); document.querySelector(\'#status\').textContent = \'Submitted locally\'"><input type="submit" value="Send test"></form><p id="status">Not sent</p>');
     checkboxTaskHtml = Buffer.from('<!doctype html><form id="sample" onsubmit="event.preventDefault(); document.querySelector(\'#status\').textContent = \'Submitted locally\'"><label><input type="checkbox" name="target"> Neb</label><button type="submit">Submit</button></form><p id="status">Not sent</p>');
@@ -45,7 +47,7 @@ describe("Playwright browser safety flow", () => {
         return;
       }
       response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-      response.end(request.url === "/visual-only" ? visualHtml : request.url === "/checkbox" ? checkboxHtml : request.url === "/submit" ? submitHtml : request.url === "/checkbox-task" ? checkboxTaskHtml : request.url === "/tabs" ? tabHtml : request.url === "/expand" ? expandHtml : request.url === "/native-fields" ? nativeFieldsHtml : html);
+      response.end(request.url === "/visual-only" ? visualHtml : request.url === "/checkbox" ? checkboxHtml : request.url === "/submit" ? submitHtml : request.url === "/checkbox-task" ? checkboxTaskHtml : request.url === "/tabs" ? tabHtml : request.url === "/expand" ? expandHtml : request.url === "/native-fields" ? nativeFieldsHtml : request.url === "/ambiguous-labels" ? ambiguousLabelsHtml : html);
     });
     await new Promise<void>((resolve, reject) => {
       server.once("error", reject);
@@ -291,6 +293,38 @@ describe("Playwright browser safety flow", () => {
     expect(result.selectionRule).toBe("unique-exact-quoted-label");
     expect(result.confidence).toBeNull();
     expect(result.calibration).toBe("not-applicable-rule");
+  }, 45_000);
+
+  it("uses a unique explicit command label locally without a model round trip", async () => {
+    profile = await mkdtemp(path.join(os.tmpdir(), "adk-browser-command-label-test-"));
+    browser = new BrowserManager({ headless: true, profileDir: path.join(profile, "chromium") });
+    await browser.launch(baseUrl);
+    const provider: DecisionProvider = {
+      id: "remote-test-provider",
+      model: "unused-test-provider",
+      decide: async () => { throw new Error("A unique exact visible label should resolve locally"); },
+    };
+
+    const result = await browser.decideAndAct("Click Save local draft button.", provider);
+    expect(result.status).toBe("action-executed");
+    expect(result.selectionRule).toBe("unique-explicit-command-label");
+    expect(result.action.label).toBe("Save local draft");
+    expect(result.effect.textDelta.excerpt).toContain("Saved the local sample draft.");
+  }, 45_000);
+
+  it("does not guess when the same explicit command label appears twice", async () => {
+    profile = await mkdtemp(path.join(os.tmpdir(), "adk-browser-ambiguous-label-test-"));
+    browser = new BrowserManager({ headless: true, profileDir: path.join(profile, "chromium") });
+    await browser.launch(`${baseUrl}ambiguous-labels`);
+    const provider: DecisionProvider = {
+      id: "remote-test-provider",
+      model: "unused-test-provider",
+      decide: async () => { throw new Error("Remote page context is blocked by default"); },
+    };
+
+    const result = await browser.decideAndAct("Click Continue", provider);
+    expect(result.status).toBe("remote-provider-blocked-for-browser-privacy");
+    expect(result.candidates).toHaveLength(2);
   }, 45_000);
 
   it("executes a submit input only after the separate approval call", async () => {
