@@ -4,7 +4,10 @@
 
 - Expose read-only browser fields in bounded snapshots and open their visible picker with `browser_action`; reject attempts to fill them directly.
 - Match an explicit unique submit request locally while preserving the separate sensitive-action approval call.
+- Resolve unique exact control labels in simple click/tap/open requests locally, while leaving duplicates ambiguous and consequential actions behind approval.
 - Add a curated multi-tool BrowserGym smoke harness for explicit fake task values, native selects, read-only date pickers, paginated search, and local visual descriptions.
+- Record whether the local model cache directory existed before decision measurements and add one Linux Docker result; older MiniWoB cache-state claims were corrected.
+- Add a real CLI-over-MCP-stdio subprocess smoke check to local development and the cross-platform CI matrix.
 
 ## 0.1.0-alpha.1 — 2026-09-29
 
