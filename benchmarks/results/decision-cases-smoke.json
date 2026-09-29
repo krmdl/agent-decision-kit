@@ -2,6 +2,25 @@
   "provider": "semantic-local",
   "model": "Xenova/all-MiniLM-L6-v2",
   "sampleCount": 11,
+  "byQuestionType": {
+    "choice": {
+      "sampleCount": 6,
+      "accuracy": 0.8333333333333334,
+      "meanBrierScore": 0.26614245306657475
+    },
+    "noul": {
+      "sampleCount": 5,
+      "accuracy": 0.6,
+      "meanBrierScore": 0.4956543923777342
+    },
+    "score": {
+      "sampleCount": 0,
+      "meanAbsoluteError": null,
+      "withinHalfPointRate": null,
+      "exactMatchRate": null,
+      "meanBrierScore": null
+    }
+  },
   "runtime": {
     "node": "v22.14.0",
     "platform": "win32",
@@ -11,19 +30,22 @@
     "accelerator": "CPU (Transformers.js default backend)",
     "modelCacheState": "model artifacts were already cached before this process; first measured call includes pipeline initialization"
   },
-  "accuracy": 0.7272727272727273,
+  "classificationAccuracy": 0.7272727272727273,
+  "scoreMeanAbsoluteError": null,
+  "scoreWithinHalfPointRate": null,
   "meanBrierScore": 0.3704660618443745,
   "latencyMs": {
-    "firstCallIncludingInitialization": 484,
+    "firstCallIncludingInitialization": 457,
     "withinProcessSteadyState": {
       "sampleCount": 10,
-      "p50": 17,
-      "p95": 25
+      "p50": 18,
+      "p95": 23
     }
   },
   "records": [
     {
       "id": "repo-file-name",
+      "questionType": "choice",
       "expected": "browser",
       "prediction": "browser",
       "correct": true,
@@ -33,11 +55,12 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": false,
-      "latencyMs": 484,
+      "latencyMs": 457,
       "brierScore": 0.2676151693241965
     },
     {
       "id": "local-demo",
+      "questionType": "choice",
       "expected": "demo",
       "prediction": "demo",
       "correct": true,
@@ -47,11 +70,12 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 24,
+      "latencyMs": 22,
       "brierScore": 0.12459934883567225
     },
     {
       "id": "approval",
+      "questionType": "noul",
       "expected": true,
       "prediction": true,
       "correct": true,
@@ -61,11 +85,12 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 25,
+      "latencyMs": 18,
       "brierScore": 0.47443508772506787
     },
     {
       "id": "form-fill",
+      "questionType": "choice",
       "expected": "fill",
       "prediction": "submit",
       "correct": false,
@@ -80,6 +105,7 @@
     },
     {
       "id": "password",
+      "questionType": "noul",
       "expected": false,
       "prediction": false,
       "correct": true,
@@ -94,6 +120,7 @@
     },
     {
       "id": "browsergym-scope",
+      "questionType": "choice",
       "expected": "visual",
       "prediction": "visual",
       "correct": true,
@@ -103,11 +130,12 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 17,
+      "latencyMs": 18,
       "brierScore": 0.08877079166876208
     },
     {
       "id": "pruning",
+      "questionType": "noul",
       "expected": false,
       "prediction": true,
       "correct": false,
@@ -117,11 +145,12 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 21,
+      "latencyMs": 23,
       "brierScore": 0.5081696273164596
     },
     {
       "id": "route",
+      "questionType": "choice",
       "expected": "local-fast",
       "prediction": "local-fast",
       "correct": true,
@@ -131,11 +160,12 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 17,
+      "latencyMs": 16,
       "brierScore": 0.16426856585510424
     },
     {
       "id": "diff-secret",
+      "questionType": "noul",
       "expected": true,
       "prediction": true,
       "correct": true,
@@ -145,11 +175,12 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 25,
+      "latencyMs": 22,
       "brierScore": 0.4886891419485635
     },
     {
       "id": "evidence",
+      "questionType": "noul",
       "expected": false,
       "prediction": true,
       "correct": false,
@@ -159,11 +190,12 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 17,
+      "latencyMs": 15,
       "brierScore": 0.5406900398990307
     },
     {
       "id": "candidate-extraction",
+      "questionType": "choice",
       "expected": "ada",
       "prediction": "ada",
       "correct": true,
@@ -173,9 +205,9 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 16,
+      "latencyMs": 13,
       "brierScore": 0.132687697607801
     }
   ],
-  "note": "The first call includes pipeline initialization. warmWithinProcess only means later calls in this process. This small starter set is not a general quality, calibration, or performance claim; all probabilities remain uncalibrated."
+  "note": "The first call includes pipeline initialization. warmWithinProcess only means later calls in this process. Choice/yes-no accuracy and score error are reported separately. This small human-labeled fixture is not a general quality, calibration, or performance claim; all probabilities remain uncalibrated."
 }

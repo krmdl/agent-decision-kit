@@ -72,7 +72,7 @@ export class SemanticLocalProvider implements DecisionProvider {
       const query = embedded[cursor++] ?? [];
       const optionVectors = item.options.map(() => embedded[cursor++] ?? []);
       const probabilities = validateProbabilities(Object.fromEntries(
-        item.original.map((label, index) => [label, softmax(optionVectors.map((vector) => cosine(query, vector)))[index] ?? 0]),
+        item.original.map((label, index) => [item.type === "score" ? String(index) : label, softmax(optionVectors.map((vector) => cosine(query, vector)))[index] ?? 0]),
       ));
       const confidence = maxProbability(probabilities);
 
@@ -80,7 +80,7 @@ export class SemanticLocalProvider implements DecisionProvider {
         const choice = Object.entries(probabilities).sort((left, right) => right[1] - left[1])[0]?.[0] ?? item.original[0]!;
         answers[item.name] = { type: "choice", choice, probabilities, confidence, calibration: "uncalibrated-estimate" };
       } else if (item.type === "score") {
-        const score = Object.entries(probabilities).reduce((total, [key, probability]) => total + Number(key) * probability, 0);
+        const score = item.original.reduce((total, _criterion, index) => total + index * (probabilities[String(index)] ?? 0), 0);
         answers[item.name] = { type: "score", score, probabilities, confidence, calibration: "uncalibrated-estimate" };
       } else {
         const noul = probabilities.true ?? 0.5;

@@ -107,7 +107,7 @@ Claude Code users can also opt into the [prompt-routing hook](integrations/claud
 
 ## Benchmarks and honest claims
 
-`benchmarks/` contains labeled fixtures, an evaluation protocol, raw records, and metric definitions. One small CPU MiniWoB smoke run completed 7 of 8 tasks; it is not a representative quality or speed result. The separate 11-case decision fixture is not held out and its probability estimates are uncalibrated. Report decision accuracy, calibration, browser task success, action count, and latency separately. Broader WebArena/VisualWebArena evaluation and live cross-agent runtime checks remain evaluation work; CI does not generate fabricated benchmark charts.
+`benchmarks/` contains labeled fixtures, an evaluation protocol, raw records, and metric definitions. One small CPU MiniWoB smoke run completed 7 of 8 tasks; it is not a representative quality or speed result. A 30-case project-specific decision fixture scored 7/10 on Choice, 5/10 on yes/no, and 1.04 mean absolute error on Score; it is not held out and its probability estimates are uncalibrated. Report decision accuracy, score error, calibration, browser task success, action count, and latency separately. Broader WebArena/VisualWebArena evaluation and live cross-agent runtime checks remain evaluation work; CI does not generate fabricated benchmark charts.
 
 We do not claim the 500 ms p95 target, 7-second browsing demo, Jev equivalence, or any other speedup until a reproducible run is published with hardware, versions, sample counts, and raw results.
 
