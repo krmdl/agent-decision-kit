@@ -11,6 +11,7 @@
 - Add a real CLI-over-MCP-stdio subprocess smoke check to local development and the cross-platform CI matrix.
 - Verify Claude Code's MCP health check and Codex CLI config loading on installed Windows clients using isolated temporary config directories; no vendor-model turns or paid inference were used.
 - Add a local, bounded OCR fast path for visual-only pages; mask editable fields and keep the slower local vision-language question tool available for OCR misses.
+- Add exact-phrase OCR click proposals for visual-only pages; every coordinate click requires a separate approval and a pixel-identical current screenshot.
 
 ## 0.1.0-alpha.1 — 2026-09-29
 

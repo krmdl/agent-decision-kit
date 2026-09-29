@@ -1,13 +1,13 @@
 {
   "benchmark": "visual-only-ocr-smoke",
-  "task": "read-prominent-canvas-text",
+  "task": "read-prominent-canvas-text-and-approve-one-exact-local-click",
   "success": true,
   "engine": "tesseract.js",
   "language": "eng",
-  "screenshotMs": 102,
-  "initializationMs": 355,
-  "recognitionMs": 968,
-  "latencyMs": 1425,
+  "screenshotMs": 70,
+  "initializationMs": 186,
+  "recognitionMs": 716,
+  "latencyMs": 973,
   "sampleCount": 1,
   "expectedLabels": [
     "Save draft",
@@ -20,6 +20,16 @@
   "optionalSmallLabel": {
     "text": "Open task",
     "found": false
+  },
+  "visualClickSmoke": {
+    "proposedWithoutClick": true,
+    "cancellationChecked": true,
+    "approvedClickReachedLocalCanvasTarget": true,
+    "staleScreenshotApprovalRejected": true,
+    "click": {
+      "x": 755,
+      "y": 477
+    }
   },
   "lines": [
     {
@@ -149,6 +159,6 @@
     "architecture": "x64",
     "cpuModel": "AMD Ryzen 5 5600H with Radeon Graphics         "
   },
-  "timestampUtc": "2026-09-29T21:23:55.196Z",
-  "note": "One synthetic canvas screenshot smoke sample, not a quality or speed benchmark. Editable fields are masked. OCR line confidence is not calibrated. A miss on small button text can happen; use local visual question answering when OCR is insufficient. No page action is performed."
+  "timestampUtc": "2026-09-29T21:54:29.530Z",
+  "note": "One synthetic canvas screenshot and local click smoke sample, not a quality or speed benchmark. Editable fields are masked. OCR engine scores are not calibrated. The click proposal required an exact unique match and a separate explicit confirmation; the harness checked cancellation and rejection of a stale screenshot. Its demo handler changes only local synthetic canvas pixels and the document title. A miss on small button text can happen; use local visual question answering when OCR is insufficient."
 }
