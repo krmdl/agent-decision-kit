@@ -16,7 +16,7 @@ These guides cover MCP stdio configuration for nine common coding-agent surfaces
 | Cline | [Guide](cline.md) | JSON shape checked against Cline docs; SDK stdio subprocess smoke test |
 | OpenCode | [Guide](opencode.md) | Local command array checked against OpenCode docs; SDK stdio subprocess smoke test |
 
-Every guide uses a local source checkout because the npm package has not been published. Build once, then use the absolute path to `dist/cli.js`. If the project later publishes a package, the equivalent command is `npx -y agent-decision-kit mcp`.
+Every guide uses a local source checkout because the npm package has not been published. Build once, then use the absolute path to `dist/cli.js`. The `agents:verify` check validates the CLI's nine config aliases and parses each guide's JSON or TOML example. This checks the examples' syntax and command shape; it does not test vendor-specific settings or install the agents. If the project later publishes a package, the equivalent command is `npx -y agent-decision-kit mcp`.
 
 ## Common source setup
 
