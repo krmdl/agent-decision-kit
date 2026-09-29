@@ -1,45 +1,44 @@
 {
   "episodeCount": 8,
-  "successCount": 3,
-  "taskSuccessRate": 0.375,
+  "successCount": 7,
+  "taskSuccessRate": 0.875,
   "timeoutRate": 0.0,
   "failureReasons": {
-    "task-goal-not-achieved": 5
+    "task-goal-not-achieved": 1
   },
   "decisionStatuses": {
-    "action-executed-after-approval": 3,
-    "visual-only-page": 2,
-    "ambiguous-selection": 2,
-    "action-executed": 1
+    "action-executed": 5,
+    "visual-only-page": 1,
+    "action-executed-after-approval": 2
   },
   "decisionProviders": {
-    "semantic-local": 7,
-    "local-literal-match": 1
+    "semantic-local": 4,
+    "local-literal-match": 4
   },
-  "syntheticApprovalCount": 3,
+  "syntheticApprovalCount": 2,
   "latencyMs": {
-    "p50": 3022,
-    "p95": 3638
+    "p50": 1700,
+    "p95": 2278
   },
   "agentActionLatencyMs": {
     "sampleCount": 8,
-    "p50": 647,
-    "p95": 850
+    "p50": 300,
+    "p95": 702
   },
   "decisionCallLatencyMs": {
-    "sampleCount": 5,
-    "p50": 447,
-    "p95": 816
+    "sampleCount": 3,
+    "p50": 194,
+    "p95": 206
   },
   "decisionLatencyPerEpisodeMs": {
     "sampleCount": 8,
-    "p50": 402,
-    "p95": 816
+    "p50": 0,
+    "p95": 206
   },
   "actions": {
-    "mean": 0.5,
-    "p50": 0,
-    "p95": 1
+    "mean": 1.125,
+    "p50": 1,
+    "p95": 2
   },
   "rawRecords": [
     {
@@ -55,19 +54,20 @@
         "role": "button",
         "label": "Click Me!",
         "kind": "button",
-        "risk": "approval-required"
+        "risk": "low"
       },
       "decisionConfidence": 1,
       "decisionCalibration": "uncalibrated-estimate",
-      "decisionLatencyMs": 447,
+      "decisionLatencyMs": 187,
       "decisionCallLatenciesMs": [
-        447
+        187
       ],
       "decisionSnapshot": null,
+      "availableCandidates": null,
       "decisionTrace": [
         {
           "step": 1,
-          "decisionStatus": "awaiting-user-approval",
+          "decisionStatus": "action-executed",
           "provider": "semantic-local",
           "model": "Xenova/all-MiniLM-L6-v2",
           "selectionRule": null,
@@ -76,24 +76,25 @@
             "role": "button",
             "label": "Click Me!",
             "kind": "button",
-            "risk": "approval-required"
+            "risk": "low"
           },
-          "decisionLatencyMs": 447,
+          "availableCandidates": null,
+          "decisionLatencyMs": 187,
           "candidateCount": 1,
           "confidence": 1,
           "calibration": "uncalibrated-estimate",
-          "executionStatus": "action-executed-after-approval"
+          "executionStatus": "action-executed"
         }
       ],
       "candidateCount": 1,
       "selectionRule": null,
-      "syntheticApprovalCount": 1,
-      "latencyMs": 3638,
-      "environmentResetLatencyMs": 2841,
-      "agentActionLatencyMs": 797,
+      "syntheticApprovalCount": 0,
+      "latencyMs": 2278,
+      "environmentResetLatencyMs": 1830,
+      "agentActionLatencyMs": 448,
       "reward": 1.0,
       "terminated": true,
-      "decisionStatus": "action-executed-after-approval",
+      "decisionStatus": "action-executed",
       "decisionProvider": "semantic-local",
       "decisionModel": "Xenova/all-MiniLM-L6-v2",
       "browserGymVersion": "0.14.3",
@@ -111,14 +112,14 @@
       "miniWobCommit": "7fd85d71a4b60325c6585396ec4f48377d049838",
       "browserStillOpenAfterDisconnect": true,
       "rawTaskInfo": {
-        "REWARD_GLOBAL": 0.997298,
+        "REWARD_GLOBAL": 0.998717,
         "RAW_REWARD_GLOBAL": 1,
         "REWARD_REASON": null,
         "DONE_GLOBAL": true,
         "EPISODE_ID": 1,
         "TASK_READY": true
       },
-      "timestampUtc": "2026-09-29T16:59:07.303368+00:00",
+      "timestampUtc": "2026-09-29T17:45:29.572435+00:00",
       "maxActions": 5,
       "note": "Single-task integration smoke check. The runner repeats bounded BrowserManager calls up to maxActions. Not a representative BrowserGym benchmark, model-quality estimate, or speed claim. Synthetic approvals are possible only for the exact local MiniWoB file URL."
     },
@@ -135,45 +136,83 @@
         "role": "button",
         "label": "okay",
         "kind": "button",
-        "risk": "approval-required"
+        "risk": "low"
       },
       "decisionConfidence": null,
       "decisionCalibration": "not-applicable-rule",
       "decisionLatencyMs": 0,
       "decisionCallLatenciesMs": [],
       "decisionSnapshot": null,
+      "availableCandidates": null,
       "decisionTrace": [
         {
           "step": 1,
-          "decisionStatus": "awaiting-user-approval",
+          "decisionStatus": "action-executed",
           "provider": "local-literal-match",
-          "model": "unique-quoted-label",
+          "model": "unique-exact-quoted-label",
           "selectionRule": "unique-exact-quoted-label",
           "selectedAction": {
             "ref": "r1",
             "role": "button",
             "label": "okay",
             "kind": "button",
-            "risk": "approval-required"
+            "risk": "low"
           },
+          "availableCandidates": [
+            {
+              "ref": "r1",
+              "role": "button",
+              "label": "okay",
+              "kind": "button",
+              "risk": "low"
+            },
+            {
+              "ref": "r2",
+              "role": "button",
+              "label": "Submit",
+              "kind": "button",
+              "risk": "approval-required"
+            },
+            {
+              "ref": "r3",
+              "role": "input",
+              "label": "input 3",
+              "kind": "text",
+              "risk": "low"
+            },
+            {
+              "ref": "r4",
+              "role": "button",
+              "label": "Submit",
+              "kind": "button",
+              "risk": "approval-required"
+            },
+            {
+              "ref": "r5",
+              "role": "button",
+              "label": "no",
+              "kind": "button",
+              "risk": "low"
+            }
+          ],
           "decisionLatencyMs": 0,
           "candidateCount": 5,
           "confidence": null,
           "calibration": "not-applicable-rule",
-          "executionStatus": "action-executed-after-approval"
+          "executionStatus": "action-executed"
         }
       ],
       "candidateCount": 5,
       "selectionRule": "unique-exact-quoted-label",
-      "syntheticApprovalCount": 1,
-      "latencyMs": 2698,
-      "environmentResetLatencyMs": 2365,
-      "agentActionLatencyMs": 333,
+      "syntheticApprovalCount": 0,
+      "latencyMs": 1648,
+      "environmentResetLatencyMs": 1390,
+      "agentActionLatencyMs": 258,
       "reward": 1.0,
       "terminated": true,
-      "decisionStatus": "action-executed-after-approval",
+      "decisionStatus": "action-executed",
       "decisionProvider": "local-literal-match",
-      "decisionModel": "unique-quoted-label",
+      "decisionModel": "unique-exact-quoted-label",
       "browserGymVersion": "0.14.3",
       "browserGymPackageCommit": "0a785fbed075224ae81ca9c1fe924f66050696fe",
       "playwrightPythonVersion": "1.44.0",
@@ -189,14 +228,14 @@
       "miniWobCommit": "7fd85d71a4b60325c6585396ec4f48377d049838",
       "browserStillOpenAfterDisconnect": true,
       "rawTaskInfo": {
-        "REWARD_GLOBAL": 0.99771,
+        "REWARD_GLOBAL": 0.99888,
         "RAW_REWARD_GLOBAL": 1,
         "REWARD_REASON": null,
         "DONE_GLOBAL": true,
         "EPISODE_ID": 1,
         "TASK_READY": true
       },
-      "timestampUtc": "2026-09-29T16:59:14.757036+00:00",
+      "timestampUtc": "2026-09-29T17:45:33.553495+00:00",
       "maxActions": 5,
       "note": "Single-task integration smoke check. The runner repeats bounded BrowserManager calls up to maxActions. Not a representative BrowserGym benchmark, model-quality estimate, or speed claim. Synthetic approvals are possible only for the exact local MiniWoB file URL."
     },
@@ -219,6 +258,7 @@
         "headings": [],
         "textExcerpt": "Cursus donec adipiscing. Id id sagittis, mauris sagittis cursus. Massa. Quis enim mi. Ultrices. Amet, morbi ultricies bibendum aliquet aenean."
       },
+      "availableCandidates": null,
       "decisionTrace": [
         {
           "step": 1,
@@ -227,6 +267,7 @@
           "model": null,
           "selectionRule": null,
           "selectedAction": null,
+          "availableCandidates": null,
           "decisionLatencyMs": null,
           "candidateCount": 0,
           "confidence": null,
@@ -237,14 +278,14 @@
       "candidateCount": 0,
       "selectionRule": null,
       "syntheticApprovalCount": 0,
-      "latencyMs": 2388,
-      "environmentResetLatencyMs": 2365,
-      "agentActionLatencyMs": 23,
+      "latencyMs": 1432,
+      "environmentResetLatencyMs": 1421,
+      "agentActionLatencyMs": 11,
       "reward": 0.0,
       "terminated": false,
       "decisionStatus": "visual-only-page",
       "decisionProvider": "semantic-local",
-      "decisionModel": "Xenova/all-MiniLM-L6-v2",
+      "decisionModel": "not-reported",
       "browserGymVersion": "0.14.3",
       "browserGymPackageCommit": "0a785fbed075224ae81ca9c1fe924f66050696fe",
       "playwrightPythonVersion": "1.44.0",
@@ -267,7 +308,7 @@
         "EPISODE_ID": 0,
         "TASK_READY": true
       },
-      "timestampUtc": "2026-09-29T16:59:21.750756+00:00",
+      "timestampUtc": "2026-09-29T17:45:37.316684+00:00",
       "maxActions": 5,
       "note": "Single-task integration smoke check. The runner repeats bounded BrowserManager calls up to maxActions. Not a representative BrowserGym benchmark, model-quality estimate, or speed claim. Synthetic approvals are possible only for the exact local MiniWoB file URL."
     },
@@ -275,44 +316,109 @@
       "benchmark": "miniwob",
       "task": "click-tab",
       "taskPrompt": "Click on Tab #2.",
-      "success": false,
+      "success": true,
       "timeout": false,
-      "failureReason": "task-goal-not-achieved",
-      "actions": 0,
-      "selectedAction": null,
+      "failureReason": null,
+      "actions": 1,
+      "selectedAction": {
+        "ref": "r3",
+        "role": "tab",
+        "label": "Tab #2 \u00e2\u20ac\u201d Collapsed",
+        "kind": "li",
+        "risk": "low",
+        "expanded": false,
+        "selected": false
+      },
       "decisionConfidence": null,
-      "decisionCalibration": null,
-      "decisionLatencyMs": 619,
-      "decisionCallLatenciesMs": [
-        619
-      ],
+      "decisionCalibration": "not-applicable-rule",
+      "decisionLatencyMs": 0,
+      "decisionCallLatenciesMs": [],
       "decisionSnapshot": null,
+      "availableCandidates": null,
       "decisionTrace": [
         {
           "step": 1,
-          "decisionStatus": "ambiguous-selection",
-          "provider": "semantic-local",
-          "model": "Xenova/all-MiniLM-L6-v2",
-          "selectionRule": null,
-          "selectedAction": null,
-          "decisionLatencyMs": 619,
-          "candidateCount": 3,
+          "decisionStatus": "action-executed",
+          "provider": "local-literal-match",
+          "model": "explicit-tab-number",
+          "selectionRule": "explicit-tab-number",
+          "selectedAction": {
+            "ref": "r3",
+            "role": "tab",
+            "label": "Tab #2 \u00e2\u20ac\u201d Collapsed",
+            "kind": "li",
+            "risk": "low",
+            "expanded": false,
+            "selected": false
+          },
+          "availableCandidates": [
+            {
+              "ref": "r1",
+              "role": "tab",
+              "label": "Tab #1 \u00e2\u20ac\u201d Expanded",
+              "kind": "li",
+              "risk": "low",
+              "expanded": true,
+              "selected": true
+            },
+            {
+              "ref": "r2",
+              "role": "presentation",
+              "label": "Tab #1",
+              "kind": "a",
+              "risk": "low"
+            },
+            {
+              "ref": "r3",
+              "role": "tab",
+              "label": "Tab #2 \u00e2\u20ac\u201d Collapsed",
+              "kind": "li",
+              "risk": "low",
+              "expanded": false,
+              "selected": false
+            },
+            {
+              "ref": "r4",
+              "role": "presentation",
+              "label": "Tab #2",
+              "kind": "a",
+              "risk": "low"
+            },
+            {
+              "ref": "r5",
+              "role": "tab",
+              "label": "Tab #3 \u00e2\u20ac\u201d Collapsed",
+              "kind": "li",
+              "risk": "low",
+              "expanded": false,
+              "selected": false
+            },
+            {
+              "ref": "r6",
+              "role": "presentation",
+              "label": "Tab #3",
+              "kind": "a",
+              "risk": "low"
+            }
+          ],
+          "decisionLatencyMs": 0,
+          "candidateCount": 6,
           "confidence": null,
-          "calibration": null,
-          "executionStatus": "ambiguous-selection"
+          "calibration": "not-applicable-rule",
+          "executionStatus": "action-executed"
         }
       ],
-      "candidateCount": 3,
-      "selectionRule": null,
+      "candidateCount": 6,
+      "selectionRule": "explicit-tab-number",
       "syntheticApprovalCount": 0,
-      "latencyMs": 3022,
-      "environmentResetLatencyMs": 2375,
-      "agentActionLatencyMs": 647,
-      "reward": 0.0,
-      "terminated": false,
-      "decisionStatus": "ambiguous-selection",
-      "decisionProvider": "semantic-local",
-      "decisionModel": "Xenova/all-MiniLM-L6-v2",
+      "latencyMs": 1686,
+      "environmentResetLatencyMs": 1427,
+      "agentActionLatencyMs": 259,
+      "reward": 1.0,
+      "terminated": true,
+      "decisionStatus": "action-executed",
+      "decisionProvider": "local-literal-match",
+      "decisionModel": "explicit-tab-number",
       "browserGymVersion": "0.14.3",
       "browserGymPackageCommit": "0a785fbed075224ae81ca9c1fe924f66050696fe",
       "playwrightPythonVersion": "1.44.0",
@@ -328,14 +434,14 @@
       "miniWobCommit": "7fd85d71a4b60325c6585396ec4f48377d049838",
       "browserStillOpenAfterDisconnect": true,
       "rawTaskInfo": {
-        "REWARD_GLOBAL": 0,
-        "RAW_REWARD_GLOBAL": 0,
+        "REWARD_GLOBAL": 0.998872,
+        "RAW_REWARD_GLOBAL": 1,
         "REWARD_REASON": null,
-        "DONE_GLOBAL": false,
-        "EPISODE_ID": 0,
+        "DONE_GLOBAL": true,
+        "EPISODE_ID": 1,
         "TASK_READY": true
       },
-      "timestampUtc": "2026-09-29T16:59:29.350668+00:00",
+      "timestampUtc": "2026-09-29T17:45:41.328475+00:00",
       "maxActions": 5,
       "note": "Single-task integration smoke check. The runner repeats bounded BrowserManager calls up to maxActions. Not a representative BrowserGym benchmark, model-quality estimate, or speed claim. Synthetic approvals are possible only for the exact local MiniWoB file URL."
     },
@@ -343,56 +449,130 @@
       "benchmark": "miniwob",
       "task": "click-collapsible",
       "taskPrompt": "Expand the section below and click submit.",
-      "success": false,
+      "success": true,
       "timeout": false,
-      "failureReason": "task-goal-not-achieved",
-      "actions": 1,
+      "failureReason": null,
+      "actions": 2,
       "selectedAction": {
-        "ref": "r1",
+        "ref": "r3",
         "role": "button",
         "label": "Submit",
         "kind": "button",
         "risk": "approval-required"
       },
-      "decisionConfidence": 1,
-      "decisionCalibration": "uncalibrated-estimate",
-      "decisionLatencyMs": 404,
-      "decisionCallLatenciesMs": [
-        404
-      ],
+      "decisionConfidence": null,
+      "decisionCalibration": "not-applicable-rule",
+      "decisionLatencyMs": 0,
+      "decisionCallLatenciesMs": [],
       "decisionSnapshot": null,
+      "availableCandidates": null,
       "decisionTrace": [
         {
           "step": 1,
-          "decisionStatus": "awaiting-user-approval",
-          "provider": "semantic-local",
-          "model": "Xenova/all-MiniLM-L6-v2",
-          "selectionRule": null,
+          "decisionStatus": "action-executed",
+          "provider": "local-literal-match",
+          "model": "unique-expand-control",
+          "selectionRule": "unique-expand-control",
           "selectedAction": {
             "ref": "r1",
+            "role": "tab",
+            "label": "Section #37 \u00e2\u20ac\u201d Collapsed",
+            "kind": "h3",
+            "risk": "low",
+            "expanded": false,
+            "selected": false
+          },
+          "availableCandidates": [
+            {
+              "ref": "r1",
+              "role": "tab",
+              "label": "Section #37 \u00e2\u20ac\u201d Collapsed",
+              "kind": "h3",
+              "risk": "low",
+              "expanded": false,
+              "selected": false
+            },
+            {
+              "ref": "r2",
+              "role": "tab",
+              "label": "Submit \u00e2\u20ac\u201d Collapsed",
+              "kind": "p",
+              "risk": "approval-required",
+              "expanded": false,
+              "selected": false
+            },
+            {
+              "ref": "r3",
+              "role": "button",
+              "label": "Submit",
+              "kind": "button",
+              "risk": "approval-required"
+            }
+          ],
+          "decisionLatencyMs": 0,
+          "candidateCount": 3,
+          "confidence": null,
+          "calibration": "not-applicable-rule",
+          "executionStatus": "action-executed"
+        },
+        {
+          "step": 2,
+          "decisionStatus": "awaiting-user-approval",
+          "provider": "local-literal-match",
+          "model": "expanded-section-then-submit",
+          "selectionRule": "expanded-section-then-submit",
+          "selectedAction": {
+            "ref": "r3",
             "role": "button",
             "label": "Submit",
             "kind": "button",
             "risk": "approval-required"
           },
-          "decisionLatencyMs": 404,
-          "candidateCount": 1,
-          "confidence": 1,
-          "calibration": "uncalibrated-estimate",
+          "availableCandidates": [
+            {
+              "ref": "r1",
+              "role": "tab",
+              "label": "Section #37 \u00e2\u20ac\u201d Expanded",
+              "kind": "h3",
+              "risk": "low",
+              "expanded": true,
+              "selected": true
+            },
+            {
+              "ref": "r2",
+              "role": "tab",
+              "label": "Submit \u00e2\u20ac\u201d Collapsed",
+              "kind": "p",
+              "risk": "approval-required",
+              "expanded": false,
+              "selected": false
+            },
+            {
+              "ref": "r3",
+              "role": "button",
+              "label": "Submit",
+              "kind": "button",
+              "risk": "approval-required"
+            }
+          ],
+          "decisionLatencyMs": 0,
+          "candidateCount": 3,
+          "confidence": null,
+          "calibration": "not-applicable-rule",
           "executionStatus": "action-executed-after-approval"
         }
       ],
-      "candidateCount": 1,
-      "selectionRule": null,
+      "candidateCount": 3,
+      "selectionRule": "expanded-section-then-submit",
       "syntheticApprovalCount": 1,
-      "latencyMs": 3227,
-      "environmentResetLatencyMs": 2463,
-      "agentActionLatencyMs": 764,
-      "reward": 0.0,
+      "latencyMs": 2161,
+      "environmentResetLatencyMs": 1459,
+      "agentActionLatencyMs": 702,
+      "reward": 1.0,
       "terminated": true,
       "decisionStatus": "action-executed-after-approval",
-      "decisionProvider": "semantic-local",
-      "decisionModel": "Xenova/all-MiniLM-L6-v2",
+      "decisionProvider": "local-literal-match",
+      "decisionModel": "expanded-section-then-submit",
       "browserGymVersion": "0.14.3",
       "browserGymPackageCommit": "0a785fbed075224ae81ca9c1fe924f66050696fe",
       "playwrightPythonVersion": "1.44.0",
@@ -408,14 +588,14 @@
       "miniWobCommit": "7fd85d71a4b60325c6585396ec4f48377d049838",
       "browserStillOpenAfterDisconnect": true,
       "rawTaskInfo": {
-        "REWARD_GLOBAL": -1,
-        "RAW_REWARD_GLOBAL": -1,
+        "REWARD_GLOBAL": 0.998447,
+        "RAW_REWARD_GLOBAL": 1,
         "REWARD_REASON": null,
         "DONE_GLOBAL": true,
         "EPISODE_ID": 1,
         "TASK_READY": true
       },
-      "timestampUtc": "2026-09-29T16:59:37.700885+00:00",
+      "timestampUtc": "2026-09-29T17:45:45.797207+00:00",
       "maxActions": 5,
       "note": "Single-task integration smoke check. The runner repeats bounded BrowserManager calls up to maxActions. Not a representative BrowserGym benchmark, model-quality estimate, or speed claim. Synthetic approvals are possible only for the exact local MiniWoB file URL."
     },
@@ -430,17 +610,18 @@
       "selectedAction": {
         "ref": "r1",
         "role": "button",
-        "label": "Close â€” Close",
+        "label": "Close",
         "kind": "button",
         "risk": "low"
       },
       "decisionConfidence": 1,
       "decisionCalibration": "uncalibrated-estimate",
-      "decisionLatencyMs": 402,
+      "decisionLatencyMs": 194,
       "decisionCallLatenciesMs": [
-        402
+        194
       ],
       "decisionSnapshot": null,
+      "availableCandidates": null,
       "decisionTrace": [
         {
           "step": 1,
@@ -451,11 +632,12 @@
           "selectedAction": {
             "ref": "r1",
             "role": "button",
-            "label": "Close â€” Close",
+            "label": "Close",
             "kind": "button",
             "risk": "low"
           },
-          "decisionLatencyMs": 402,
+          "availableCandidates": null,
+          "decisionLatencyMs": 194,
           "candidateCount": 1,
           "confidence": 1,
           "calibration": "uncalibrated-estimate",
@@ -465,9 +647,9 @@
       "candidateCount": 1,
       "selectionRule": null,
       "syntheticApprovalCount": 0,
-      "latencyMs": 3172,
-      "environmentResetLatencyMs": 2439,
-      "agentActionLatencyMs": 733,
+      "latencyMs": 1888,
+      "environmentResetLatencyMs": 1456,
+      "agentActionLatencyMs": 432,
       "reward": 1.0,
       "terminated": true,
       "decisionStatus": "action-executed",
@@ -488,14 +670,14 @@
       "miniWobCommit": "7fd85d71a4b60325c6585396ec4f48377d049838",
       "browserStillOpenAfterDisconnect": true,
       "rawTaskInfo": {
-        "REWARD_GLOBAL": 0.997338,
+        "REWARD_GLOBAL": 0.998711,
         "RAW_REWARD_GLOBAL": 1,
         "REWARD_REASON": null,
         "DONE_GLOBAL": true,
         "EPISODE_ID": 1,
         "TASK_READY": true
       },
-      "timestampUtc": "2026-09-29T16:59:46.350612+00:00",
+      "timestampUtc": "2026-09-29T17:45:50.025360+00:00",
       "maxActions": 5,
       "note": "Single-task integration smoke check. The runner repeats bounded BrowserManager calls up to maxActions. Not a representative BrowserGym benchmark, model-quality estimate, or speed claim. Synthetic approvals are possible only for the exact local MiniWoB file URL."
     },
@@ -503,45 +685,56 @@
       "benchmark": "miniwob",
       "task": "click-menu",
       "taskPrompt": "Select Jenelle",
-      "success": false,
+      "success": true,
       "timeout": false,
-      "failureReason": "task-goal-not-achieved",
-      "actions": 0,
-      "selectedAction": null,
-      "decisionConfidence": null,
-      "decisionCalibration": null,
-      "decisionLatencyMs": 0,
-      "decisionCallLatenciesMs": [],
-      "decisionSnapshot": {
-        "title": "Click Menu Task",
-        "url": "file:///MINIWOB/click-menu.html",
-        "headings": [],
-        "textExcerpt": "Letisha Jenelle"
+      "failureReason": null,
+      "actions": 1,
+      "selectedAction": {
+        "ref": "r2",
+        "role": "menuitem",
+        "label": "Jenelle",
+        "kind": "div",
+        "risk": "low"
       },
+      "decisionConfidence": 0.6002896650937184,
+      "decisionCalibration": "uncalibrated-estimate",
+      "decisionLatencyMs": 206,
+      "decisionCallLatenciesMs": [
+        206
+      ],
+      "decisionSnapshot": null,
+      "availableCandidates": null,
       "decisionTrace": [
         {
           "step": 1,
-          "decisionStatus": "visual-only-page",
+          "decisionStatus": "action-executed",
           "provider": "semantic-local",
-          "model": null,
+          "model": "Xenova/all-MiniLM-L6-v2",
           "selectionRule": null,
-          "selectedAction": null,
-          "decisionLatencyMs": null,
-          "candidateCount": 0,
-          "confidence": null,
-          "calibration": null,
-          "executionStatus": "visual-only-page"
+          "selectedAction": {
+            "ref": "r2",
+            "role": "menuitem",
+            "label": "Jenelle",
+            "kind": "div",
+            "risk": "low"
+          },
+          "availableCandidates": null,
+          "decisionLatencyMs": 206,
+          "candidateCount": 2,
+          "confidence": 0.6002896650937184,
+          "calibration": "uncalibrated-estimate",
+          "executionStatus": "action-executed"
         }
       ],
-      "candidateCount": 0,
+      "candidateCount": 2,
       "selectionRule": null,
       "syntheticApprovalCount": 0,
-      "latencyMs": 2401,
-      "environmentResetLatencyMs": 2378,
-      "agentActionLatencyMs": 23,
-      "reward": 0.0,
-      "terminated": false,
-      "decisionStatus": "visual-only-page",
+      "latencyMs": 1878,
+      "environmentResetLatencyMs": 1421,
+      "agentActionLatencyMs": 457,
+      "reward": 1.0,
+      "terminated": true,
+      "decisionStatus": "action-executed",
       "decisionProvider": "semantic-local",
       "decisionModel": "Xenova/all-MiniLM-L6-v2",
       "browserGymVersion": "0.14.3",
@@ -559,14 +752,14 @@
       "miniWobCommit": "7fd85d71a4b60325c6585396ec4f48377d049838",
       "browserStillOpenAfterDisconnect": true,
       "rawTaskInfo": {
-        "REWARD_GLOBAL": 0,
-        "RAW_REWARD_GLOBAL": 0,
+        "REWARD_GLOBAL": 0.99869,
+        "RAW_REWARD_GLOBAL": 1,
         "REWARD_REASON": null,
-        "DONE_GLOBAL": false,
-        "EPISODE_ID": 0,
+        "DONE_GLOBAL": true,
+        "EPISODE_ID": 1,
         "TASK_READY": true
       },
-      "timestampUtc": "2026-09-29T16:59:53.402358+00:00",
+      "timestampUtc": "2026-09-29T17:45:54.212311+00:00",
       "maxActions": 5,
       "note": "Single-task integration smoke check. The runner repeats bounded BrowserManager calls up to maxActions. Not a representative BrowserGym benchmark, model-quality estimate, or speed claim. Synthetic approvals are possible only for the exact local MiniWoB file URL."
     },
@@ -574,44 +767,173 @@
       "benchmark": "miniwob",
       "task": "click-checkboxes",
       "taskPrompt": "Select Neb and click Submit.",
-      "success": false,
+      "success": true,
       "timeout": false,
-      "failureReason": "task-goal-not-achieved",
-      "actions": 0,
-      "selectedAction": null,
+      "failureReason": null,
+      "actions": 2,
+      "selectedAction": {
+        "ref": "r6",
+        "role": "button",
+        "label": "Submit",
+        "kind": "button",
+        "risk": "approval-required"
+      },
       "decisionConfidence": null,
-      "decisionCalibration": null,
-      "decisionLatencyMs": 816,
-      "decisionCallLatenciesMs": [
-        816
-      ],
+      "decisionCalibration": "not-applicable-rule",
+      "decisionLatencyMs": 0,
+      "decisionCallLatenciesMs": [],
       "decisionSnapshot": null,
+      "availableCandidates": null,
       "decisionTrace": [
         {
           "step": 1,
-          "decisionStatus": "ambiguous-selection",
-          "provider": "semantic-local",
-          "model": "Xenova/all-MiniLM-L6-v2",
-          "selectionRule": null,
-          "selectedAction": null,
-          "decisionLatencyMs": 816,
+          "decisionStatus": "action-executed",
+          "provider": "local-literal-match",
+          "model": "explicit-checkbox-target",
+          "selectionRule": "explicit-checkbox-target",
+          "selectedAction": {
+            "ref": "r4",
+            "role": "input",
+            "label": "Neb \u00e2\u20ac\u201d Currently unchecked",
+            "kind": "checkbox",
+            "risk": "low",
+            "checked": false
+          },
+          "availableCandidates": [
+            {
+              "ref": "r1",
+              "role": "input",
+              "label": "UV \u00e2\u20ac\u201d Currently unchecked",
+              "kind": "checkbox",
+              "risk": "low",
+              "checked": false
+            },
+            {
+              "ref": "r2",
+              "role": "input",
+              "label": "tp \u00e2\u20ac\u201d Currently unchecked",
+              "kind": "checkbox",
+              "risk": "low",
+              "checked": false
+            },
+            {
+              "ref": "r3",
+              "role": "input",
+              "label": "bf \u00e2\u20ac\u201d Currently unchecked",
+              "kind": "checkbox",
+              "risk": "low",
+              "checked": false
+            },
+            {
+              "ref": "r4",
+              "role": "input",
+              "label": "Neb \u00e2\u20ac\u201d Currently unchecked",
+              "kind": "checkbox",
+              "risk": "low",
+              "checked": false
+            },
+            {
+              "ref": "r5",
+              "role": "input",
+              "label": "cp \u00e2\u20ac\u201d Currently unchecked",
+              "kind": "checkbox",
+              "risk": "low",
+              "checked": false
+            },
+            {
+              "ref": "r6",
+              "role": "button",
+              "label": "Submit",
+              "kind": "button",
+              "risk": "approval-required"
+            }
+          ],
+          "decisionLatencyMs": 0,
           "candidateCount": 6,
           "confidence": null,
-          "calibration": null,
-          "executionStatus": "ambiguous-selection"
+          "calibration": "not-applicable-rule",
+          "executionStatus": "action-executed"
+        },
+        {
+          "step": 2,
+          "decisionStatus": "awaiting-user-approval",
+          "provider": "local-literal-match",
+          "model": "checkbox-targets-then-submit",
+          "selectionRule": "checkbox-targets-then-submit",
+          "selectedAction": {
+            "ref": "r6",
+            "role": "button",
+            "label": "Submit",
+            "kind": "button",
+            "risk": "approval-required"
+          },
+          "availableCandidates": [
+            {
+              "ref": "r1",
+              "role": "input",
+              "label": "UV \u00e2\u20ac\u201d Currently unchecked",
+              "kind": "checkbox",
+              "risk": "low",
+              "checked": false
+            },
+            {
+              "ref": "r2",
+              "role": "input",
+              "label": "tp \u00e2\u20ac\u201d Currently unchecked",
+              "kind": "checkbox",
+              "risk": "low",
+              "checked": false
+            },
+            {
+              "ref": "r3",
+              "role": "input",
+              "label": "bf \u00e2\u20ac\u201d Currently unchecked",
+              "kind": "checkbox",
+              "risk": "low",
+              "checked": false
+            },
+            {
+              "ref": "r4",
+              "role": "input",
+              "label": "Neb \u00e2\u20ac\u201d Currently checked",
+              "kind": "checkbox",
+              "risk": "low",
+              "checked": true
+            },
+            {
+              "ref": "r5",
+              "role": "input",
+              "label": "cp \u00e2\u20ac\u201d Currently unchecked",
+              "kind": "checkbox",
+              "risk": "low",
+              "checked": false
+            },
+            {
+              "ref": "r6",
+              "role": "button",
+              "label": "Submit",
+              "kind": "button",
+              "risk": "approval-required"
+            }
+          ],
+          "decisionLatencyMs": 0,
+          "candidateCount": 6,
+          "confidence": null,
+          "calibration": "not-applicable-rule",
+          "executionStatus": "action-executed-after-approval"
         }
       ],
       "candidateCount": 6,
-      "selectionRule": null,
-      "syntheticApprovalCount": 0,
-      "latencyMs": 3246,
-      "environmentResetLatencyMs": 2396,
-      "agentActionLatencyMs": 850,
-      "reward": 0.0,
-      "terminated": false,
-      "decisionStatus": "ambiguous-selection",
-      "decisionProvider": "semantic-local",
-      "decisionModel": "Xenova/all-MiniLM-L6-v2",
+      "selectionRule": "checkbox-targets-then-submit",
+      "syntheticApprovalCount": 1,
+      "latencyMs": 1700,
+      "environmentResetLatencyMs": 1400,
+      "agentActionLatencyMs": 300,
+      "reward": 1.0,
+      "terminated": true,
+      "decisionStatus": "action-executed-after-approval",
+      "decisionProvider": "local-literal-match",
+      "decisionModel": "checkbox-targets-then-submit",
       "browserGymVersion": "0.14.3",
       "browserGymPackageCommit": "0a785fbed075224ae81ca9c1fe924f66050696fe",
       "playwrightPythonVersion": "1.44.0",
@@ -627,14 +949,14 @@
       "miniWobCommit": "7fd85d71a4b60325c6585396ec4f48377d049838",
       "browserStillOpenAfterDisconnect": true,
       "rawTaskInfo": {
-        "REWARD_GLOBAL": 0,
-        "RAW_REWARD_GLOBAL": 0,
+        "REWARD_GLOBAL": 0.998854,
+        "RAW_REWARD_GLOBAL": 1,
         "REWARD_REASON": null,
-        "DONE_GLOBAL": false,
-        "EPISODE_ID": 0,
+        "DONE_GLOBAL": true,
+        "EPISODE_ID": 1,
         "TASK_READY": true
       },
-      "timestampUtc": "2026-09-29T17:00:01.351339+00:00",
+      "timestampUtc": "2026-09-29T17:45:58.214236+00:00",
       "maxActions": 5,
       "note": "Single-task integration smoke check. The runner repeats bounded BrowserManager calls up to maxActions. Not a representative BrowserGym benchmark, model-quality estimate, or speed claim. Synthetic approvals are possible only for the exact local MiniWoB file URL."
     }

@@ -23,9 +23,9 @@ The starter fixtures are public and tiny. They are useful for verifying the harn
 
 Raw records redact local file URLs and home-directory paths before writing them to disk. The live approval check still verifies the exact unredacted local MiniWoB URL before confirming any benchmark action.
 
-The checked-in run completed 3/8 tasks (37.5%) with no harness timeouts. Median agent action-path latency was 647 ms (p95 850 ms); the five provider calls had a p95 of 816 ms. Each task used a fresh Node bridge process, so its first inference was cold even though model files were cached. The unique exact quoted-label rule selected one action locally in 0 ms and is excluded from provider-call latency. That rule returns no confidence estimate. The separate 11-label local decision loop measures its warm within-process p95 at 25 ms. These small fixtures are not general quality or latency guarantees. The smoke suite's 37.5% success rate shows the semantic baseline needs stronger decision quality before broad browser task claims are appropriate.
+The checked-in run completed 7/8 tasks (87.5%) with no harness timeouts. Median agent action-path latency was 300 ms (p95 702 ms); the three provider calls had a p95 of 206 ms. Each task used a fresh Node bridge process, so its first inference was cold even though model files were cached. Four deterministic local selections (an exact quoted label, a numbered tab, a checkbox target, and an expand/submit step) are excluded from provider-call latency and do not report probabilities. The separate 11-label local decision loop measures its warm within-process p95 at 25 ms. These small CPU smoke fixtures do not establish consumer-GPU performance, calibration, or broad browser quality. The remaining click-link page exposed no DOM control and was recorded as `visual-only-page`.
 
-To reproduce the recorded smoke suite, use Node.js 20+, Python 3.10+, and the exact MiniWoB++ revision from the raw records. Install BrowserGym in a separate virtual environment (it is not a runtime dependency of this package):
+To reproduce the recorded smoke suite, use Node.js 20.19 or newer, Python 3.10+, and the exact MiniWoB++ revision from the raw records. Install BrowserGym in a separate virtual environment (it is not a runtime dependency of this package):
 
 ```sh
 python -m venv .venv-browsergym

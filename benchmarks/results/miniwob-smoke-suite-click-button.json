@@ -11,45 +11,83 @@
     "role": "button",
     "label": "okay",
     "kind": "button",
-    "risk": "approval-required"
+    "risk": "low"
   },
   "decisionConfidence": null,
   "decisionCalibration": "not-applicable-rule",
   "decisionLatencyMs": 0,
   "decisionCallLatenciesMs": [],
   "decisionSnapshot": null,
+  "availableCandidates": null,
   "decisionTrace": [
     {
       "step": 1,
-      "decisionStatus": "awaiting-user-approval",
+      "decisionStatus": "action-executed",
       "provider": "local-literal-match",
-      "model": "unique-quoted-label",
+      "model": "unique-exact-quoted-label",
       "selectionRule": "unique-exact-quoted-label",
       "selectedAction": {
         "ref": "r1",
         "role": "button",
         "label": "okay",
         "kind": "button",
-        "risk": "approval-required"
+        "risk": "low"
       },
+      "availableCandidates": [
+        {
+          "ref": "r1",
+          "role": "button",
+          "label": "okay",
+          "kind": "button",
+          "risk": "low"
+        },
+        {
+          "ref": "r2",
+          "role": "button",
+          "label": "Submit",
+          "kind": "button",
+          "risk": "approval-required"
+        },
+        {
+          "ref": "r3",
+          "role": "input",
+          "label": "input 3",
+          "kind": "text",
+          "risk": "low"
+        },
+        {
+          "ref": "r4",
+          "role": "button",
+          "label": "Submit",
+          "kind": "button",
+          "risk": "approval-required"
+        },
+        {
+          "ref": "r5",
+          "role": "button",
+          "label": "no",
+          "kind": "button",
+          "risk": "low"
+        }
+      ],
       "decisionLatencyMs": 0,
       "candidateCount": 5,
       "confidence": null,
       "calibration": "not-applicable-rule",
-      "executionStatus": "action-executed-after-approval"
+      "executionStatus": "action-executed"
     }
   ],
   "candidateCount": 5,
   "selectionRule": "unique-exact-quoted-label",
-  "syntheticApprovalCount": 1,
-  "latencyMs": 2698,
-  "environmentResetLatencyMs": 2365,
-  "agentActionLatencyMs": 333,
+  "syntheticApprovalCount": 0,
+  "latencyMs": 1648,
+  "environmentResetLatencyMs": 1390,
+  "agentActionLatencyMs": 258,
   "reward": 1.0,
   "terminated": true,
-  "decisionStatus": "action-executed-after-approval",
+  "decisionStatus": "action-executed",
   "decisionProvider": "local-literal-match",
-  "decisionModel": "unique-quoted-label",
+  "decisionModel": "unique-exact-quoted-label",
   "browserGymVersion": "0.14.3",
   "browserGymPackageCommit": "0a785fbed075224ae81ca9c1fe924f66050696fe",
   "playwrightPythonVersion": "1.44.0",
@@ -65,14 +103,14 @@
   "miniWobCommit": "7fd85d71a4b60325c6585396ec4f48377d049838",
   "browserStillOpenAfterDisconnect": true,
   "rawTaskInfo": {
-    "REWARD_GLOBAL": 0.99771,
+    "REWARD_GLOBAL": 0.99888,
     "RAW_REWARD_GLOBAL": 1,
     "REWARD_REASON": null,
     "DONE_GLOBAL": true,
     "EPISODE_ID": 1,
     "TASK_READY": true
   },
-  "timestampUtc": "2026-09-29T16:59:14.757036+00:00",
+  "timestampUtc": "2026-09-29T17:45:33.553495+00:00",
   "maxActions": 5,
   "note": "Single-task integration smoke check. The runner repeats bounded BrowserManager calls up to maxActions. Not a representative BrowserGym benchmark, model-quality estimate, or speed claim. Synthetic approvals are possible only for the exact local MiniWoB file URL."
 }

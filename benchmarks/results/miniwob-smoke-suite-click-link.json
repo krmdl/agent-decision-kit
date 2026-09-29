@@ -17,6 +17,7 @@
     "headings": [],
     "textExcerpt": "Cursus donec adipiscing. Id id sagittis, mauris sagittis cursus. Massa. Quis enim mi. Ultrices. Amet, morbi ultricies bibendum aliquet aenean."
   },
+  "availableCandidates": null,
   "decisionTrace": [
     {
       "step": 1,
@@ -25,6 +26,7 @@
       "model": null,
       "selectionRule": null,
       "selectedAction": null,
+      "availableCandidates": null,
       "decisionLatencyMs": null,
       "candidateCount": 0,
       "confidence": null,
@@ -35,14 +37,14 @@
   "candidateCount": 0,
   "selectionRule": null,
   "syntheticApprovalCount": 0,
-  "latencyMs": 2388,
-  "environmentResetLatencyMs": 2365,
-  "agentActionLatencyMs": 23,
+  "latencyMs": 1432,
+  "environmentResetLatencyMs": 1421,
+  "agentActionLatencyMs": 11,
   "reward": 0.0,
   "terminated": false,
   "decisionStatus": "visual-only-page",
   "decisionProvider": "semantic-local",
-  "decisionModel": "Xenova/all-MiniLM-L6-v2",
+  "decisionModel": "not-reported",
   "browserGymVersion": "0.14.3",
   "browserGymPackageCommit": "0a785fbed075224ae81ca9c1fe924f66050696fe",
   "playwrightPythonVersion": "1.44.0",
@@ -65,7 +67,7 @@
     "EPISODE_ID": 0,
     "TASK_READY": true
   },
-  "timestampUtc": "2026-09-29T16:59:21.750756+00:00",
+  "timestampUtc": "2026-09-29T17:45:37.316684+00:00",
   "maxActions": 5,
   "note": "Single-task integration smoke check. The runner repeats bounded BrowserManager calls up to maxActions. Not a representative BrowserGym benchmark, model-quality estimate, or speed claim. Synthetic approvals are possible only for the exact local MiniWoB file URL."
 }

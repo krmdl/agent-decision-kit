@@ -11,19 +11,20 @@
     "role": "button",
     "label": "Click Me!",
     "kind": "button",
-    "risk": "approval-required"
+    "risk": "low"
   },
   "decisionConfidence": 1,
   "decisionCalibration": "uncalibrated-estimate",
-  "decisionLatencyMs": 447,
+  "decisionLatencyMs": 187,
   "decisionCallLatenciesMs": [
-    447
+    187
   ],
   "decisionSnapshot": null,
+  "availableCandidates": null,
   "decisionTrace": [
     {
       "step": 1,
-      "decisionStatus": "awaiting-user-approval",
+      "decisionStatus": "action-executed",
       "provider": "semantic-local",
       "model": "Xenova/all-MiniLM-L6-v2",
       "selectionRule": null,
@@ -32,24 +33,25 @@
         "role": "button",
         "label": "Click Me!",
         "kind": "button",
-        "risk": "approval-required"
+        "risk": "low"
       },
-      "decisionLatencyMs": 447,
+      "availableCandidates": null,
+      "decisionLatencyMs": 187,
       "candidateCount": 1,
       "confidence": 1,
       "calibration": "uncalibrated-estimate",
-      "executionStatus": "action-executed-after-approval"
+      "executionStatus": "action-executed"
     }
   ],
   "candidateCount": 1,
   "selectionRule": null,
-  "syntheticApprovalCount": 1,
-  "latencyMs": 3638,
-  "environmentResetLatencyMs": 2841,
-  "agentActionLatencyMs": 797,
+  "syntheticApprovalCount": 0,
+  "latencyMs": 2278,
+  "environmentResetLatencyMs": 1830,
+  "agentActionLatencyMs": 448,
   "reward": 1.0,
   "terminated": true,
-  "decisionStatus": "action-executed-after-approval",
+  "decisionStatus": "action-executed",
   "decisionProvider": "semantic-local",
   "decisionModel": "Xenova/all-MiniLM-L6-v2",
   "browserGymVersion": "0.14.3",
@@ -67,14 +69,14 @@
   "miniWobCommit": "7fd85d71a4b60325c6585396ec4f48377d049838",
   "browserStillOpenAfterDisconnect": true,
   "rawTaskInfo": {
-    "REWARD_GLOBAL": 0.997298,
+    "REWARD_GLOBAL": 0.998717,
     "RAW_REWARD_GLOBAL": 1,
     "REWARD_REASON": null,
     "DONE_GLOBAL": true,
     "EPISODE_ID": 1,
     "TASK_READY": true
   },
-  "timestampUtc": "2026-09-29T16:59:07.303368+00:00",
+  "timestampUtc": "2026-09-29T17:45:29.572435+00:00",
   "maxActions": 5,
   "note": "Single-task integration smoke check. The runner repeats bounded BrowserManager calls up to maxActions. Not a representative BrowserGym benchmark, model-quality estimate, or speed claim. Synthetic approvals are possible only for the exact local MiniWoB file URL."
 }

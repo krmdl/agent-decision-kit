@@ -36,7 +36,7 @@ This is a local, transparent baseline. It does not summarize, rewrite, or judge 
 
 1. `browser_launch` opens a separate persistent Chromium profile, or `browser_connect` attaches to a selected loopback CDP tab.
 2. `browser_inspect` returns the page title, bounded text excerpt, and visible control labels/refs. Form values and browser storage are omitted.
-3. Ask `browser_decide_and_act` for one task, or choose a ref explicitly with `browser_action`. A unique visible label written in quotes is matched locally without provider inference.
+3. Ask `browser_decide_and_act` for one task, or choose a ref explicitly with `browser_action`. Unique quoted labels, numbered tabs, named checkbox targets, and clear disclosure steps can match locally without provider inference.
 4. Read the short DOM delta. A destructive or externally consequential control returns an approval token instead of clicking.
 5. Inspect the proposed action, then call `browser_confirm` separately. Approval is invalidated when the page fingerprint changes.
 6. Fill text through `browser_fill`; it never submits the form. Checkboxes and radio controls can be toggled. Submit, reset, image-submit, and consequential button actions require a separate `browser_confirm` call before Playwright clicks them.

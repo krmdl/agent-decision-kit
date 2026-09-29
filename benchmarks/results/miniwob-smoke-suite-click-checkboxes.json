@@ -2,44 +2,173 @@
   "benchmark": "miniwob",
   "task": "click-checkboxes",
   "taskPrompt": "Select Neb and click Submit.",
-  "success": false,
+  "success": true,
   "timeout": false,
-  "failureReason": "task-goal-not-achieved",
-  "actions": 0,
-  "selectedAction": null,
+  "failureReason": null,
+  "actions": 2,
+  "selectedAction": {
+    "ref": "r6",
+    "role": "button",
+    "label": "Submit",
+    "kind": "button",
+    "risk": "approval-required"
+  },
   "decisionConfidence": null,
-  "decisionCalibration": null,
-  "decisionLatencyMs": 816,
-  "decisionCallLatenciesMs": [
-    816
-  ],
+  "decisionCalibration": "not-applicable-rule",
+  "decisionLatencyMs": 0,
+  "decisionCallLatenciesMs": [],
   "decisionSnapshot": null,
+  "availableCandidates": null,
   "decisionTrace": [
     {
       "step": 1,
-      "decisionStatus": "ambiguous-selection",
-      "provider": "semantic-local",
-      "model": "Xenova/all-MiniLM-L6-v2",
-      "selectionRule": null,
-      "selectedAction": null,
-      "decisionLatencyMs": 816,
+      "decisionStatus": "action-executed",
+      "provider": "local-literal-match",
+      "model": "explicit-checkbox-target",
+      "selectionRule": "explicit-checkbox-target",
+      "selectedAction": {
+        "ref": "r4",
+        "role": "input",
+        "label": "Neb \u00e2\u20ac\u201d Currently unchecked",
+        "kind": "checkbox",
+        "risk": "low",
+        "checked": false
+      },
+      "availableCandidates": [
+        {
+          "ref": "r1",
+          "role": "input",
+          "label": "UV \u00e2\u20ac\u201d Currently unchecked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": false
+        },
+        {
+          "ref": "r2",
+          "role": "input",
+          "label": "tp \u00e2\u20ac\u201d Currently unchecked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": false
+        },
+        {
+          "ref": "r3",
+          "role": "input",
+          "label": "bf \u00e2\u20ac\u201d Currently unchecked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": false
+        },
+        {
+          "ref": "r4",
+          "role": "input",
+          "label": "Neb \u00e2\u20ac\u201d Currently unchecked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": false
+        },
+        {
+          "ref": "r5",
+          "role": "input",
+          "label": "cp \u00e2\u20ac\u201d Currently unchecked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": false
+        },
+        {
+          "ref": "r6",
+          "role": "button",
+          "label": "Submit",
+          "kind": "button",
+          "risk": "approval-required"
+        }
+      ],
+      "decisionLatencyMs": 0,
       "candidateCount": 6,
       "confidence": null,
-      "calibration": null,
-      "executionStatus": "ambiguous-selection"
+      "calibration": "not-applicable-rule",
+      "executionStatus": "action-executed"
+    },
+    {
+      "step": 2,
+      "decisionStatus": "awaiting-user-approval",
+      "provider": "local-literal-match",
+      "model": "checkbox-targets-then-submit",
+      "selectionRule": "checkbox-targets-then-submit",
+      "selectedAction": {
+        "ref": "r6",
+        "role": "button",
+        "label": "Submit",
+        "kind": "button",
+        "risk": "approval-required"
+      },
+      "availableCandidates": [
+        {
+          "ref": "r1",
+          "role": "input",
+          "label": "UV \u00e2\u20ac\u201d Currently unchecked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": false
+        },
+        {
+          "ref": "r2",
+          "role": "input",
+          "label": "tp \u00e2\u20ac\u201d Currently unchecked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": false
+        },
+        {
+          "ref": "r3",
+          "role": "input",
+          "label": "bf \u00e2\u20ac\u201d Currently unchecked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": false
+        },
+        {
+          "ref": "r4",
+          "role": "input",
+          "label": "Neb \u00e2\u20ac\u201d Currently checked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": true
+        },
+        {
+          "ref": "r5",
+          "role": "input",
+          "label": "cp \u00e2\u20ac\u201d Currently unchecked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": false
+        },
+        {
+          "ref": "r6",
+          "role": "button",
+          "label": "Submit",
+          "kind": "button",
+          "risk": "approval-required"
+        }
+      ],
+      "decisionLatencyMs": 0,
+      "candidateCount": 6,
+      "confidence": null,
+      "calibration": "not-applicable-rule",
+      "executionStatus": "action-executed-after-approval"
     }
   ],
   "candidateCount": 6,
-  "selectionRule": null,
-  "syntheticApprovalCount": 0,
-  "latencyMs": 3246,
-  "environmentResetLatencyMs": 2396,
-  "agentActionLatencyMs": 850,
-  "reward": 0.0,
-  "terminated": false,
-  "decisionStatus": "ambiguous-selection",
-  "decisionProvider": "semantic-local",
-  "decisionModel": "Xenova/all-MiniLM-L6-v2",
+  "selectionRule": "checkbox-targets-then-submit",
+  "syntheticApprovalCount": 1,
+  "latencyMs": 1700,
+  "environmentResetLatencyMs": 1400,
+  "agentActionLatencyMs": 300,
+  "reward": 1.0,
+  "terminated": true,
+  "decisionStatus": "action-executed-after-approval",
+  "decisionProvider": "local-literal-match",
+  "decisionModel": "checkbox-targets-then-submit",
   "browserGymVersion": "0.14.3",
   "browserGymPackageCommit": "0a785fbed075224ae81ca9c1fe924f66050696fe",
   "playwrightPythonVersion": "1.44.0",
@@ -55,14 +184,14 @@
   "miniWobCommit": "7fd85d71a4b60325c6585396ec4f48377d049838",
   "browserStillOpenAfterDisconnect": true,
   "rawTaskInfo": {
-    "REWARD_GLOBAL": 0,
-    "RAW_REWARD_GLOBAL": 0,
+    "REWARD_GLOBAL": 0.998854,
+    "RAW_REWARD_GLOBAL": 1,
     "REWARD_REASON": null,
-    "DONE_GLOBAL": false,
-    "EPISODE_ID": 0,
+    "DONE_GLOBAL": true,
+    "EPISODE_ID": 1,
     "TASK_READY": true
   },
-  "timestampUtc": "2026-09-29T17:00:01.351339+00:00",
+  "timestampUtc": "2026-09-29T17:45:58.214236+00:00",
   "maxActions": 5,
   "note": "Single-task integration smoke check. The runner repeats bounded BrowserManager calls up to maxActions. Not a representative BrowserGym benchmark, model-quality estimate, or speed claim. Synthetic approvals are possible only for the exact local MiniWoB file URL."
 }

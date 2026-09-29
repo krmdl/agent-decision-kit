@@ -14,15 +14,21 @@ describe("Playwright browser safety flow", () => {
   let visualHtml: Buffer;
   let checkboxHtml: Buffer;
   let submitHtml: Buffer;
+  let checkboxTaskHtml: Buffer;
+  let tabHtml: Buffer;
+  let expandHtml: Buffer;
 
   beforeAll(async () => {
     const html = await readFile(path.resolve("examples/browser-demo.html"));
     visualHtml = await readFile(path.resolve("examples/visual-only-demo.html"));
     checkboxHtml = Buffer.from('<!doctype html><label><input type="checkbox" name="updates"> Receive product updates</label>');
     submitHtml = Buffer.from('<!doctype html><form onsubmit="event.preventDefault(); document.querySelector(\'#status\').textContent = \'Submitted locally\'"><input type="submit" value="Send test"></form><p id="status">Not sent</p>');
+    checkboxTaskHtml = Buffer.from('<!doctype html><form id="sample" onsubmit="event.preventDefault(); document.querySelector(\'#status\').textContent = \'Submitted locally\'"><label><input type="checkbox" name="target"> Neb</label><button type="submit">Submit</button></form><p id="status">Not sent</p>');
+    tabHtml = Buffer.from('<!doctype html><div role="tab">Tab #1</div><div role="tab">Tab #2</div><div role="tab">Tab #3</div>');
+    expandHtml = Buffer.from('<!doctype html><button id="toggle" aria-expanded="false" aria-controls="details">Section details</button><div id="details" hidden><p role="tab" aria-expanded="false">Submit</p><form onsubmit="event.preventDefault(); document.querySelector(\'#status\').textContent = \'Submitted locally\'"><button type="submit">Submit</button></form></div><p id="status">Not sent</p><script>document.querySelector(\'#toggle\').addEventListener(\'click\',e=>{const open=e.currentTarget.getAttribute(\'aria-expanded\')!==\'true\';e.currentTarget.setAttribute(\'aria-expanded\',String(open));document.querySelector(\'#details\').hidden=!open;location.hash=\'details\'})</script>');
     server = createServer((request, response) => {
       response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-      response.end(request.url === "/visual-only" ? visualHtml : request.url === "/checkbox" ? checkboxHtml : request.url === "/submit" ? submitHtml : html);
+      response.end(request.url === "/visual-only" ? visualHtml : request.url === "/checkbox" ? checkboxHtml : request.url === "/submit" ? submitHtml : request.url === "/checkbox-task" ? checkboxTaskHtml : request.url === "/tabs" ? tabHtml : request.url === "/expand" ? expandHtml : html);
     });
     await new Promise<void>((resolve, reject) => {
       server.once("error", reject);
@@ -132,5 +138,75 @@ describe("Playwright browser safety flow", () => {
     const result = await browser.confirm(token, true);
     expect(result.status).toBe("action-executed-after-approval");
     expect(result.effect.textDelta.excerpt).toContain("Submitted locally");
+  }, 45_000);
+
+  it("matches an explicitly numbered ARIA tab without calling a provider", async () => {
+    profile = await mkdtemp(path.join(os.tmpdir(), "adk-browser-tab-test-"));
+    browser = new BrowserManager({ headless: true, profileDir: path.join(profile, "chromium") });
+    await browser.launch(`${baseUrl}tabs`);
+    const provider: DecisionProvider = {
+      id: "remote-test-provider",
+      model: "unused-test-provider",
+      decide: async () => { throw new Error("An explicit tab number should resolve locally"); },
+    };
+
+    const result = await browser.decideAndAct("Click on Tab #2.", provider);
+    expect(result.status).toBe("action-executed");
+    expect(result.selectionRule).toBe("explicit-tab-number");
+    expect(result.action.label).toBe("Tab #2");
+  }, 45_000);
+
+  it("selects requested checkboxes in order, then pauses for submit approval", async () => {
+    profile = await mkdtemp(path.join(os.tmpdir(), "adk-browser-checkbox-task-test-"));
+    browser = new BrowserManager({ headless: true, profileDir: path.join(profile, "chromium") });
+    await browser.launch(`${baseUrl}checkbox-task`);
+    const provider: DecisionProvider = {
+      id: "remote-test-provider",
+      model: "unused-test-provider",
+      decide: async () => { throw new Error("A named checkbox and follow-up submit should resolve locally"); },
+    };
+
+    const checkbox = (await browser.inspect()).candidates.find((candidate) => candidate.kind === "checkbox");
+    expect(checkbox?.label).toContain("Neb");
+    expect(checkbox?.checked).toBe(false);
+
+    const first = await browser.decideAndAct("Select Neb and click Submit.", provider);
+    expect(first.status).toBe("action-executed");
+    expect(first.selectionRule).toBe("explicit-checkbox-target");
+    expect(first.effect.checked).toBe(true);
+
+    const second = await browser.decideAndAct("Select Neb and click Submit.", provider);
+    expect(second.status).toBe("awaiting-user-approval");
+    expect(second.selectionRule).toBe("checkbox-targets-then-submit");
+    const token = "approvalToken" in second ? second.approvalToken : "";
+    const final = await browser.confirm(token, true);
+    expect(final.status).toBe("action-executed-after-approval");
+    expect(final.effect.textDelta.excerpt).toContain("Submitted locally");
+  }, 45_000);
+
+  it("expands an explicit disclosure before proposing its submit control", async () => {
+    profile = await mkdtemp(path.join(os.tmpdir(), "adk-browser-expand-test-"));
+    browser = new BrowserManager({ headless: true, profileDir: path.join(profile, "chromium") });
+    await browser.launch(`${baseUrl}expand`);
+    const provider: DecisionProvider = {
+      id: "remote-test-provider",
+      model: "unused-test-provider",
+      decide: async () => { throw new Error("The collapsed section and ordered submit should resolve locally"); },
+    };
+
+    const disclosure = (await browser.inspect()).candidates.find((candidate) => candidate.label.includes("Section details"));
+    expect(disclosure).toMatchObject({ role: "button", risk: "low", expanded: false });
+
+    const first = await browser.decideAndAct("Expand the section below and click submit.", provider);
+    expect(first.selectionRule).toBe("single-collapsed-control");
+    expect(first.status).toBe("action-executed");
+    const second = await browser.decideAndAct("Expand the section below and click submit.", provider);
+    expect(second.status).toBe("awaiting-user-approval");
+    expect(second.selectionRule).toBe("expanded-section-then-submit");
+    expect(second.proposedAction).toMatchObject({ role: "button", kind: "button", label: "Submit" });
+    const token = "approvalToken" in second ? second.approvalToken : "";
+    const final = await browser.confirm(token, true);
+    expect(final.status).toBe("action-executed-after-approval");
+    expect(final.effect.textDelta.excerpt).toContain("Submitted locally");
   }, 45_000);
 });
