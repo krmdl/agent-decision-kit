@@ -1,0 +1,154 @@
+{
+  "benchmark": "visual-only-ocr-smoke",
+  "task": "read-prominent-canvas-text",
+  "success": true,
+  "engine": "tesseract.js",
+  "language": "eng",
+  "screenshotMs": 102,
+  "initializationMs": 355,
+  "recognitionMs": 968,
+  "latencyMs": 1425,
+  "sampleCount": 1,
+  "expectedLabels": [
+    "Save draft",
+    "Delete draft"
+  ],
+  "labelsFound": [
+    "Save draft",
+    "Delete draft"
+  ],
+  "optionalSmallLabel": {
+    "text": "Open task",
+    "found": false
+  },
+  "lines": [
+    {
+      "text": "AGENT DECISION KIT - LOCAL VISUAL DEMO",
+      "confidence": 90,
+      "box": {
+        "x0": 76,
+        "y0": 72,
+        "x1": 404,
+        "y1": 83
+      }
+    },
+    {
+      "text": "Sample interface painted into one image; it exposes no DOM controls.",
+      "confidence": 95,
+      "box": {
+        "x0": 77,
+        "y0": 170,
+        "x1": 648,
+        "y1": 188
+      }
+    },
+    {
+      "text": "Task inbox Draft workspace",
+      "confidence": 96,
+      "box": {
+        "x0": 108,
+        "y0": 256,
+        "x1": 857,
+        "y1": 278
+      }
+    },
+    {
+      "text": "BEES Release note draft",
+      "confidence": 67,
+      "box": {
+        "x0": 109,
+        "y0": 298,
+        "x1": 820,
+        "y1": 318
+      }
+    },
+    {
+      "text": "Review browser setup ( — ) Shipped a clearer local browser demo",
+      "confidence": 90,
+      "box": {
+        "x0": 129,
+        "y0": 368,
+        "x1": 1021,
+        "y1": 401
+      }
+    },
+    {
+      "text": "A local guide is ready to open i )",
+      "confidence": 69,
+      "box": {
+        "x0": 128,
+        "y0": 392,
+        "x1": 560,
+        "y1": 421
+      }
+    },
+    {
+      "text": "Save draft Delete draft",
+      "confidence": 91,
+      "box": {
+        "x0": 711,
+        "y0": 470,
+        "x1": 985,
+        "y1": 484
+      }
+    },
+    {
+      "text": "Draft release notes . a .",
+      "confidence": 30,
+      "box": {
+        "x0": 129,
+        "y0": 497,
+        "x1": 1010,
+        "y1": 513
+      }
+    },
+    {
+      "text": "Fake data - local preview",
+      "confidence": 93,
+      "box": {
+        "x0": 129,
+        "y0": 533,
+        "x1": 304,
+        "y1": 549
+      }
+    },
+    {
+      "text": "No account - no real user data",
+      "confidence": 93,
+      "box": {
+        "x0": 681,
+        "y0": 546,
+        "x1": 897,
+        "y1": 558
+      }
+    },
+    {
+      "text": "Nothing is sent, published, charged, or deleted outside this image.",
+      "confidence": 96,
+      "box": {
+        "x0": 681,
+        "y0": 578,
+        "x1": 1161,
+        "y1": 594
+      }
+    },
+    {
+      "text": "VISIBLE LABELS ARE SYNTHETIC TEST DATA",
+      "confidence": 95,
+      "box": {
+        "x0": 76,
+        "y0": 720,
+        "x1": 342,
+        "y1": 730
+      }
+    }
+  ],
+  "runtime": {
+    "node": "v22.14.0",
+    "platform": "win32",
+    "architecture": "x64",
+    "cpuModel": "AMD Ryzen 5 5600H with Radeon Graphics         "
+  },
+  "timestampUtc": "2026-09-29T21:23:55.196Z",
+  "note": "One synthetic canvas screenshot smoke sample, not a quality or speed benchmark. Editable fields are masked. OCR line confidence is not calibrated. A miss on small button text can happen; use local visual question answering when OCR is insufficient. No page action is performed."
+}

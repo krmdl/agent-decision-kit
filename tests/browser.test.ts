@@ -198,7 +198,8 @@ describe("Playwright browser safety flow", () => {
     const result = await browser.decideAndAct("Open the task", provider);
     expect(result.status).toBe("visual-only-page");
     expect(result.visualFallbackAvailable).toBe(true);
-    expect(result.suggestedTool).toBe("browser_visual_inspect");
+    expect(result.suggestedTool).toBe("browser_visual_text");
+    expect(result.descriptionTool).toBe("browser_visual_inspect");
     expect("visual" in result).toBe(false);
   }, 45_000);
 

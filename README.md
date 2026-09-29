@@ -28,7 +28,8 @@ It uses ordinary code to constrain choices and execute actions. Its default deci
 - **Fast local browser paths.** A unique exact control label in a simple click/tap/open request (quoted or unquoted), numbered tabs, named checkboxes, and clear expand-then-submit steps can resolve without model inference. Duplicate labels remain ambiguous. These rule-based choices return no probability and keep sensitive actions behind the approval gate.
 - **Coding workflows.** Find relevant files, prune context while keeping requested strings verbatim, suggest a model route, pre-screen a diff, rerank, classify, screen, extract from caller-supplied candidates, and check completion evidence.
 - **CLI and MCP.** Use the same functions in a shell pipeline or from an MCP-compatible coding agent.
-- **Local vision fallback.** When a page has no visible DOM actions, `browser_decide_and_act` returns immediately and points to `browser_visual_inspect`; that separate tool can answer a question about the screenshot with [SmolVLM2 500M](https://huggingface.co/HuggingFaceTB/SmolVLM2-500M-Video-Instruct), an Apache-2.0 vision-language model. First use downloads model files; CPU inference can take tens of seconds. The screenshot stays local. Its description is uncalibrated and never triggers an action.
+- **Fast visual text fallback.** When a page has no visible DOM actions, `browser_decide_and_act` returns immediately and points to `browser_visual_text`. It runs local Tesseract OCR, masks editable text fields, and returns bounded text lines with screenshot-pixel boxes. First use downloads the selected language data; the screenshot stays local, but recognized page text is returned to the agent. OCR can miss or misread text and never clicks.
+- **Optional visual question answering.** `browser_visual_inspect` can answer a question about the screenshot with [SmolVLM2 500M](https://huggingface.co/HuggingFaceTB/SmolVLM2-500M-Video-Instruct), an Apache-2.0 vision-language model. First use downloads model files; CPU inference can take tens of seconds. The screenshot stays local. Its description is uncalibrated and never triggers an action.
 
 ![Architecture diagram](website/public/images/architecture.svg)
 
@@ -71,7 +72,7 @@ The demo is a local static page with fictional tasks. Start any static server fr
 
 The accessible demo is [`examples/browser-demo.html`](examples/browser-demo.html). The screenshot above and short recording at [`website/public/images/browser-demo.gif`](website/public/images/browser-demo.gif) were captured with Playwright. The second example draws its interface into a canvas so there are no DOM controls for Playwright to inspect; it is designed to exercise the optional vision path:
 
-[Open the canvas-only demo](website/public/demos/visual-only-demo.html) · [`npm run vision:verify`](package.json) runs a local model smoke check (first use downloads model weights).
+[Open the canvas-only demo](website/public/demos/visual-only-demo.html) · [`npm run ocr:verify`](package.json) checks the quick OCR path · [`npm run vision:verify`](package.json) runs local visual question answering (first use downloads model weights).
 
 ![Canvas-only fake task board used to check local screenshot understanding](website/public/images/visual-only-demo.png)
 
@@ -103,7 +104,7 @@ Claude Code users can also opt into the [prompt-routing hook](integrations/claud
 - The default provider sends state to the local Transformers.js model after its weights are downloaded. The optional local OpenAI-compatible adapter also defaults to loopback.
 - Remote OpenAI-compatible and Jev providers send the decision request to the configured provider. Browser context is separately blocked for remote providers unless explicitly opted in.
 - Jev is optional and can incur TypeSafe charges. Its API endpoint and request format follow [TypeSafe's API docs](https://api.typesafe.ai/docs). Jev outputs are not stored as training data, used to tune the local model, or used to build an imitator; review the [TypeSafe agreement](https://typesafe.ai/legal/mca) before enabling that adapter.
-- Chromium uses a separate persistent profile at `~/.agent-decision-kit/browser-profile`; set `AGENT_DECISION_BROWSER_DIR` to change it. CDP attachment uses a dedicated Chrome profile and explicit tab selection. Cookies, storage, URL credentials/query/hash, local file paths, and form values are not returned; bounded page context is sent to the local decision provider, while remote providers require explicit opt-in. Closing an attached session disconnects instead of closing the selected Chrome context.
+- Chromium uses a separate persistent profile at `~/.agent-decision-kit/browser-profile`; set `AGENT_DECISION_BROWSER_DIR` to change it. CDP attachment uses a dedicated Chrome profile and explicit tab selection. Cookies, storage, URL credentials/query/hash, local file paths, and form values are not returned by DOM tools. Local OCR masks editable fields and returns bounded visible page text to the calling agent; that text may enter its model context. Treat it as untrusted page content. The screenshot itself stays local. Remote decision-provider browser context still requires explicit opt-in. Closing an attached session disconnects instead of closing the selected Chrome context.
 
 ## Benchmarks and honest claims
 

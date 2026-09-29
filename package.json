@@ -48,6 +48,7 @@
     "benchmark:decisions": "npm run build && node benchmarks/run-decisions.mjs",
     "hook:verify": "npm run build && node scripts/check-hook.mjs",
     "agents:verify": "npm run build && node scripts/check-agent-configs.mjs",
+    "ocr:verify": "npm run build && node scripts/check-ocr.mjs",
     "vision:verify": "npm run build && node scripts/check-vision.mjs",
     "website:dev": "npm --prefix website run dev",
     "website:build": "npm --prefix website run build",
@@ -59,6 +60,7 @@
     "@modelcontextprotocol/sdk": "^1.31.0",
     "commander": "^14.0.3",
     "playwright": "^1.63.0",
+    "tesseract.js": "^7.0.0",
     "zod": "^4.6.5"
   },
   "devDependencies": {

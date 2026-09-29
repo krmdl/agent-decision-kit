@@ -103,6 +103,8 @@ Report task success rate, action-count distribution, latency p50/p95, and timeou
 
 The checked-in run recognized the label on CPU in 21,634 ms with model files already present in the local cache. The timing includes model initialization and generation. Confidence is unavailable; this is an integration smoke check, not a quality, calibration, or speed benchmark. If the model is not cached, the first run downloads its weights. The screenshot and model inference remain local.
 
+`results/ocr-smoke.json` is a one-page local OCR integration check on the same synthetic canvas demo. It checks two prominent draft controls, records recognized text and box output, and also reports whether the smaller `Open task` label was found. It is a one-sample integration check, not a general OCR quality or latency claim; line confidence is uncalibrated and OCR may miss small labels.
+
 ## Calibration
 
 For labeled outcomes, report Brier score and reliability bins alongside accuracy. Do not call `confidence` calibrated unless the provider explicitly identifies its calibration source and the measured reliability backs that up on held-out examples. The local semantic model reports `uncalibrated-estimate`.

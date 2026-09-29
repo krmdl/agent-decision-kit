@@ -16,6 +16,7 @@ describe("MCP server interoperability", () => {
     expect(tools.map((tool) => tool.name)).toContain("browser_select_option");
     expect(tools.map((tool) => tool.name)).toContain("decide");
     expect(tools.find((tool) => tool.name === "browser_visual_inspect")?.inputSchema).toHaveProperty("properties.question");
+    expect(tools.find((tool) => tool.name === "browser_visual_text")?.inputSchema).toHaveProperty("properties.maxLines");
     expect(tools.find((tool) => tool.name === "browser_select_option")?.inputSchema).toHaveProperty("properties.optionLabel");
     const result = await client.callTool({ name: "model_route", arguments: { task: "fix a typo in a label" } });
     const responseText = result.content.find((item) => item.type === "text");
