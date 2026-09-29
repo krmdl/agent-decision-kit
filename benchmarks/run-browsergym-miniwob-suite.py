@@ -34,6 +34,21 @@ def load_aggregator():
     return module
 
 
+def suite_identity(records):
+    modes = {record.get("runnerMode") for record in records if record.get("runnerMode")}
+    if not modes:
+        return "miniwob-runner-error-smoke", "runner-mode-unavailable"
+    if len(modes) > 1:
+        return "miniwob-mixed-smoke", "mixed-tool-integration"
+    mode = next(iter(modes))
+    names = {
+        "bounded-visual-ocr-approval-smoke": "miniwob-visual-ocr-smoke",
+        "bounded-multi-tool-integration-smoke": "miniwob-multi-tool-smoke",
+        "bounded-repeated-browser-decide-and-act": "miniwob-smoke",
+    }
+    return names.get(mode, "miniwob-mixed-smoke"), mode
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--miniwob-root", required=True, type=Path, help="Path to miniwob-plusplus/miniwob/html/miniwob")
@@ -131,9 +146,10 @@ def main():
     summary = load_aggregator().summarize(records)
     exercised_tools = sorted({tool for record in records for tool in record.get("toolCoverage", [])})
     supported_tools = {"browser_connect", "browser_decide_and_act", "browser_confirm", "browser_action", "browser_fill", "browser_select_option", "browser_visual_inspect", "browser_visual_text", "browser_visual_action"}
+    suite_name, runner_mode = suite_identity(records)
     summary["suite"] = {
-        "name": "miniwob-visual-ocr-smoke" if args.visual_ocr_actions else ("miniwob-multi-tool-smoke" if args.multi_tool else "miniwob-smoke"),
-        "runnerMode": "bounded-visual-ocr-approval-smoke" if args.visual_ocr_actions else ("bounded-multi-tool-integration-smoke" if args.multi_tool else "bounded-repeated-browser-decide-and-act"),
+        "name": suite_name,
+        "runnerMode": runner_mode,
         "toolCoverage": exercised_tools,
         "notExercisedTools": sorted(supported_tools - set(exercised_tools)),
         "limitation": "This is a curated integration harness, not a full autonomous agent or representative BrowserGym benchmark. In multi-tool mode, it extracts only explicit values from synthetic task instructions and selects exact visible options. The optional visual OCR path tries only an explicitly quoted link label, and its coordinate click is approved only for the exact local file:// task page.",

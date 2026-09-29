@@ -7,9 +7,27 @@ RUNNER_PATH = Path(__file__).with_name("run-browsergym-miniwob.py")
 SPEC = importlib.util.spec_from_file_location("run_browsergym_miniwob", RUNNER_PATH)
 RUNNER = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(RUNNER)
+SUITE_PATH = Path(__file__).with_name("run-browsergym-miniwob-suite.py")
+SUITE_SPEC = importlib.util.spec_from_file_location("run_browsergym_miniwob_suite", SUITE_PATH)
+SUITE = importlib.util.module_from_spec(SUITE_SPEC)
+SUITE_SPEC.loader.exec_module(SUITE)
 
 
 class MultiToolPlanningTests(unittest.TestCase):
+    def test_suite_metadata_uses_tools_that_ran_not_just_enabled_flags(self):
+        self.assertEqual(
+            SUITE.suite_identity([{"runnerMode": "bounded-multi-tool-integration-smoke"}]),
+            ("miniwob-multi-tool-smoke", "bounded-multi-tool-integration-smoke"),
+        )
+        self.assertEqual(
+            SUITE.suite_identity([{"runnerMode": "bounded-visual-ocr-approval-smoke"}]),
+            ("miniwob-visual-ocr-smoke", "bounded-visual-ocr-approval-smoke"),
+        )
+        self.assertEqual(
+            SUITE.suite_identity([{"runnerMode": "bounded-multi-tool-integration-smoke"}, {"runnerMode": "bounded-visual-ocr-approval-smoke"}]),
+            ("miniwob-mixed-smoke", "mixed-tool-integration"),
+        )
+
     def test_extracts_only_an_explicitly_quoted_visual_link_target(self):
         self.assertEqual(RUNNER.extract_visual_click_target('Click on the link "adipiscing.".'), "adipiscing.")
         self.assertEqual(RUNNER.extract_visual_click_target("Click the link “Continue” now."), "Continue")

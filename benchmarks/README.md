@@ -107,7 +107,9 @@ The checked-in run recognized the label on CPU in 21,634 ms with model files alr
 
 `results/miniwob-ocr-click-link-smoke.json` and `results/miniwob-ocr-click-link-smoke-click-link.json` record the quoted-target OCR integration run on the pinned MiniWoB `click-link` page. On Linux x64 CPU, the default pass recognized four short lines but missed the requested `adipiscing.` link. The sparse-text retry recognized seven lines in 82 ms but also missed the target. The task therefore failed validation (0/1 success, zero clicks); end-to-end latency including reset was 2,085 ms and the bounded tool loop took 807 ms. No semantic model call occurred. This is a single integration smoke sample, not a quality or speed benchmark. The runner extracts only the explicitly quoted link label, and synthetic confirmation is refused unless the page URL is the exact local `file://` task. Keep this separate from the historical vision-only result; retain OCR misses and unsuccessful task validation as failures.
 
-Reproduce that focused run from the repository root with the pinned MiniWoB++ checkout:
+`results/miniwob-custom-pointer-click-smoke.json` is a one-task Linux CPU follow-up on the same pinned MiniWoB `click-link` task and quoted target. The semantic tree is empty, but the page styles its text links with `cursor: pointer`; the bounded fallback found seven non-semantic targets and the literal rule picked the unique requested label without loading the decision model. The target was clicked only after one synthetic approval on the exact local `file://` task. The harness recorded 1/1 success, a 280 ms browser action loop, 0 ms decision inference, and 1,204 ms end-to-end including environment reset. The raw summary and episode record include all versions and the target label. This single easy task shows that the custom-target path can handle this case; it is not a representative browser benchmark or a general speed comparison. The earlier OCR-only run remains recorded as a 0/1 failure.
+
+Reproduce that focused OCR-only run from the repository root with the pinned MiniWoB++ checkout:
 
 ```sh
 python benchmarks/run-browsergym-miniwob-suite.py \
@@ -115,6 +117,16 @@ python benchmarks/run-browsergym-miniwob-suite.py \
   --multi-tool --visual-ocr-actions --tasks click-link \
   --approve-synthetic-actions \
   --output benchmarks/results/miniwob-ocr-click-link-smoke.json
+```
+
+Reproduce the CSS pointer-target follow-up with the same seed and action budget. The OCR flags leave that path available as a fallback, but it is not used when the page exposes an exact local text target:
+
+```sh
+python benchmarks/run-browsergym-miniwob-suite.py \
+  --miniwob-root /tmp/miniwob-plusplus/miniwob/html/miniwob \
+  --tasks click-link --seed 7 --max-actions 5 \
+  --multi-tool --visual-ocr-actions --approve-synthetic-actions \
+  --output benchmarks/results/miniwob-custom-pointer-click-smoke.json
 ```
 
 ## Calibration
