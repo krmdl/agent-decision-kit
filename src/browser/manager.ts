@@ -22,6 +22,7 @@ type PendingBrowserApproval =
 
 const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "::1", "[::1]"]);
 const OCR_MASK_SELECTOR = 'input:not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="image"]), textarea, select, [contenteditable]:not([contenteditable="false"])';
+const COPYABLE_FIELD_KINDS = new Set(["text", "search", "email", "tel", "url", "number", "date", "datetime-local", "time", "month", "week", "textarea"]);
 
 export class BrowserManager {
   private browser: Browser | undefined;
@@ -107,12 +108,21 @@ export class BrowserManager {
       for (const element of document.querySelectorAll(`[${referenceAttributeName}]`)) {
         element.removeAttribute(referenceAttributeName);
       }
-      const editableText = Array.from(document.querySelectorAll<HTMLElement>("[contenteditable]:not([contenteditable='false'])"))
-        .map((element) => (element.innerText || element.textContent || "").replace(/\s+/g, " ").trim())
+      const editableText = Array.from(document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLElement>("input,textarea,[contenteditable]:not([contenteditable='false'])"))
+        .map((element) => {
+          if (element instanceof HTMLInputElement) return ["text", "search", "email", "tel", "url", "number", "date", "datetime-local", "time", "month", "week", "password"].includes(element.type) ? element.value : "";
+          if (element instanceof HTMLTextAreaElement) return element.value;
+          return element.innerText || element.textContent || "";
+        })
+        .map((value) => value.replace(/\s+/g, " ").trim())
         .filter(Boolean);
       const redactEditableText = (value: string) => {
         let redacted = value.replace(/\s+/g, " ").trim();
-        for (const text of editableText) redacted = redacted.split(text).join("[editable content]");
+        for (const text of editableText) {
+          const escaped = text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+          const exactValue = new RegExp(`(^|[^\\p{L}\\p{N}_])${escaped}(?=$|[^\\p{L}\\p{N}_])`, "gu");
+          redacted = redacted.replace(exactValue, "$1[editable content]");
+        }
         return redacted;
       };
       const visible = (element: Element) => {
@@ -127,7 +137,8 @@ export class BrowserManager {
         const id = element.id ? redactEditableText(document.querySelector(`label[for="${CSS.escape(element.id)}"]`)?.textContent ?? "") : "";
         const wrappingLabel = redactEditableText(element.closest("label")?.textContent ?? "");
         const isSelect = element.tagName.toLowerCase() === "select";
-        const text = isSelect ? "" : redactEditableText(element.textContent ?? "");
+        const isEditableControl = element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || isSelect;
+        const text = isEditableControl ? "" : redactEditableText(element.textContent ?? "");
         const placeholder = input.placeholder ?? "";
         const name = input.getAttribute("name") ?? "";
         const checked = ["checkbox", "radio"].includes(input.type) ? input.checked : ["checkbox", "radio", "switch", "menuitemcheckbox", "menuitemradio"].includes(element.getAttribute("role") ?? "") && ["true", "false"].includes(element.getAttribute("aria-checked") ?? "") ? element.getAttribute("aria-checked") === "true" : undefined;
@@ -512,6 +523,38 @@ export class BrowserManager {
     await locator.fill(text, { timeout: 5_000 });
     await this.inspect();
     return { status: "filled", ref, characterCount: text.length, valueReturned: false, note: "Text was entered only into the page field; it was not submitted." };
+  }
+
+  async copyField(sourceRef: string, targetRef: string) {
+    if (sourceRef === targetRef) throw new Error("Choose two different visible text fields to copy between.");
+    const inspectedFingerprint = this.lastInspectionFingerprint;
+    if (!this.candidates.has(sourceRef) || !this.candidates.has(targetRef) || !inspectedFingerprint) throw new Error("Unknown or stale field ref. Call browser_inspect first.");
+    await this.inspect();
+    if (this.lastInspectionFingerprint !== inspectedFingerprint) throw new Error("The page changed after inspection. Inspect it again and select current field refs.");
+    const source = this.candidates.get(sourceRef);
+    const target = this.candidates.get(targetRef);
+    if (!source || !target) throw new Error("Unknown or stale field ref. Call browser_inspect first.");
+    if (!COPYABLE_FIELD_KINDS.has(source.kind) || !["input", "textarea"].includes(source.role)) {
+      throw new Error("The source must be a visible text input or textarea. Password, file, hidden, select, and contenteditable fields are excluded.");
+    }
+    if (!COPYABLE_FIELD_KINDS.has(target.kind) || !["input", "textarea"].includes(target.role)) {
+      throw new Error("The destination must be a visible editable text input or textarea. Password, file, hidden, select, and contenteditable fields are excluded.");
+    }
+    if (target.readOnly) throw new Error("The destination field is read-only.");
+
+    const sourceValue = await this.candidateLocator(sourceRef).inputValue({ timeout: 5_000 });
+    if (sourceValue.length > 20_000) throw new Error("Source text exceeds the 20,000 character limit.");
+    await this.candidateLocator(targetRef).fill(sourceValue, { timeout: 5_000 });
+    await this.inspect();
+    return {
+      status: "copied",
+      sourceRef,
+      targetRef,
+      characterCount: sourceValue.length,
+      valueReturned: false,
+      submitted: false,
+      note: "Text was copied locally between the selected page fields. Its contents were not returned to the agent, and no submit control was clicked.",
+    };
   }
 
   async selectOption(ref: string, optionLabel: string) {

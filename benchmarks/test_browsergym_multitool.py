@@ -14,6 +14,24 @@ SUITE_SPEC.loader.exec_module(SUITE)
 
 
 class MultiToolPlanningTests(unittest.TestCase):
+    def test_copies_only_between_one_visible_textarea_and_one_editable_textbox(self):
+        source = {"ref": "r1", "role": "textarea", "kind": "textarea", "label": "Source text"}
+        target = {"ref": "r2", "role": "input", "kind": "text", "label": "Destination text"}
+        submit = {"ref": "r3", "role": "button", "kind": "button", "label": "Submit", "risk": "approval-required"}
+        candidates = [source, target, submit]
+        task = "Copy the text in the textarea below, paste it into the textbox and press Submit."
+
+        planned = RUNNER.multi_tool_action(task, candidates, set())
+        self.assertEqual(planned, ("copy-field", {"sourceRef": "r1", "targetRef": "r2"}, {"fieldKind": "local-copy", "characterCount": "not-returned"}))
+        completed = {RUNNER.field_key(target)}
+        self.assertEqual(
+            RUNNER.multi_tool_action(task, candidates, completed),
+            ("act", {"ref": "r3"}, {"fieldKind": "submit-after-local-copy"}),
+        )
+
+        ambiguous = [source, target, dict(target, ref="r4", label="Second destination"), submit]
+        self.assertIsNone(RUNNER.multi_tool_action(task, ambiguous, set()))
+
     def test_extracts_explicit_slider_targets_and_plans_one_direct_range_call_at_a_time(self):
         candidates = [
             {"ref": "r1", "role": "slider", "kind": "range", "label": "Slider one"},

@@ -67,6 +67,19 @@ def multi_tool_action(task, candidates, completed_fields, visible_text=""):
                 return "act", {"ref": submit_controls[0]["ref"]}, {"fieldKind": "submit-after-explicit-slider-entry"}
         return None
 
+    if re.search(r"\bcopy\b[\s\S]*\bpaste\b", task, re.IGNORECASE):
+        sources = [candidate for candidate in candidates if candidate.get("role") == "textarea" and candidate.get("kind") == "textarea"]
+        targets = [candidate for candidate in candidates if candidate.get("role") == "input" and candidate.get("kind") in {"text", "search", "email", "tel", "url", "number"} and not candidate.get("readOnly")]
+        if len(sources) == 1 and len(targets) == 1:
+            target = targets[0]
+            if field_key(target) not in completed_fields:
+                return "copy-field", {"sourceRef": sources[0]["ref"], "targetRef": target["ref"]}, {"fieldKind": "local-copy", "characterCount": "not-returned"}
+            if re.search(r"\b(?:submit|send|publish|post)\b", task, re.IGNORECASE):
+                submit_controls = [candidate for candidate in candidates if candidate.get("kind") == "submit" or candidate.get("kind") == "button" and normalized(candidate.get("label", "").split("—", 1)[0]) == "submit"]
+                if len(submit_controls) == 1 and field_key(submit_controls[0]) not in completed_fields:
+                    return "act", {"ref": submit_controls[0]["ref"]}, {"fieldKind": "submit-after-local-copy"}
+        return None
+
     radio_match = re.search(r"\b(?:check|select|choose|tick)\s+(?:the\s+)?(\d+)(?:st|nd|rd|th)?\s+radio(?:\s+button)?\b", task, re.IGNORECASE)
     if radio_match:
         radios = [candidate for candidate in candidates if candidate.get("kind") == "radio" or candidate.get("role") in {"radio", "menuitemradio"}]
@@ -327,7 +340,7 @@ def main():
                 if planned:
                     operation, fields, metadata = planned
                     action_result = bridge.call(operation, **fields)
-                    tool_name = {"select-option": "browser_select_option", "set-range": "browser_set_range", "fill": "browser_fill", "act": "browser_action"}[operation]
+                    tool_name = {"select-option": "browser_select_option", "set-range": "browser_set_range", "fill": "browser_fill", "copy-field": "browser_copy_field", "act": "browser_action"}[operation]
                     tool_coverage.add(tool_name)
                     action_count += 1
                     synthetic_approval = False
@@ -337,9 +350,10 @@ def main():
                             synthetic_approval = True
                             synthetic_approval_count += 1
                             tool_coverage.add("browser_confirm")
-                    if operation in {"fill", "select-option", "act", "set-range"}:
-                        candidate = next(item for item in inspected["candidates"] if item["ref"] == fields["ref"])
-                        completed = action_result.get("status") in ({"set", "already-set"} if operation == "set-range" else {"filled", "selected", "action-executed", "action-executed-after-approval"})
+                    if operation in {"fill", "select-option", "act", "set-range", "copy-field"}:
+                        field_ref = fields["targetRef"] if operation == "copy-field" else fields["ref"]
+                        candidate = next(item for item in inspected["candidates"] if item["ref"] == field_ref)
+                        completed = action_result.get("status") in ({"set", "already-set"} if operation == "set-range" else {"filled", "selected", "copied", "action-executed", "action-executed-after-approval"})
                         if completed:
                             completed_fields.add(field_key(candidate))
                     tool_action_trace.append({"step": step_index + 1, "tool": tool_name, "status": action_result.get("status"), "syntheticApproval": synthetic_approval, **metadata})
@@ -351,7 +365,7 @@ def main():
                         break
                     if operation == "set-range" and action_result.get("status") not in {"set", "already-set"}:
                         break
-                    if metadata.get("fieldKind") == "submit-after-explicit-slider-entry":
+                    if metadata.get("fieldKind") in {"submit-after-explicit-slider-entry", "submit-after-local-copy"}:
                         break
                     continue
 

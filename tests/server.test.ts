@@ -22,6 +22,7 @@ describe("MCP server interoperability", () => {
     expect(tools.map((tool) => tool.name)).toContain("browser_confirm");
     expect(tools.map((tool) => tool.name)).toContain("browser_select_option");
     expect(tools.map((tool) => tool.name)).toContain("browser_set_range");
+    expect(tools.map((tool) => tool.name)).toContain("browser_copy_field");
     expect(tools.map((tool) => tool.name)).toContain("decide");
     expect(tools.map((tool) => tool.name)).toContain("provider_warmup");
     expect(tools.find((tool) => tool.name === "browser_visual_inspect")?.inputSchema).toHaveProperty("properties.question");
@@ -29,6 +30,8 @@ describe("MCP server interoperability", () => {
     expect(tools.find((tool) => tool.name === "browser_visual_action")?.inputSchema).toHaveProperty("properties.text");
     expect(tools.find((tool) => tool.name === "browser_select_option")?.inputSchema).toHaveProperty("properties.optionLabel");
     expect(tools.find((tool) => tool.name === "browser_set_range")?.inputSchema).toHaveProperty("properties.value");
+    expect(tools.find((tool) => tool.name === "browser_copy_field")?.inputSchema).toHaveProperty("properties.sourceRef");
+    expect(tools.find((tool) => tool.name === "browser_copy_field")?.inputSchema).toHaveProperty("properties.targetRef");
     const result = await client.callTool({ name: "model_route", arguments: { task: "fix a typo in a label" } });
     const responseText = result.content.find((item) => item.type === "text");
     expect(responseText?.type === "text" ? JSON.parse(responseText.text).complexity : null).toBe("low");

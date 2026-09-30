@@ -130,6 +130,12 @@ export function createServer(options: { provider?: DecisionProvider } = {}) {
     inputSchema: { ref: z.string().regex(/^r\d+$/), text: z.string().max(20_000) },
   }, async ({ ref, text }) => asToolResult(await browser.fill(ref, text)));
 
+  server.registerTool("browser_copy_field", {
+    title: "Copy text between browser fields",
+    description: "Copy the value locally from one fresh visible text input or textarea into another. Password, file, hidden, select, and contenteditable fields are excluded. The copied text is never returned to the agent and no submit control is clicked.",
+    inputSchema: { sourceRef: z.string().regex(/^r\d+$/), targetRef: z.string().regex(/^r\d+$/) },
+  }, async ({ sourceRef, targetRef }) => asToolResult(await browser.copyField(sourceRef, targetRef)));
+
   server.registerTool("browser_select_option", {
     title: "Select a native browser option",
     description: "Select one exact, enabled option label from a visible native select control. It does not submit the page or return the option value.",

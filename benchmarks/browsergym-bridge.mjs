@@ -36,6 +36,9 @@ for await (const line of input) {
       case "fill":
         result = await browser.fill(request.ref, request.text);
         break;
+      case "copy-field":
+        result = await browser.copyField(request.sourceRef, request.targetRef);
+        break;
       case "select-option":
         result = await browser.selectOption(request.ref, request.optionLabel);
         break;

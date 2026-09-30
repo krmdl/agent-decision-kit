@@ -25,6 +25,7 @@ describe("Playwright browser safety flow", () => {
   let tabHtml: Buffer;
   let expandHtml: Buffer;
   let nativeFieldsHtml: Buffer;
+  let copyFieldsHtml: Buffer;
   let ambiguousLabelsHtml: Buffer;
   let editableContentHtml: Buffer;
   let silentFormHtml: Buffer;
@@ -63,6 +64,7 @@ describe("Playwright browser safety flow", () => {
     tabHtml = Buffer.from('<!doctype html><div role="tab">Tab #1</div><div role="tab">Tab #2</div><div role="tab">Tab #3</div>');
     expandHtml = Buffer.from('<!doctype html><button id="toggle" aria-expanded="false" aria-controls="details">Section details</button><div id="details" hidden><p role="tab" aria-expanded="false">Submit</p><form onsubmit="event.preventDefault(); document.querySelector(\'#status\').textContent = \'Submitted locally\'"><button type="submit">Submit</button></form></div><p id="status">Not sent</p><script>document.querySelector(\'#toggle\').addEventListener(\'click\',e=>{const open=e.currentTarget.getAttribute(\'aria-expanded\')!==\'true\';e.currentTarget.setAttribute(\'aria-expanded\',String(open));document.querySelector(\'#details\').hidden=!open;location.hash=\'details\'})</script>');
     nativeFieldsHtml = Buffer.from(`<!doctype html><form id="native-form" onsubmit="event.preventDefault(); document.querySelector('#status').textContent = 'Submitted'"><label for="country">Country</label><select id="country" name="country"><option value="">Choose one</option><option value="ca">Canada</option><option value="cn">China</option><optgroup label="Disabled" disabled><option value="blocked">Unavailable</option></optgroup></select><label for="date">Date</label><input id="date" name="date" type="date"><label for="datepicker">Appointment date</label><input id="datepicker" name="appointment" type="text" aria-label="Appointment date" readonly><div id="picker" role="group" aria-label="December 2016 date picker" hidden><button id="day22" type="button" aria-label="December 22, 2016">22</button></div><button type="submit">Submit</button></form><p id="status">Not submitted</p><script>document.querySelector('#country').addEventListener('change',()=>document.querySelector('#status').textContent='Selected country');document.querySelector('#date').addEventListener('change',()=>document.querySelector('#status').textContent='Date entry updated');document.querySelector('#datepicker').addEventListener('click',()=>document.querySelector('#picker').hidden=false);document.querySelector('#day22').addEventListener('click',()=>{document.querySelector('#datepicker').value='12/22/2016';document.querySelector('#picker').hidden=true;document.querySelector('#status').textContent='Date selected'})</script>`);
+    copyFieldsHtml = Buffer.from('<!doctype html><form id="copy-form" onsubmit="event.preventDefault();document.querySelector(\'#status\').textContent=\'Submitted\'"><label for="source">Source text</label><textarea id="source">private-copy-fixture-61c9</textarea><label for="target">Destination text</label><input id="target" type="text"><button type="submit">Submit</button></form><p id="status">Not submitted</p>');
     editableContentHtml = Buffer.from('<!doctype html><h1>Sample page</h1><div contenteditable="true">private-note-do-not-send-73b1</div><p>Public page context</p>');
     silentFormHtml = Buffer.from('<!doctype html><form onsubmit="event.preventDefault();document.querySelector(\'#status\').textContent=\'Submitted\'"><label for="draft">Draft</label><input id="draft" type="text"><button type="submit">Submit draft</button></form><p id="status">No visible change</p>');
     decisionRaceHtml = Buffer.from('<!doctype html><button>Read guide</button><p>Waiting for a decision</p>');
@@ -85,7 +87,7 @@ describe("Playwright browser safety flow", () => {
         return;
       }
       response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-      response.end(request.url === "/visual-only" ? visualHtml : request.url === "/pointer-text" ? pointerTextHtml : request.url === "/silent-pointer" ? silentPointerHtml : request.url === "/silent-input" ? silentInputHtml : request.url === "/mixed-pointer" ? mixedPointerHtml : request.url === "/checkbox" ? checkboxHtml : request.url === "/submit" ? submitHtml : request.url === "/checkbox-task" ? checkboxTaskHtml : request.url === "/tabs" ? tabHtml : request.url === "/expand" ? expandHtml : request.url === "/native-fields" ? nativeFieldsHtml : request.url === "/slider" ? sliderHtml : request.url === "/aria-slider" ? ariaSliderHtml : request.url === "/jquery-ui-slider" ? jqueryUiSliderHtml : request.url === "/autocomplete" ? autocompleteHtml : request.url === "/multi-select" ? multipleSelectHtml : request.url === "/ambiguous-labels" ? ambiguousLabelsHtml : request.url === "/editable" ? editableContentHtml : request.url === "/silent-form" ? silentFormHtml : request.url === "/decision-race" ? decisionRaceHtml : request.url === "/replacement-action" ? replacementActionHtml : request.url === "/dynamic-refs" ? dynamicRefsHtml : request.url === "/menu" ? menuHtml : request.url === "/ordinal-fields" ? ordinalFieldsHtml : request.url === "/textareas" ? textareaWidgetsHtml : request.url === "/ordinal-button" ? ordinalButtonHtml : request.url === "/multi-disclosure" ? multiDisclosureHtml : html);
+      response.end(request.url === "/visual-only" ? visualHtml : request.url === "/pointer-text" ? pointerTextHtml : request.url === "/silent-pointer" ? silentPointerHtml : request.url === "/silent-input" ? silentInputHtml : request.url === "/mixed-pointer" ? mixedPointerHtml : request.url === "/checkbox" ? checkboxHtml : request.url === "/submit" ? submitHtml : request.url === "/checkbox-task" ? checkboxTaskHtml : request.url === "/tabs" ? tabHtml : request.url === "/expand" ? expandHtml : request.url === "/native-fields" ? nativeFieldsHtml : request.url === "/copy-fields" ? copyFieldsHtml : request.url === "/slider" ? sliderHtml : request.url === "/aria-slider" ? ariaSliderHtml : request.url === "/jquery-ui-slider" ? jqueryUiSliderHtml : request.url === "/autocomplete" ? autocompleteHtml : request.url === "/multi-select" ? multipleSelectHtml : request.url === "/ambiguous-labels" ? ambiguousLabelsHtml : request.url === "/editable" ? editableContentHtml : request.url === "/silent-form" ? silentFormHtml : request.url === "/decision-race" ? decisionRaceHtml : request.url === "/replacement-action" ? replacementActionHtml : request.url === "/dynamic-refs" ? dynamicRefsHtml : request.url === "/menu" ? menuHtml : request.url === "/ordinal-fields" ? ordinalFieldsHtml : request.url === "/textareas" ? textareaWidgetsHtml : request.url === "/ordinal-button" ? ordinalButtonHtml : request.url === "/multi-disclosure" ? multiDisclosureHtml : html);
     });
     await new Promise<void>((resolve, reject) => {
       server.once("error", reject);
@@ -457,6 +459,29 @@ describe("Playwright browser safety flow", () => {
     expect(result).toMatchObject({ status: "selected", optionLabel: "Beta", submitted: false, valueReturned: false });
     expect((await browser.inspect()).candidates.find((candidate) => candidate.kind === "select-multiple")?.selectedOptionLabels).toEqual(["Alpha", "Beta"]);
     expect(JSON.stringify(result)).not.toContain("beta");
+  }, 45_000);
+
+  it("copies textarea text into another field locally without exposing the value or submitting", async () => {
+    profile = await mkdtemp(path.join(os.tmpdir(), "adk-browser-copy-field-test-"));
+    browser = new BrowserManager({ headless: true, profileDir: path.join(profile, "chromium") });
+    await browser.launch(`${baseUrl}copy-fields`);
+
+    const snapshot = await browser.inspect();
+    const sourceText = "private-copy-fixture-61c9";
+    expect(JSON.stringify(snapshot)).not.toContain(sourceText);
+    const source = snapshot.candidates.find((candidate) => candidate.kind === "textarea");
+    const target = snapshot.candidates.find((candidate) => candidate.kind === "text");
+    expect(source?.label).toContain("Source text");
+    expect(target?.label).toContain("Destination text");
+
+    const result = await browser.copyField(source!.ref, target!.ref);
+    expect(result).toMatchObject({ status: "copied", sourceRef: source!.ref, targetRef: target!.ref, characterCount: sourceText.length, valueReturned: false, submitted: false });
+    expect(JSON.stringify(result)).not.toContain(sourceText);
+
+    const page = (browser as unknown as { page: Page }).page;
+    expect(await page.locator("#target").inputValue()).toBe(sourceText);
+    expect(await page.locator("#status").innerText()).toBe("Not submitted");
+    expect(JSON.stringify(await browser.inspect())).not.toContain(sourceText);
   }, 45_000);
 
   it("sets only explicit slider values and blocks submission until requested text fields are filled", async () => {
