@@ -21,6 +21,8 @@
 - Add an optional same-process MCP warm-up for the local decision model.
 - Record confidence source in decision benchmark cases and report ten-bin Choice/yes-no reliability with expected calibration error; preserve Windows and Linux CPU repeats for the independent 30-case fixture.
 - Add unit coverage for confidence reliability grouping, bin boundaries, unsupported confidence values, and ECE calculation.
+- Preserve child-runner exit codes and bounded sanitized stderr diagnostics in BrowserGym episode records.
+- Repeat the full focused MiniWoB task set after a non-reproducible 61.8-second failure; retain the failed run, isolated retry, and latest 8/8 result separately.
 
 ## 0.1.0-alpha.1 — 2026-09-29
 

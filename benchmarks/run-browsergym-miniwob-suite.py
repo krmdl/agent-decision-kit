@@ -49,6 +49,14 @@ def suite_identity(records):
     return names.get(mode, "miniwob-mixed-smoke"), mode
 
 
+def attach_runner_diagnostics(record, return_code, stderr):
+    record["runnerExitCode"] = return_code
+    diagnostic = (stderr or "").strip()
+    if return_code != 0 and diagnostic:
+        record["runnerDiagnostic"] = diagnostic[-2_000:]
+    return record
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--miniwob-root", required=True, type=Path, help="Path to miniwob-plusplus/miniwob/html/miniwob")
@@ -140,6 +148,8 @@ def main():
                 }
                 episode_path.parent.mkdir(parents=True, exist_ok=True)
                 episode_path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+            record = attach_runner_diagnostics(record, completed.returncode, completed.stderr)
+            episode_path.write_text(json.dumps(sanitize_record(record), indent=2) + "\n", encoding="utf-8")
         records.append(record)
         print(f"{task}: {'PASS' if record['success'] else 'FAIL'}; actions={record['actions']}; timeout={record.get('timeout', False)}; latencyMs={record['latencyMs']}")
 
