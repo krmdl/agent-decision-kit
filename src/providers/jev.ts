@@ -28,7 +28,7 @@ function jevProbabilities(raw: unknown, expectedKeys: string[], name: string): R
     throw new Error(`Jev returned incomplete or unexpected probability keys for '${name}'`);
   }
 
-  const probabilities: Record<string, number> = {};
+  const probabilities = Object.create(null) as Record<string, number>;
   let total = 0;
   for (const key of expectedKeys) {
     const value = values[key];
@@ -97,7 +97,7 @@ export class JevProvider implements DecisionProvider {
       }
       const payload = await response.json() as { model?: string; answers?: Record<string, JevRawAnswer> };
       if (!payload.answers) throw new Error("Jev response did not include answers");
-      const answers: Record<string, DecisionAnswer> = {};
+      const answers = Object.create(null) as Record<string, DecisionAnswer>;
       for (const [name, question] of Object.entries(request.questions)) {
         const raw = payload.answers[name];
         if (!raw || raw.type !== question.type) throw new Error(`Jev returned a missing or invalid answer for '${name}'`);

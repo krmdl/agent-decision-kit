@@ -58,9 +58,9 @@ describe("optional Jev API adapter", () => {
     const choice: DecisionRequest["questions"][string] = {
       type: "choice", instructions: "Pick a tone", criteria: { calm: "Polite", angry: "Hostile" },
     };
-    const call = (answer: Record<string, unknown>) => {
+    const call = (answer: Record<string, unknown>, requestChoice = choice) => {
       vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ answers: { result: answer } }), { status: 200 })));
-      return provider.decide({ state: "fixture", questions: { result: choice } });
+      return provider.decide({ state: "fixture", questions: { result: requestChoice } });
     };
 
     await expect(call({ type: "choice", choice: "calm", confidence: 0.9, probabilities: { calm: 0.9 } }))
@@ -71,5 +71,17 @@ describe("optional Jev API adapter", () => {
       .rejects.toThrow(/invalid probability/);
     await expect(call({ type: "choice", choice: "calm", probabilities: { calm: 0.9, angry: 0.1 } }))
       .rejects.toThrow(/omitted required confidence/);
+
+    const specialKeyChoice: DecisionRequest["questions"][string] = {
+      type: "choice", instructions: "Pick a category", criteria: JSON.parse('{"__proto__":"Special","other":"Other"}'),
+    };
+    const specialKeyAnswer = await call({
+      type: "choice", choice: "__proto__", confidence: 0.9,
+      probabilities: JSON.parse('{"__proto__":0.9,"other":0.1}'),
+    }, specialKeyChoice);
+    const specialProbabilities = specialKeyAnswer.answers.result?.type === "choice"
+      ? specialKeyAnswer.answers.result.probabilities
+      : undefined;
+    expect(specialProbabilities && Object.hasOwn(specialProbabilities, "__proto__")).toBe(true);
   });
 });
