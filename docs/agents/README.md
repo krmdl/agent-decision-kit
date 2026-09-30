@@ -1,13 +1,13 @@
 # Agent setup guides
 
-These guides cover MCP stdio configuration for nine common coding-agent surfaces: Claude Code, Codex CLI, Cursor, Gemini CLI, Windsurf Cascade, VS Code/Copilot Chat, GitHub Copilot CLI, Cline, and OpenCode. CI launches the server through its real stdio transport with the reference MCP SDK. On this Windows machine, Claude Code 2.1.218 connected to a temporary user-scoped server entry; the entry was removed after the handshake check. VS Code 1.135.0 accepted the server definition through `--add-mcp` and wrote it to an isolated profile. These checks verify client registration/startup, not an agent model turn. GitHub Copilot Chat is not installed here, so the VS Code result does not verify Copilot tool invocation. Codex CLI 0.154.0 previously loaded an isolated entry as enabled, but no Codex tool round trip was run. Cursor 2.2.20 is installed; its client-side tool invocation has not been tested. Gemini CLI, Windsurf Cascade, GitHub Copilot CLI, Cline, and OpenCode are not installed in this environment.
+These guides cover MCP stdio configuration for nine common coding-agent surfaces: Claude Code, Codex CLI, Cursor, Gemini CLI, Windsurf Cascade, VS Code/Copilot Chat, GitHub Copilot CLI, Cline, and OpenCode. CI launches the server through its real stdio transport with the reference MCP SDK. On this Windows machine, Claude Code 2.1.218 connected to a temporary user-scoped server entry; the entry was removed after the handshake check. VS Code 1.135.0 accepted the server definition through `--add-mcp` and wrote it to an isolated profile. Codex CLI 0.154.0 accepted the server through a temporary isolated `CODEX_HOME`, and `codex mcp get` reported it as enabled; the normal Codex configuration was not changed. These checks verify client registration/startup, not an agent model turn. GitHub Copilot Chat is not installed here, so the VS Code result does not verify Copilot tool invocation. Cursor 2.2.20 is installed; its client-side tool invocation has not been tested. Gemini CLI, Windsurf Cascade, GitHub Copilot CLI, Cline, and OpenCode are not installed in this environment.
 
 ## Compatibility status
 
 | Client | Server config guide | Current project evidence |
 | --- | --- | --- |
 | Claude Code | [Guide](claude-code.md) | Claude Code 2.1.218 reported the temporary stdio server `connected`; entry removed after the check; no model-backed turn |
-| Codex CLI | [Guide](codex-cli.md) | Isolated CLI config listed as `enabled`; SDK stdio subprocess smoke test, no Codex tool-call round trip |
+| Codex CLI | [Guide](codex-cli.md) | Codex CLI 0.154.0 reported an isolated temporary entry as `enabled`; SDK stdio subprocess smoke test, no Codex tool-call round trip |
 | Cursor | [Guide](cursor.md) | Cursor 2.2.20 installed; client-side tool invocation not tested; config shape checked by `agents:verify` |
 | Gemini CLI | [Guide](gemini-cli.md) | `mcpServers` shape checked against Google docs; SDK stdio subprocess smoke test |
 | Windsurf Cascade | [Guide](windsurf.md) | JSON shape checked against the legacy Cascade docs; SDK stdio subprocess smoke test |
