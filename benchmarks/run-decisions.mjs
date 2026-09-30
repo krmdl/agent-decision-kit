@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { env } from "@huggingface/transformers";
 import { createProvider } from "../dist/providers/index.js";
+import { summarizeConfidenceReliability } from "./decision-metrics.mjs";
 
 async function modelCacheDirectoryExists(modelId) {
   if (typeof modelId !== "string" || !env.cacheDir || !/^[\w.-]+(?:\/[\w.-]+)+$/.test(modelId)) return null;
@@ -61,6 +62,8 @@ for (const item of cases) {
     prediction,
     ...(answer?.type === "score" ? { scoreAbsoluteError, scoreWithinHalfPoint: scoreAbsoluteError <= 0.5, scoreExactMatch: Math.round(answer.score) === Number(item.expected) } : {}),
     ...(correct === undefined ? {} : { correct }),
+    confidence: answer?.confidence ?? null,
+    confidenceSource: answer?.confidenceSource ?? "unavailable",
     probabilities,
     calibration: answer?.calibration ?? "unavailable",
     warmWithinProcess: records.length > 0,
@@ -73,6 +76,7 @@ const warmRecords = records.filter((item) => item.warmWithinProcess);
 const warmOrdered = warmRecords.map((item) => item.latencyMs).sort((a, b) => a - b);
 const percentile = (fraction) => warmOrdered[Math.max(0, Math.ceil(warmOrdered.length * fraction) - 1)] ?? 0;
 const brierRecords = records.filter((item) => item.brierScore !== null);
+const confidenceReliability = summarizeConfidenceReliability(records);
 const classificationRecords = records.filter((item) => item.questionType === "choice" || item.questionType === "noul");
 const scoreRecords = records.filter((item) => item.questionType === "score");
 const mean = (items, field) => items.length ? items.reduce((sum, item) => sum + item[field], 0) / items.length : null;
@@ -115,12 +119,13 @@ const report = `${JSON.stringify({
   scoreMeanAbsoluteError: mean(scoreRecords, "scoreAbsoluteError"),
   scoreWithinHalfPointRate: scoreRecords.length ? scoreRecords.filter((item) => item.scoreWithinHalfPoint).length / scoreRecords.length : null,
   meanBrierScore: brierRecords.length ? brierRecords.reduce((sum, item) => sum + item.brierScore, 0) / brierRecords.length : null,
+  confidenceReliability,
   latencyMs: {
     firstCallIncludingInitialization: firstCallMs,
     withinProcessSteadyState: { sampleCount: warmRecords.length, p50: percentile(0.5), p95: percentile(0.95) },
   },
   records,
-  note: "The first call includes provider initialization and may include model retrieval if files were missing. For the Transformers.js local provider, cache inspection only checks whether the model cache directory existed before the process; it does not verify every required file. warmWithinProcess only means later calls in this process. Choice/yes-no accuracy and score error are reported separately. This small human-labeled fixture is not a general quality, calibration, or performance claim; all probabilities remain uncalibrated.",
+  note: "The first call includes provider initialization and may include model retrieval if files were missing. For the Transformers.js local provider, cache inspection only checks whether the model cache directory existed before the process; it does not verify every required file. warmWithinProcess only means later calls in this process. Choice/yes-no accuracy and score error are reported separately. Confidence reliability bins compare predicted confidence with empirical Choice/yes-no correctness; they are descriptive measurements, not post-hoc calibration. Score confidence is recorded but excluded from those binary reliability bins. This small human-labeled fixture is not a general quality, calibration, or performance claim; all probabilities remain uncalibrated.",
 }, null, 2)}\n`;
 if (outputPath) {
   const resolvedOutput = path.resolve(outputPath);

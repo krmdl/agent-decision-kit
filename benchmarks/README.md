@@ -11,20 +11,32 @@ npm run build
 node benchmarks/run-decisions.mjs > decision-report.json
 ```
 
-The script reports per-case labels, probabilities, calibration labels and latency. It separates choice/yes-no accuracy from ordinal Score mean absolute error, within-half-point rate, and rounded exact-match rate. Brier score is reported by question type. It also records the first call including pipeline initialization and within-process warm p50/p95 separately. Before timing, it records whether the model's cache directory exists; this does not prove that every required file is present. The first call may include model retrieval, and the warm label only means later calls in the same process. Record hardware, accelerator, cache state, and provider setup. Run each provider as a separate explicit condition; don't mix results. For a fair Jev comparison, use the same cases, request batching, network conditions, and label rubric. Never use provider responses as training data or to tune an imitation.
+The script reports per-case labels, probabilities, confidence source, calibration labels and latency. It separates choice/yes-no accuracy from ordinal Score mean absolute error, within-half-point rate, and rounded exact-match rate. Brier score is reported by question type. For Choice and yes/no, it also reports ten-bin confidence reliability and expected calibration error (ECE), grouped by confidence source and calibration label; Score confidence is retained in raw records but excluded from this binary correctness analysis. ECE is descriptive and does not fit a post-hoc calibration. The script records the first call including pipeline initialization and within-process warm p50/p95 separately. Before timing, it records whether the model's cache directory exists; this does not prove that every required file is present. The first call may include model retrieval, and the warm label only means later calls in the same process. Record hardware, accelerator, cache state, and provider setup. Run each provider as a separate explicit condition; don't mix results. For a fair Jev comparison, use the same cases, request batching, network conditions, and label rubric. Never use provider responses as training data or to tune an imitation.
 
 The starter fixtures are public and tiny. They are useful for verifying the harness, not for proving broad quality, calibration or performance. `fixtures/decision-cases-independent.jsonl` adds 30 human-authored examples (10 of each question type). Labels were written from the documented product behavior without consulting provider output. This small project-specific fixture is still not held out from the codebase or pretraining corpus and does not establish general quality. Keep future evaluation cases held out and source labels independently from both tested providers.
 
 `results/decision-cases-smoke.json` is a raw run over the included 11 starter labels using the default local provider on CPU. This particular run scored 8/11 (72.7%) with a 0.370 mean Brier score; first call was 246 ms and later within-process p95 was 14 ms on the recorded Ryzen 5 5600H machine. Its model cache directory existed before the run, though individual files were not checked. The labels are not held out, the estimates are uncalibrated, and these measurements do not establish real-world quality, general speed, or the consumer-GPU target.
 
-`results/decision-cases-independent-smoke.json` records the same local provider on the 30-case project-specific fixture: choice accuracy 7/10, yes/no accuracy 5/10, and Score MAE 1.04 on the 0–4 scale (2/10 within half a point). The mean Brier scores were 0.403 for choice, 0.506 for yes/no, and 0.689 for Score. First call was 246 ms; within-process p95 was 21 ms on the same CPU. Its model cache directory existed before the run, though individual files were not checked. This modest result is included as a visible limitation, not a broad benchmark claim. All estimates remain uncalibrated. Recreate either report with `npm run build`, then run:
+`results/decision-cases-independent-smoke.json` records the local provider on the 30-case project-specific fixture: choice accuracy 7/10, yes/no accuracy 5/10, and Score MAE 1.04 on the 0–4 scale (2/10 within half a point). The mean Brier scores were 0.403 for choice, 0.506 for yes/no, and 0.689 for Score. First call was 246 ms; within-process p95 was 21 ms on the same CPU. Its model cache directory existed before the run, though individual files were not checked. This modest result is included as a visible limitation, not a broad benchmark claim. All estimates remain uncalibrated. A newer run is recorded in `results/decision-cases-independent-reliability-smoke.json`: it repeats the same labels with confidence source included per case, reports ten-bin reliability for the 20 Choice/yes-no answers, and found 0.061 ECE. Eleven answers landed in the 0.5–0.6 confidence bin and seven in 0.6–0.7; because this sample is small and not a frozen holdout, those numbers do not validate calibration. The Windows run's first call was 210 ms and warm p95 was 17 ms. Recreate the reports with `npm run build`, then run:
 
 `results/decision-cases-linux-docker-smoke.json` repeats the 11 starter labels in the pinned Playwright Docker image on a Linux x64 CPU host (Node 24.20.0, Xeon Gold 6140). It scored 8/11 with mean Brier 0.370; first call was 310 ms and within-process p95 was 19 ms. The model cache directory existed before the run, but individual files were not checked. This is one small integration run, not a cross-platform performance comparison or general quality claim.
 
 ```sh
 node benchmarks/run-decisions.mjs --output benchmarks/results/decision-cases-smoke.json
 node benchmarks/run-decisions.mjs --fixtures benchmarks/fixtures/decision-cases-independent.jsonl --output benchmarks/results/decision-cases-independent-smoke.json
+node benchmarks/run-decisions.mjs --fixtures benchmarks/fixtures/decision-cases-independent.jsonl --output benchmarks/results/decision-cases-independent-reliability-smoke.json
 ```
+
+The Linux Docker repeat is `results/decision-cases-independent-reliability-linux-docker-smoke.json`. It used the same 30 labels on Node 24.20.0 and an x64 Xeon CPU: Choice 7/10, yes/no 5/10, Score MAE 1.037, mean Brier 0.533, and ECE 0.061 over the 20 Choice/yes-no confidence values. First call was 329 ms and within-process warm p95 was 31 ms. This single Linux sample is consistent with the Windows run, but it does not establish cross-platform parity. Reproduce it from a Linux shell in the repository root with:
+
+```sh
+docker run --rm --ipc=host \
+  -v "$PWD:/work" -v "$HOME/.cache:/root/.cache" -w /work \
+  mcr.microsoft.com/playwright:v1.63.0-noble \
+  bash -lc 'npm ci && node benchmarks/run-decisions.mjs --fixtures benchmarks/fixtures/decision-cases-independent.jsonl --output benchmarks/results/decision-cases-independent-reliability-linux-docker-smoke.json'
+```
+
+The cache mount keeps downloaded model files between local runs; on a cold cache, the first call includes model retrieval. Container dependency installation and execution are part of the reproduction, while the per-case latency numbers cover provider calls only.
 
 ## Browser task success
 
@@ -135,4 +147,4 @@ python benchmarks/run-browsergym-miniwob-suite.py \
 
 ## Calibration
 
-For labeled outcomes, report Brier score and reliability bins alongside accuracy. Do not call `confidence` calibrated unless the provider explicitly identifies its calibration source and the measured reliability backs that up on held-out examples. The local semantic model reports `uncalibrated-estimate`.
+For labeled outcomes, report Brier score and reliability bins alongside accuracy. Do not call `confidence` calibrated unless the provider explicitly identifies its calibration source and the measured reliability backs that up on held-out examples. The local semantic model reports `uncalibrated-estimate`; its current ECE is a descriptive statistic from a small project-specific sample, not a calibration guarantee.

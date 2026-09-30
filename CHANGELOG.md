@@ -19,6 +19,8 @@
 - Preserve context-retention strings across line boundaries, reject missing retained text, and report confidence sources separately from calibration status.
 - Retry local embedding-pipeline initialization after a transient failure and cache pipelines by model ID.
 - Add an optional same-process MCP warm-up for the local decision model.
+- Record confidence source in decision benchmark cases and report ten-bin Choice/yes-no reliability with expected calibration error; preserve Windows and Linux CPU repeats for the independent 30-case fixture.
+- Add unit coverage for confidence reliability grouping, bin boundaries, unsupported confidence values, and ECE calculation.
 
 ## 0.1.0-alpha.1 — 2026-09-29
 
