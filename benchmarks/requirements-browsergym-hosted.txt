@@ -1,0 +1,2 @@
+browsergym-webarena==0.14.3
+browsergym-visualwebarena==0.14.3

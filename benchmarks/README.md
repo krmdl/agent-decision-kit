@@ -165,6 +165,18 @@ Use a PowerShell-appropriate path for `--miniwob-root` on Windows. Use `--tasks`
 
 MiniWoB is self-contained in a local checkout. WebArena and VisualWebArena are separate services; installing their BrowserGym packages does not provision the benchmark sites. BrowserGym's [WebArena guide](https://github.com/ServiceNow/BrowserGym/blob/main/browsergym/webarena/README.md) expects domain URLs in `WA_SHOPPING`, `WA_SHOPPING_ADMIN`, `WA_REDDIT`, `WA_GITLAB`, `WA_WIKIPEDIA`, `WA_MAP`, and `WA_HOMEPAGE`. Its [VisualWebArena guide](https://github.com/ServiceNow/BrowserGym/blob/main/browsergym/visualwebarena/README.md) expects `VWA_CLASSIFIEDS`, `VWA_SHOPPING`, `VWA_REDDIT`, `VWA_WIKIPEDIA`, and `VWA_HOMEPAGE`; optional reset URLs are documented there too. This repository currently has no configured domain URLs, so no WebArena or VisualWebArena task result is published.
 
+Install the pinned BrowserGym wrappers in a dedicated Python environment; this does not start or download the website services:
+
+```sh
+python -m venv .venv-browsergym-hosted
+# Activate the environment, then:
+python -m pip install -r benchmarks/requirements-browsergym-hosted.txt
+python -m playwright install chromium
+python -c "import nltk; nltk.download('punkt_tab')"
+```
+
+The wrappers are pinned to BrowserGym 0.14.3. Set the domain URLs using the upstream guides, then run the read-only preflight below before any task evaluation.
+
 The upstream WebArena setup asks for an OpenAI API key and warns that some fuzzy-match evaluators call GPT-4. The default Agent Decision Kit benchmark path is local and free, so it does not enable those paid evaluators. Any future run must record which evaluator was used and avoid a remote judge unless the operator deliberately configures one.
 
 After setting the documented variables, verify URL reachability without printing configured values:
