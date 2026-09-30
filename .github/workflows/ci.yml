@@ -42,8 +42,11 @@ jobs:
       - run: npm run agents:verify
       - if: runner.os == 'Linux' && matrix.node == '22'
         run: npm run ocr:verify
-      - run: npm --prefix website ci
-      - run: npm --prefix website audit --audit-level=high
-      - run: npm run website:verify
+      - if: matrix.node == '22'
+        run: npm --prefix website ci
+      - if: matrix.node == '22'
+        run: npm --prefix website audit --audit-level=high
+      - if: matrix.node == '22'
+        run: npm run website:verify
         env:
           SITE_URL: https://krmdl.github.io/agent-decision-kit/
