@@ -1,0 +1,10 @@
+FROM mcr.microsoft.com/playwright:v1.63.0-noble
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONUNBUFFERED=1
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends python3-pip \
+    && rm -rf /var/lib/apt/lists/* \
+    && python3 -m pip install --break-system-packages --no-cache-dir browsergym-miniwob==0.14.3 \
+    && python3 -m playwright install chromium

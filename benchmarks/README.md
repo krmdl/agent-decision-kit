@@ -42,6 +42,15 @@ The cache mount keeps downloaded model files between local runs; on a cold cache
 
 `results/miniwob-smoke-suite.json` contains a reproducible eight-task MiniWoB smoke suite with one raw JSON episode file per task. The runner attaches the real Agent Decision Kit `BrowserManager` to BrowserGym's live Chromium page through loopback CDP, calls the task validator after each bounded decision/action round, and confirms that detaching does not close BrowserGym's browser. The suite keeps failures, ambiguous choices, and visual-only pages as results instead of omitting them. It is a small smoke suite, not a representative BrowserGym benchmark, model-quality estimate, or speed claim. `latencyMs` includes environment reset; `agentActionLatencyMs` measures the bounded browser decision/action loop; `decisionCallLatencyMs` aggregates model-call latency separately. Synthetic approvals are allowed only for the exact local MiniWoB `file://` task URL.
 
+The pinned Linux runner image matches BrowserGym 0.14.3's Python Playwright browser revision while retaining the repository's Node 24 Playwright runtime. Build it with `docker build -f benchmarks/Dockerfile.browsergym -t adk-browsergym-miniwob:0.14.3 .`; run a focused local integration set with:
+
+```sh
+docker run --rm --ipc=host \
+  -v "$PWD:/work" -v /tmp/miniwob-plusplus:/tmp/miniwob-plusplus:ro -w /work \
+  -e ONNXRUNTIME_NODE_INSTALL=skip adk-browsergym-miniwob:0.14.3 \
+  bash -lc 'npm ci && npm run build && python3 benchmarks/run-browsergym-miniwob-suite.py --miniwob-root /tmp/miniwob-plusplus/miniwob/html/miniwob --output benchmarks/results/miniwob-post-reward-fix-smoke.json --tasks click-checkboxes-large copy-paste use-slider-2 --multi-tool --approve-synthetic-actions --timeout-seconds 120'
+```
+
 MiniWoB success is counted only when `RAW_REWARD_GLOBAL >= 1.0`; partial rewards count as failures even if the BrowserGym wrapper reports a positive binary reward. The episode record preserves both the wrapper reward and raw task reward. This guards against the reward-threshold issue documented by [BrowserGym](https://github.com/ServiceNow/BrowserGym/issues/392). An audit of the checked-in MiniWoB records found no successful episode with a positive partial raw reward.
 
 Raw records redact local file URLs and home-directory paths before writing them to disk. The live approval check still verifies the exact unredacted local MiniWoB URL before confirming any benchmark action.
