@@ -8,11 +8,12 @@ import subprocess
 import sys
 import time
 from pathlib import Path
-from benchmark_records import sanitize_record
+from benchmark_records import attach_runtime_metadata, collect_runtime_metadata, sanitize_record
 
 ROOT = Path(__file__).resolve().parents[1]
 RUNNER = Path(__file__).with_name("run-browsergym-miniwob.py")
 AGGREGATOR = Path(__file__).with_name("aggregate-browsergym.py")
+BROWSERGYM_PACKAGE_COMMIT = "0a785fbed075224ae81ca9c1fe924f66050696fe"
 DEFAULT_TASKS = [
     "click-test",
     "click-button",
@@ -83,6 +84,7 @@ def main():
 
     records = []
     episode_files = []
+    suite_environment = collect_runtime_metadata(ROOT, browsergym_package_commit=BROWSERGYM_PACKAGE_COMMIT)
     for task in args.tasks:
         episode_path = args.output.parent / f"{args.output.stem}-{task}.json"
         episode_files.append(episode_path)
@@ -126,6 +128,7 @@ def main():
                 "pythonVersion": platform.python_version(),
                 "timestampUtc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
             }
+            record = attach_runtime_metadata(record, suite_environment)
             episode_path.parent.mkdir(parents=True, exist_ok=True)
             episode_path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
         else:
@@ -149,6 +152,7 @@ def main():
                 episode_path.parent.mkdir(parents=True, exist_ok=True)
                 episode_path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
             record = attach_runner_diagnostics(record, completed.returncode, completed.stderr)
+            record = attach_runtime_metadata(record, suite_environment)
             episode_path.write_text(json.dumps(sanitize_record(record), indent=2) + "\n", encoding="utf-8")
         records.append(record)
         print(f"{task}: {'PASS' if record['success'] else 'FAIL'}; actions={record['actions']}; timeout={record.get('timeout', False)}; latencyMs={record['latencyMs']}")
@@ -160,6 +164,7 @@ def main():
     summary["suite"] = {
         "name": suite_name,
         "runnerMode": runner_mode,
+        "agentDecisionKitCommit": suite_environment["agentDecisionKitCommit"],
         "toolCoverage": exercised_tools,
         "notExercisedTools": sorted(supported_tools - set(exercised_tools)),
         "limitation": "This is a curated integration harness, not a full autonomous agent or representative BrowserGym benchmark. In multi-tool mode, it extracts only explicit values from synthetic task instructions and selects exact visible options. The optional visual OCR path tries only an explicitly quoted link label, and its coordinate click is approved only for the exact local file:// task page.",

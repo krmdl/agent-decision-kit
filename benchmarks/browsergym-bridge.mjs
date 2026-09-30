@@ -25,7 +25,7 @@ for await (const line of input) {
     let result;
     switch (request.op) {
       case "versions":
-        result = { playwright: playwrightPackage.version };
+        result = { node: process.version, playwright: playwrightPackage.version };
         break;
       case "connect":
         result = await browser.connect(request.endpoint, request.pageIndex ?? 0);

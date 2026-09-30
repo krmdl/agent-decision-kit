@@ -33,6 +33,7 @@ export class BrowserManager {
   private readonly headless: boolean;
   private readonly profileDir: string;
   private readonly includeCandidateSnapshot: boolean;
+  private readonly referenceAttributeName = `data-adk-ref-${randomUUID().replace(/-/g, "")}`;
 
   constructor(options: BrowserManagerOptions = {}) {
     this.headless = options.headless ?? false;
@@ -93,7 +94,12 @@ export class BrowserManager {
   async inspect() {
     const page = this.requirePage();
     const before = performance.now();
-    const result = await page.evaluate(() => {
+    const result = await page.evaluate((referenceAttributeName) => {
+      // Remove only this manager's prior refs before assigning the current snapshot.
+      // A page can hide or replace controls between inspections while old DOM nodes remain.
+      for (const element of document.querySelectorAll(`[${referenceAttributeName}]`)) {
+        element.removeAttribute(referenceAttributeName);
+      }
       const editableText = Array.from(document.querySelectorAll<HTMLElement>("[contenteditable]:not([contenteditable='false'])"))
         .map((element) => (element.innerText || element.textContent || "").replace(/\s+/g, " ").trim())
         .filter(Boolean);
@@ -157,7 +163,7 @@ export class BrowserManager {
       const customPointerSet = new Set(customPointerNodes);
       const candidates: BrowserCandidate[] = nodes.map((element, index) => {
         const ref = `r${index + 1}`;
-        element.setAttribute("data-adk-ref", ref);
+        element.setAttribute(referenceAttributeName, ref);
         const tag = element.tagName.toLowerCase();
         const customPointer = customPointerSet.has(element);
         const role = customPointer ? "pointer-target" : element.getAttribute("role") ?? (tag === "a" ? "link" : tag === "button" ? "button" : tag === "select" ? "combobox" : tag);
@@ -209,7 +215,7 @@ export class BrowserManager {
         };
       });
       return { title: document.title, url: location.href, headings: heading, textExcerpt: body, candidates, privateFormState, privateActionState };
-    });
+    }, this.referenceAttributeName);
     const { privateFormState, privateActionState, ...snapshot } = result;
     this.candidates = new Map(snapshot.candidates.map((candidate) => [candidate.ref, candidate]));
     const privateStateFingerprint = createHash("sha256").update(JSON.stringify({ privateFormState, privateActionState })).digest("hex");
@@ -343,7 +349,7 @@ export class BrowserManager {
     if (!candidate) throw new Error("Unknown or stale action ref. Call browser_inspect first.");
     if (candidate.readOnly) throw new Error("This field is read-only. Open its visible picker control and choose a current option instead.");
     if (!["text", "search", "email", "tel", "url", "number", "date", "datetime-local", "time", "month", "week", "textarea"].includes(candidate.kind)) throw new Error("This field type is not supported for text entry. Password, file, and hidden fields are excluded.");
-    const locator = this.requirePage().locator(`[data-adk-ref="${candidate.ref}"]`).first();
+    const locator = this.candidateLocator(candidate.ref);
     await locator.fill(text, { timeout: 5_000 });
     await this.inspect();
     return { status: "filled", ref, characterCount: text.length, valueReturned: false, note: "Text was entered only into the page field; it was not submitted." };
@@ -357,7 +363,7 @@ export class BrowserManager {
     if (this.lastInspectionFingerprint !== inspectedFingerprint) throw new Error("The page changed after inspection. Inspect it again and select a current field ref.");
     const candidate = this.candidates.get(ref);
     if (!candidate || !["select-one", "select-multiple"].includes(candidate.kind)) throw new Error("This ref is not a native select control.");
-    const locator = this.requirePage().locator(`[data-adk-ref="${candidate.ref}"]`).first();
+    const locator = this.candidateLocator(candidate.ref);
     const labels = await locator.evaluate((element) => Array.from((element as HTMLSelectElement).options).filter((option) => !option.disabled && !(option.parentElement?.tagName === "OPTGROUP" && (option.parentElement as HTMLOptGroupElement).disabled)).map((option) => option.label.trim()).filter(Boolean));
     const matches = labels.filter((label) => label === optionLabel);
     if (matches.length !== 1) throw new Error("Choose one exact, enabled option label visible in the current select control.");
@@ -472,7 +478,7 @@ export class BrowserManager {
 
   private async perform(candidate: BrowserCandidate) {
     const page = this.requirePage();
-    const locator = page.locator(`[data-adk-ref="${candidate.ref}"]`).first();
+    const locator = this.candidateLocator(candidate.ref);
     if (candidate.checked !== undefined) {
       await locator.click({ timeout: 5_000 });
       const nativeInput = candidate.role === "input" && ["checkbox", "radio"].includes(candidate.kind);
@@ -496,6 +502,10 @@ export class BrowserManager {
     await page.waitForTimeout(150);
     const after = await page.locator("body").innerText({ timeout: 3_000 }).catch(() => "");
     return { url: redactBrowserUrl(page.url()), title: await page.title().catch(() => ""), textDelta: diffExcerpt(before, after) };
+  }
+
+  private candidateLocator(ref: string) {
+    return this.requirePage().locator(`[${this.referenceAttributeName}="${ref}"]`).filter({ visible: true }).first();
   }
 
   private async describePage() {

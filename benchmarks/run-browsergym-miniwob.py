@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
 """Run Agent Decision Kit on one BrowserGym MiniWoB task through Chrome CDP."""
 import argparse
-import importlib.metadata
 import json
 import os
-import platform
 import queue
 import re
 import socket
@@ -15,7 +13,7 @@ import time
 import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
-from benchmark_records import sanitize_record
+from benchmark_records import collect_runtime_metadata, sanitize_record
 
 ROOT = Path(__file__).resolve().parents[1]
 MARKER = "@@ADK_BROWSERGYM@@"
@@ -217,6 +215,9 @@ def main():
     decision = {}
     decision_provider = "semantic-local"
     decision_model = None
+    browser_info = {}
+    playwright_node_version = "not-reported"
+    node_version = "not-reported"
     decision_selection_rule = None
     selected_action = None
     decision_confidence = None
@@ -254,7 +255,9 @@ def main():
         connection = bridge.call("connect", endpoint=endpoint, pageIndex=0)
         if not connection.get("connected"):
             raise RuntimeError(f"Could not attach to BrowserGym page: {connection}")
-        playwright_node_version = bridge.call("versions")["playwright"]
+        bridge_versions = bridge.call("versions")
+        playwright_node_version = bridge_versions.get("playwright", "not-reported")
+        node_version = bridge_versions.get("node", "not-reported")
 
         action_start = time.perf_counter()
         for step_index in range(args.max_actions):
@@ -465,16 +468,7 @@ def main():
             "decisionStatus": decision.get("status"),
             "decisionProvider": decision_provider,
             "decisionModel": decision_model or "not-reported",
-            "browserGymVersion": importlib.metadata.version("browsergym-core"),
-            "browserGymPackageCommit": BROWSERGYM_PACKAGE_COMMIT,
-            "playwrightPythonVersion": importlib.metadata.version("playwright"),
-            "playwrightNodeVersion": playwright_node_version,
-            "browserVersion": browser_info.get("Browser", "not reported"),
-            "pythonVersion": platform.python_version(),
-            "nodeVersion": subprocess.run(["node", "--version"], cwd=ROOT, capture_output=True, text=True, check=True).stdout.strip(),
-            "operatingSystem": platform.platform(),
-            "cpu": platform.processor() or "not reported by Python",
-            "accelerator": "CPU",
+            **collect_runtime_metadata(ROOT, browser_info=browser_info, playwright_node_version=playwright_node_version, node_version=node_version, browsergym_package_commit=BROWSERGYM_PACKAGE_COMMIT),
             "modelCacheState": ("not-used: the OCR visual path does not invoke the semantic model" if visual_ocr_used else "local cache already populated before this episode"),
             "ocrLanguageCacheExistedBeforeEpisode": ocr_language_cache_existed if visual_ocr_used else None,
             "decisionWarmState": ("first semantic provider inference in a fresh Node bridge process; model files are cached" if decision_latencies else "no semantic decision-provider inference occurred; explicit browser/OCR tools handled this episode" if visual_ocr_used else "no semantic decision-provider inference occurred; deterministic local rules and explicit tool calls handled the DOM path"),
@@ -526,8 +520,10 @@ def main():
                 "decisionStatus": decision.get("status", "error"),
                 "decisionProvider": decision_provider,
                 "decisionModel": decision_model or "not-reported",
+                **collect_runtime_metadata(ROOT, browser_info=browser_info, playwright_node_version=playwright_node_version, node_version=node_version, browsergym_package_commit=BROWSERGYM_PACKAGE_COMMIT),
                 "modelCacheState": "not-used: the OCR visual path does not invoke the semantic model" if visual_ocr_used else None,
                 "ocrLanguageCacheExistedBeforeEpisode": ocr_language_cache_existed if visual_ocr_used else None,
+                "decisionWarmState": "first semantic provider inference in a fresh Node bridge process; model files are cached" if decision_latencies else "no semantic decision-provider inference occurred; deterministic local rules and explicit tool calls handled the DOM path",
                 "miniWobCommit": MINIWOB_COMMIT,
                 "timestampUtc": datetime.now(timezone.utc).isoformat(),
                 "visualOcrActionsEnabled": args.visual_ocr_actions,

@@ -3,7 +3,7 @@ import { createServer as createNetServer } from "node:net";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { chromium, type Browser, type BrowserContext } from "playwright";
+import { chromium, type Browser, type BrowserContext, type Page } from "playwright";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { BrowserManager } from "../src/browser/manager.js";
 import type { DecisionProvider } from "../src/core/types.js";
@@ -29,6 +29,7 @@ describe("Playwright browser safety flow", () => {
   let silentFormHtml: Buffer;
   let decisionRaceHtml: Buffer;
   let replacementActionHtml: Buffer;
+  let dynamicRefsHtml: Buffer;
 
   beforeAll(async () => {
     const html = await readFile(path.resolve("examples/browser-demo.html"));
@@ -45,6 +46,7 @@ describe("Playwright browser safety flow", () => {
     silentFormHtml = Buffer.from('<!doctype html><form onsubmit="event.preventDefault();document.querySelector(\'#status\').textContent=\'Submitted\'"><label for="draft">Draft</label><input id="draft" type="text"><button type="submit">Submit draft</button></form><p id="status">No visible change</p>');
     decisionRaceHtml = Buffer.from('<!doctype html><button>Read guide</button><p>Waiting for a decision</p>');
     replacementActionHtml = Buffer.from('<!doctype html><button data-adk-ref="r1" onclick="document.querySelector(\'#status\').textContent=\'Dangerous action executed\'">Delete all data</button><p id="status">Not executed</p>');
+    dynamicRefsHtml = Buffer.from('<!doctype html><button id="old">Old action</button><button id="new" hidden onclick="document.querySelector(\'#status\').textContent=\'New action clicked\'">New action</button><p id="status">Not clicked</p>');
     server = createServer((request, response) => {
       if (request.url === "/json/version") {
         if (cdpRedirect) {
@@ -57,7 +59,7 @@ describe("Playwright browser safety flow", () => {
         return;
       }
       response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-      response.end(request.url === "/visual-only" ? visualHtml : request.url === "/pointer-text" ? pointerTextHtml : request.url === "/checkbox" ? checkboxHtml : request.url === "/submit" ? submitHtml : request.url === "/checkbox-task" ? checkboxTaskHtml : request.url === "/tabs" ? tabHtml : request.url === "/expand" ? expandHtml : request.url === "/native-fields" ? nativeFieldsHtml : request.url === "/ambiguous-labels" ? ambiguousLabelsHtml : request.url === "/editable" ? editableContentHtml : request.url === "/silent-form" ? silentFormHtml : request.url === "/decision-race" ? decisionRaceHtml : request.url === "/replacement-action" ? replacementActionHtml : html);
+      response.end(request.url === "/visual-only" ? visualHtml : request.url === "/pointer-text" ? pointerTextHtml : request.url === "/checkbox" ? checkboxHtml : request.url === "/submit" ? submitHtml : request.url === "/checkbox-task" ? checkboxTaskHtml : request.url === "/tabs" ? tabHtml : request.url === "/expand" ? expandHtml : request.url === "/native-fields" ? nativeFieldsHtml : request.url === "/ambiguous-labels" ? ambiguousLabelsHtml : request.url === "/editable" ? editableContentHtml : request.url === "/silent-form" ? silentFormHtml : request.url === "/decision-race" ? decisionRaceHtml : request.url === "/replacement-action" ? replacementActionHtml : request.url === "/dynamic-refs" ? dynamicRefsHtml : html);
     });
     await new Promise<void>((resolve, reject) => {
       server.once("error", reject);
@@ -236,6 +238,29 @@ describe("Playwright browser safety flow", () => {
     const result = await browser.decideAndAct("Identify the most relevant control.", provider);
     expect(result.status).toBe("page-changed-during-decision");
     expect((await browser.inspect()).textExcerpt).toContain("Not executed");
+  }, 45_000);
+
+  it("removes stale DOM refs before targeting a replacement control", async () => {
+    profile = await mkdtemp(path.join(os.tmpdir(), "adk-browser-dynamic-refs-test-"));
+    browser = new BrowserManager({ headless: true, profileDir: path.join(profile, "chromium") });
+    await browser.launch(`${baseUrl}dynamic-refs`);
+
+    const original = await browser.inspect();
+    expect(original.candidates[0]?.label).toContain("Old action");
+    const page = (browser as unknown as { page: Page }).page;
+    await page.evaluate(() => {
+      document.querySelector<HTMLButtonElement>("#old")!.hidden = true;
+      document.querySelector<HTMLButtonElement>("#new")!.hidden = false;
+    });
+
+    const refreshed = await browser.inspect();
+    const target = refreshed.candidates.find((candidate) => candidate.label.includes("New action"));
+    expect(target).toBeDefined();
+    const currentRefs = await page.locator("*").evaluateAll((elements) => elements.flatMap((element) => Array.from(element.attributes).filter((attribute) => attribute.name.startsWith("data-adk-ref-")).map((attribute) => attribute.value)));
+    expect(currentRefs.filter((ref) => ref === target!.ref)).toHaveLength(1);
+
+    expect((await browser.act(target!.ref)).status).toBe("action-executed");
+    expect((await browser.inspect()).textExcerpt).toContain("New action clicked");
   }, 45_000);
 
   it("redacts sensitive URL parts but still detects URL changes before acting", async () => {
