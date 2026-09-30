@@ -19,7 +19,7 @@ try {
   const { tools } = await client.listTools();
   discoveredToolCount = tools.length;
   const toolNames = new Set(tools.map(({ name }) => name));
-  for (const name of ["decide", "model_route", "browser_launch", "browser_inspect", "browser_action", "browser_confirm", "browser_set_range", "browser_copy_field"]) {
+  for (const name of ["decide", "model_route", "browser_launch", "browser_inspect", "browser_action", "browser_confirm", "browser_set_range", "browser_copy_field", "browser_set_checkboxes"]) {
     assert.ok(toolNames.has(name), `stdio server is missing ${name}`);
   }
 

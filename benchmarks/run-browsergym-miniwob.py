@@ -80,6 +80,22 @@ def multi_tool_action(task, candidates, completed_fields, visible_text=""):
                     return "act", {"ref": submit_controls[0]["ref"]}, {"fieldKind": "submit-after-local-copy"}
         return None
 
+    checkbox_match = re.search(r"\b(?:select|check|tick|choose)\s+(.*?)(?=\s+(?:and|then)\s+(?:click|press|tap)\b|[.!?]|$)", task, re.IGNORECASE)
+    if checkbox_match:
+        targets = [normalized(part.strip().strip("\"'“”")) for part in re.split(r"\s+and\s+|,\s*", checkbox_match.group(1)) if part.strip()]
+        if len(targets) >= 2:
+            checkboxes = [candidate for candidate in candidates if candidate.get("kind") == "checkbox" and candidate.get("role") == "input"]
+            matches = [[candidate for candidate in checkboxes if normalized(candidate.get("label", "").split("—", 1)[0]) == target] for target in targets]
+            if all(len(items) == 1 and items[0].get("risk") != "approval-required" for items in matches):
+                selected = [items[0] for items in matches]
+                if len({candidate["ref"] for candidate in selected}) == len(selected):
+                    if any(candidate.get("checked") is not True for candidate in selected):
+                        return "set-checkboxes", {"refs": [candidate["ref"] for candidate in selected], "checked": True}, {"fieldKind": "explicit-checkbox-batch", "checkboxCount": len(selected)}
+                    if re.search(r"\b(?:submit|send|publish|post)\b", task, re.IGNORECASE):
+                        submit_controls = [candidate for candidate in candidates if candidate.get("kind") == "submit" or candidate.get("kind") == "button" and normalized(candidate.get("label", "").split("—", 1)[0]) == "submit"]
+                        if len(submit_controls) == 1 and field_key(submit_controls[0]) not in completed_fields:
+                            return "act", {"ref": submit_controls[0]["ref"]}, {"fieldKind": "submit-after-explicit-checkbox-batch"}
+
     radio_match = re.search(r"\b(?:check|select|choose|tick)\s+(?:the\s+)?(\d+)(?:st|nd|rd|th)?\s+radio(?:\s+button)?\b", task, re.IGNORECASE)
     if radio_match:
         radios = [candidate for candidate in candidates if candidate.get("kind") == "radio" or candidate.get("role") in {"radio", "menuitemradio"}]
@@ -340,7 +356,7 @@ def main():
                 if planned:
                     operation, fields, metadata = planned
                     action_result = bridge.call(operation, **fields)
-                    tool_name = {"select-option": "browser_select_option", "set-range": "browser_set_range", "fill": "browser_fill", "copy-field": "browser_copy_field", "act": "browser_action"}[operation]
+                    tool_name = {"select-option": "browser_select_option", "set-range": "browser_set_range", "fill": "browser_fill", "copy-field": "browser_copy_field", "set-checkboxes": "browser_set_checkboxes", "act": "browser_action"}[operation]
                     tool_coverage.add(tool_name)
                     action_count += 1
                     synthetic_approval = False
@@ -365,7 +381,7 @@ def main():
                         break
                     if operation == "set-range" and action_result.get("status") not in {"set", "already-set"}:
                         break
-                    if metadata.get("fieldKind") in {"submit-after-explicit-slider-entry", "submit-after-local-copy"}:
+                    if metadata.get("fieldKind") in {"submit-after-explicit-slider-entry", "submit-after-local-copy", "submit-after-explicit-checkbox-batch"}:
                         break
                     continue
 
@@ -536,7 +552,7 @@ def main():
             "taskPrompt": task,
             "runnerMode": "bounded-visual-ocr-approval-smoke" if visual_ocr_used else ("bounded-multi-tool-integration-smoke" if args.multi_tool else "bounded-repeated-browser-decide-and-act"),
             "toolCoverage": sorted(tool_coverage),
-            "notExercisedTools": sorted({"browser_connect", "browser_decide_and_act", "browser_confirm", "browser_action", "browser_fill", "browser_select_option", "browser_set_range", "browser_visual_inspect", "browser_visual_text", "browser_visual_action"} - tool_coverage),
+            "notExercisedTools": sorted({"browser_connect", "browser_decide_and_act", "browser_confirm", "browser_action", "browser_fill", "browser_copy_field", "browser_set_checkboxes", "browser_select_option", "browser_set_range", "browser_visual_inspect", "browser_visual_text", "browser_visual_action"} - tool_coverage),
             "toolActionTrace": tool_action_trace,
             "success": bool(reward > 0),
             "timeout": False,
@@ -590,7 +606,7 @@ def main():
                 "taskPrompt": task,
                 "runnerMode": "bounded-visual-ocr-approval-smoke" if visual_ocr_used else ("bounded-multi-tool-integration-smoke" if args.multi_tool else "bounded-repeated-browser-decide-and-act"),
                 "toolCoverage": sorted(tool_coverage),
-                "notExercisedTools": sorted({"browser_connect", "browser_decide_and_act", "browser_confirm", "browser_action", "browser_fill", "browser_select_option", "browser_set_range", "browser_visual_inspect", "browser_visual_text", "browser_visual_action"} - tool_coverage),
+                "notExercisedTools": sorted({"browser_connect", "browser_decide_and_act", "browser_confirm", "browser_action", "browser_fill", "browser_copy_field", "browser_set_checkboxes", "browser_select_option", "browser_set_range", "browser_visual_inspect", "browser_visual_text", "browser_visual_action"} - tool_coverage),
                 "toolActionTrace": tool_action_trace,
                 "success": False,
                 "timeout": timed_out,

@@ -39,6 +39,9 @@ for await (const line of input) {
       case "copy-field":
         result = await browser.copyField(request.sourceRef, request.targetRef);
         break;
+      case "set-checkboxes":
+        result = await browser.setCheckboxes(request.refs, request.checked);
+        break;
       case "select-option":
         result = await browser.selectOption(request.ref, request.optionLabel);
         break;

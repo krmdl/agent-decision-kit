@@ -14,6 +14,26 @@ SUITE_SPEC.loader.exec_module(SUITE)
 
 
 class MultiToolPlanningTests(unittest.TestCase):
+    def test_batches_only_explicit_unique_native_checkbox_targets_then_submits_separately(self):
+        task = "Select Alpha, Beta, Gamma and click Submit."
+        checkboxes = [
+            {"ref": "r1", "role": "input", "kind": "checkbox", "label": "Alpha — Currently unchecked", "checked": False, "risk": "low"},
+            {"ref": "r2", "role": "input", "kind": "checkbox", "label": "Beta — Currently unchecked", "checked": False, "risk": "low"},
+            {"ref": "r3", "role": "input", "kind": "checkbox", "label": "Gamma — Currently unchecked", "checked": False, "risk": "low"},
+            {"ref": "r4", "role": "button", "kind": "button", "label": "Submit", "risk": "approval-required"},
+        ]
+        planned = RUNNER.multi_tool_action(task, checkboxes, set())
+        self.assertEqual(planned, ("set-checkboxes", {"refs": ["r1", "r2", "r3"], "checked": True}, {"fieldKind": "explicit-checkbox-batch", "checkboxCount": 3}))
+
+        checked = [dict(candidate, label=candidate["label"].replace("unchecked", "checked"), checked=True) if candidate["kind"] == "checkbox" else candidate for candidate in checkboxes]
+        self.assertEqual(
+            RUNNER.multi_tool_action(task, checked, set()),
+            ("act", {"ref": "r4"}, {"fieldKind": "submit-after-explicit-checkbox-batch"}),
+        )
+
+        ambiguous = [*checkboxes, dict(checkboxes[0], ref="r5")]
+        self.assertIsNone(RUNNER.multi_tool_action(task, ambiguous, set()))
+
     def test_copies_only_between_one_visible_textarea_and_one_editable_textbox(self):
         source = {"ref": "r1", "role": "textarea", "kind": "textarea", "label": "Source text"}
         target = {"ref": "r2", "role": "input", "kind": "text", "label": "Destination text"}

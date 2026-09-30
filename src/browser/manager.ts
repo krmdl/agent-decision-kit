@@ -557,6 +557,52 @@ export class BrowserManager {
     };
   }
 
+  async setCheckboxes(refs: string[], checked: boolean) {
+    if (refs.length < 1 || refs.length > 40) throw new Error("Choose between 1 and 40 visible native checkboxes.");
+    if (new Set(refs).size !== refs.length) throw new Error("Each checkbox ref must be unique.");
+    const inspectedFingerprint = this.lastInspectionFingerprint;
+    if (!inspectedFingerprint || refs.some((ref) => !this.candidates.has(ref))) throw new Error("Unknown or stale checkbox ref. Call browser_inspect first.");
+    const initial = await this.inspect();
+    if (this.lastInspectionFingerprint !== inspectedFingerprint) throw new Error("The page changed after inspection. Inspect it again and select current checkbox refs.");
+
+    const targets = refs.map((ref) => {
+      const candidate = this.candidates.get(ref);
+      if (!candidate || candidate.kind !== "checkbox" || candidate.role !== "input") throw new Error("Only visible native checkboxes can be changed with this tool.");
+      if (candidate.risk === "approval-required") throw new Error("A checkbox marked approval-required must be handled separately with browser_action and browser_confirm.");
+      const label = stableCheckboxLabel(candidate.label);
+      const key = normalizeLabel(label);
+      if (!key) throw new Error("Each checkbox must have a visible label so it can be revalidated after the page updates.");
+      return { label, key };
+    });
+    if (new Set(targets.map((target) => target.key)).size !== targets.length) throw new Error("Checkbox labels are ambiguous. Select each checkbox separately.");
+
+    const pageUrl = initial.url;
+    const results: Array<{ ref: string; checked: boolean; changed: boolean }> = [];
+    for (const target of targets) {
+      const snapshot = await this.inspect();
+      if (snapshot.url !== pageUrl) throw new Error("The page navigated while checkbox selections were being changed.");
+      const matches = snapshot.candidates.filter((candidate) => candidate.kind === "checkbox" && candidate.role === "input" && normalizeLabel(stableCheckboxLabel(candidate.label)) === target.key);
+      if (matches.length !== 1 || matches[0]!.risk === "approval-required") throw new Error("A requested checkbox is missing, ambiguous, or requires approval. Inspect the current page before continuing.");
+      const candidate = matches[0]!;
+      const locator = this.candidateLocator(candidate.ref);
+      const isEnabledNativeCheckbox = await locator.evaluate((element) => element instanceof HTMLInputElement && element.type === "checkbox" && !element.disabled);
+      if (!isEnabledNativeCheckbox) throw new Error("A requested checkbox is disabled or is no longer a native checkbox.");
+      const wasChecked = candidate.checked === true;
+      if (wasChecked !== checked) await locator.setChecked(checked, { timeout: 5_000 });
+      results.push({ ref: candidate.ref, checked, changed: wasChecked !== checked });
+    }
+    await this.inspect();
+    return {
+      status: "updated",
+      count: results.length,
+      changedCount: results.filter((item) => item.changed).length,
+      items: results,
+      submitted: false,
+      valueReturned: false,
+      note: "Visible native checkbox states were updated. The page was not submitted; any submit control remains a separate action.",
+    };
+  }
+
   async selectOption(ref: string, optionLabel: string) {
     if (optionLabel.length > 500) throw new Error("Option label exceeds the 500 character limit.");
     const inspectedFingerprint = this.lastInspectionFingerprint;
@@ -1122,6 +1168,10 @@ function findUniqueSubmitCandidate(candidates: BrowserCandidate[]) {
 
 function normalizeLabel(value: string) {
   return value.normalize("NFKC").toLocaleLowerCase("en-US").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+}
+
+function stableCheckboxLabel(value: string) {
+  return value.replace(/\s*[—–]\s*Currently\s+(?:un)?checked\s*$/iu, "").trim();
 }
 
 function pageIdentity(rawUrl: string) {

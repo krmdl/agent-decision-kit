@@ -60,7 +60,7 @@ describe("Playwright browser safety flow", () => {
     ambiguousLabelsHtml = Buffer.from('<!doctype html><button type="button">Continue</button><a href="#next">Continue</a><p id="status">No action</p>');
     checkboxHtml = Buffer.from('<!doctype html><label><input type="checkbox" name="updates"> Receive product updates</label>');
     submitHtml = Buffer.from('<!doctype html><form onsubmit="event.preventDefault(); document.querySelector(\'#status\').textContent = \'Submitted locally\'"><input type="submit" value="Send test"></form><p id="status">Not sent</p>');
-    checkboxTaskHtml = Buffer.from('<!doctype html><form id="sample" onsubmit="event.preventDefault(); document.querySelector(\'#status\').textContent = \'Submitted locally\'"><label><input type="checkbox" name="target"> Neb</label><button type="submit">Submit</button></form><p id="status">Not sent</p>');
+    checkboxTaskHtml = Buffer.from('<!doctype html><form id="sample" onsubmit="event.preventDefault(); document.querySelector(\'#status\').textContent = \'Submitted locally\'"><label><input type="checkbox" name="target"> Neb</label><label><input type="checkbox" name="other"> Other</label><button type="submit">Submit</button></form><p id="status">Not sent</p>');
     tabHtml = Buffer.from('<!doctype html><div role="tab">Tab #1</div><div role="tab">Tab #2</div><div role="tab">Tab #3</div>');
     expandHtml = Buffer.from('<!doctype html><button id="toggle" aria-expanded="false" aria-controls="details">Section details</button><div id="details" hidden><p role="tab" aria-expanded="false">Submit</p><form onsubmit="event.preventDefault(); document.querySelector(\'#status\').textContent = \'Submitted locally\'"><button type="submit">Submit</button></form></div><p id="status">Not sent</p><script>document.querySelector(\'#toggle\').addEventListener(\'click\',e=>{const open=e.currentTarget.getAttribute(\'aria-expanded\')!==\'true\';e.currentTarget.setAttribute(\'aria-expanded\',String(open));document.querySelector(\'#details\').hidden=!open;location.hash=\'details\'})</script>');
     nativeFieldsHtml = Buffer.from(`<!doctype html><form id="native-form" onsubmit="event.preventDefault(); document.querySelector('#status').textContent = 'Submitted'"><label for="country">Country</label><select id="country" name="country"><option value="">Choose one</option><option value="ca">Canada</option><option value="cn">China</option><optgroup label="Disabled" disabled><option value="blocked">Unavailable</option></optgroup></select><label for="date">Date</label><input id="date" name="date" type="date"><label for="datepicker">Appointment date</label><input id="datepicker" name="appointment" type="text" aria-label="Appointment date" readonly><div id="picker" role="group" aria-label="December 2016 date picker" hidden><button id="day22" type="button" aria-label="December 22, 2016">22</button></div><button type="submit">Submit</button></form><p id="status">Not submitted</p><script>document.querySelector('#country').addEventListener('change',()=>document.querySelector('#status').textContent='Selected country');document.querySelector('#date').addEventListener('change',()=>document.querySelector('#status').textContent='Date entry updated');document.querySelector('#datepicker').addEventListener('click',()=>document.querySelector('#picker').hidden=false);document.querySelector('#day22').addEventListener('click',()=>{document.querySelector('#datepicker').value='12/22/2016';document.querySelector('#picker').hidden=true;document.querySelector('#status').textContent='Date selected'})</script>`);
@@ -823,6 +823,32 @@ describe("Playwright browser safety flow", () => {
     const final = await browser.confirm(token, true);
     expect(final.status).toBe("action-executed-after-approval");
     expect(final.effect.textDelta.excerpt).toContain("Submitted locally");
+  }, 45_000);
+
+  it("sets several uniquely labeled native checkboxes in one local call without submitting", async () => {
+    profile = await mkdtemp(path.join(os.tmpdir(), "adk-browser-checkbox-batch-test-"));
+    browser = new BrowserManager({ headless: true, profileDir: path.join(profile, "chromium") });
+    await browser.launch(`${baseUrl}checkbox-task`);
+
+    const snapshot = await browser.inspect();
+    const refs = snapshot.candidates.filter((candidate) => candidate.kind === "checkbox").map((candidate) => candidate.ref);
+    const submit = snapshot.candidates.find((candidate) => candidate.label === "Submit");
+    expect(refs).toHaveLength(2);
+    expect(submit).toBeDefined();
+    await expect(browser.setCheckboxes([...refs, submit!.ref], true)).rejects.toThrow("Only visible native checkboxes");
+    await expect(browser.setCheckboxes([refs[0]!, refs[0]!], true)).rejects.toThrow("Each checkbox ref must be unique");
+
+    const result = await browser.setCheckboxes(refs, true);
+    expect(result).toMatchObject({ status: "updated", count: 2, changedCount: 2, submitted: false, valueReturned: false });
+    expect(JSON.stringify(result)).not.toContain("Neb");
+    const page = (browser as unknown as { page: Page }).page;
+    expect(await page.locator('input[type="checkbox"]').count()).toBe(2);
+    expect(await page.locator('input[type="checkbox"]').nth(0).isChecked()).toBe(true);
+    expect(await page.locator('input[type="checkbox"]').nth(1).isChecked()).toBe(true);
+    expect(await page.locator("#status").innerText()).toBe("Not sent");
+
+    const repeated = await browser.setCheckboxes(refs, true);
+    expect(repeated).toMatchObject({ status: "updated", count: 2, changedCount: 0, submitted: false });
   }, 45_000);
 
   it("expands an explicit disclosure before proposing its submit control", async () => {

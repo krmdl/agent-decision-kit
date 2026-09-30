@@ -136,6 +136,12 @@ export function createServer(options: { provider?: DecisionProvider } = {}) {
     inputSchema: { sourceRef: z.string().regex(/^r\d+$/), targetRef: z.string().regex(/^r\d+$/) },
   }, async ({ sourceRef, targetRef }) => asToolResult(await browser.copyField(sourceRef, targetRef)));
 
+  server.registerTool("browser_set_checkboxes", {
+    title: "Set multiple visible checkboxes",
+    description: "Set 1–40 uniquely labeled visible native checkboxes to one explicit checked state. Each target is revalidated as the page updates. Approval-required, ambiguous, disabled, and custom checkboxes are excluded. This never submits the page; submit remains a separate approval-gated action.",
+    inputSchema: { refs: z.array(z.string().regex(/^r\d+$/)).min(1).max(40), checked: z.boolean() },
+  }, async ({ refs, checked }) => asToolResult(await browser.setCheckboxes(refs, checked)));
+
   server.registerTool("browser_select_option", {
     title: "Select a native browser option",
     description: "Select one exact, enabled option label from a visible native select control. It does not submit the page or return the option value.",
