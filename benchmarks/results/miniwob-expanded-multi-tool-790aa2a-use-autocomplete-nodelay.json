@@ -1,0 +1,186 @@
+{
+  "benchmark": "miniwob",
+  "task": "use-autocomplete-nodelay",
+  "taskPrompt": "Enter an item that starts with \"Po\".",
+  "runnerMode": "bounded-multi-tool-integration-smoke",
+  "toolCoverage": [
+    "browser_confirm",
+    "browser_connect",
+    "browser_decide_and_act",
+    "browser_fill"
+  ],
+  "notExercisedTools": [
+    "browser_action",
+    "browser_copy_field",
+    "browser_select_option",
+    "browser_set_checkboxes",
+    "browser_set_range",
+    "browser_visual_action",
+    "browser_visual_inspect",
+    "browser_visual_text"
+  ],
+  "toolActionTrace": [
+    {
+      "step": 1,
+      "tool": "browser_fill",
+      "status": "filled",
+      "syntheticApproval": false,
+      "fieldKind": "text",
+      "characterCount": 2
+    }
+  ],
+  "success": true,
+  "timeout": false,
+  "failureReason": null,
+  "actions": 4,
+  "selectedAction": {
+    "ref": "r2",
+    "role": "button",
+    "label": "Submit",
+    "kind": "button",
+    "risk": "approval-required"
+  },
+  "decisionConfidence": 1,
+  "decisionCalibration": "uncalibrated-estimate",
+  "decisionLatencyMs": 267,
+  "decisionCallLatenciesMs": [
+    242,
+    25
+  ],
+  "decisionSnapshot": null,
+  "availableCandidates": null,
+  "decisionTrace": [
+    {
+      "step": 2,
+      "decisionStatus": "awaiting-user-approval",
+      "provider": "local-literal-match",
+      "model": "first-visible-option-matching-explicit-prefix",
+      "selectionRule": "first-visible-option-matching-explicit-prefix",
+      "selectedAction": {
+        "ref": "r3",
+        "role": "pointer-target",
+        "label": "Poland",
+        "kind": "custom-pointer",
+        "risk": "approval-required"
+      },
+      "availableCandidates": [
+        {
+          "ref": "r1",
+          "role": "input",
+          "label": "Tags:",
+          "kind": "text",
+          "risk": "low"
+        },
+        {
+          "ref": "r2",
+          "role": "button",
+          "label": "Submit",
+          "kind": "button",
+          "risk": "approval-required"
+        },
+        {
+          "ref": "r3",
+          "role": "pointer-target",
+          "label": "Poland",
+          "kind": "custom-pointer",
+          "risk": "approval-required"
+        },
+        {
+          "ref": "r4",
+          "role": "pointer-target",
+          "label": "Portugal",
+          "kind": "custom-pointer",
+          "risk": "approval-required"
+        }
+      ],
+      "decisionLatencyMs": 0,
+      "candidateCount": 4,
+      "confidence": null,
+      "calibration": "not-applicable-rule",
+      "executionStatus": "action-executed-after-approval"
+    },
+    {
+      "step": 3,
+      "decisionStatus": "action-executed",
+      "provider": "semantic-local",
+      "model": "Xenova/all-MiniLM-L6-v2",
+      "selectionRule": null,
+      "selectedAction": {
+        "ref": "r1",
+        "role": "input",
+        "label": "Tags:",
+        "kind": "text",
+        "risk": "low"
+      },
+      "availableCandidates": null,
+      "decisionLatencyMs": 242,
+      "candidateCount": 2,
+      "confidence": 0.6371813616656955,
+      "calibration": "uncalibrated-estimate",
+      "executionStatus": "action-executed"
+    },
+    {
+      "step": 4,
+      "decisionStatus": "awaiting-user-approval",
+      "provider": "semantic-local",
+      "model": "Xenova/all-MiniLM-L6-v2",
+      "selectionRule": null,
+      "selectedAction": {
+        "ref": "r2",
+        "role": "button",
+        "label": "Submit",
+        "kind": "button",
+        "risk": "approval-required"
+      },
+      "availableCandidates": null,
+      "decisionLatencyMs": 25,
+      "candidateCount": 2,
+      "confidence": 1,
+      "calibration": "uncalibrated-estimate",
+      "executionStatus": "action-executed-after-approval"
+    }
+  ],
+  "candidateCount": 2,
+  "selectionRule": null,
+  "syntheticApprovalCount": 2,
+  "latencyMs": 1734,
+  "environmentResetLatencyMs": 860,
+  "agentActionLatencyMs": 874,
+  "reward": 1.0,
+  "terminated": true,
+  "decisionStatus": "action-executed-after-approval",
+  "decisionProvider": "semantic-local",
+  "decisionModel": "Xenova/all-MiniLM-L6-v2",
+  "agentDecisionKitCommit": "790aa2ab416888b360cb73ba8c36ed12c972923d",
+  "browserGymVersion": "0.14.3",
+  "browserGymPackageCommit": "0a785fbed075224ae81ca9c1fe924f66050696fe",
+  "playwrightPythonVersion": "1.44.0",
+  "playwrightNodeVersion": "1.63.0",
+  "browserVersion": "HeadlessChrome/125.0.6422.26",
+  "pythonVersion": "3.12.3",
+  "nodeVersion": "v24.20.0",
+  "operatingSystem": "Linux-5.15.0-37-generic-x86_64-with-glibc2.39",
+  "cpu": "x86_64",
+  "accelerator": "CPU",
+  "modelCacheState": "local cache already populated before this episode",
+  "ocrLanguageCacheExistedBeforeEpisode": null,
+  "decisionWarmState": "first semantic provider inference in a fresh Node bridge process; model files are cached",
+  "miniWobCommit": "7fd85d71a4b60325c6585396ec4f48377d049838",
+  "browserStillOpenAfterDisconnect": true,
+  "rawTaskInfo": {
+    "REWARD_GLOBAL": 0.998254,
+    "RAW_REWARD_GLOBAL": 1,
+    "REWARD_REASON": null,
+    "DONE_GLOBAL": true,
+    "EPISODE_ID": 1,
+    "TASK_READY": true
+  },
+  "timestampUtc": "2026-09-30T13:52:41.755879+00:00",
+  "maxActions": 8,
+  "note": "A curated MiniWoB integration smoke check, not a representative BrowserGym benchmark or a full autonomous agent. Multi-tool mode extracts only explicit task values and visible native options; field values are omitted from action traces. The optional OCR path attempts only the quoted link target and its coordinate click remains behind the standard one-use approval gate; synthetic approval is possible only for the exact local MiniWoB file URL.",
+  "visualOcrActionsEnabled": false,
+  "runnerExitCode": 0,
+  "agentDecisionKitBaseCommit": "675d520230d9829151adb44dd1de1e233a595bfd",
+  "agentDecisionKitTreeWasDirtyAtRun": true,
+  "agentDecisionKitSourceTreeVerifiedAgainstCommit": true
+}
