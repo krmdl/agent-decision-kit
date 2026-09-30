@@ -144,7 +144,7 @@ export class BrowserManager {
         return parts.join(" — ").slice(0, 240);
       };
       const supportedInputTypes = new Set(["text", "search", "email", "tel", "url", "number", "date", "datetime-local", "time", "month", "week", "range", "checkbox", "radio", "submit", "image", "button", "reset"]);
-      const semanticRoles = "[role=button], [role=link], [role=tab], [role=checkbox], [role=radio], [role=switch], [role=slider], [role=menuitem], [role=menuitemcheckbox], [role=menuitemradio], [role=option]";
+      const semanticRoles = "[role=button], [role=link], [role=tab], [role=checkbox], [role=radio], [role=switch], [role=slider], .ui-slider-handle[tabindex], [role=menuitem], [role=menuitemcheckbox], [role=menuitemradio], [role=option]";
       const semanticSelector = `button, a[href], input:not([type=password]):not([type=hidden]):not([type=file]), textarea, select, ${semanticRoles}`;
       const all = Array.from(document.querySelectorAll(semanticSelector));
       const semanticNodes = all.filter(visible).filter((element) => {
@@ -173,11 +173,19 @@ export class BrowserManager {
         element.setAttribute(referenceAttributeName, ref);
         const tag = element.tagName.toLowerCase();
         const customPointer = customPointerSet.has(element);
-        const role = customPointer ? "pointer-target" : element.getAttribute("role") ?? (tag === "a" ? "link" : tag === "button" ? "button" : tag === "select" ? "combobox" : tag);
         const input = element as HTMLInputElement;
         const isNativeRange = element instanceof HTMLInputElement && input.type === "range";
-        const isAriaSlider = role === "slider";
-        const kind = customPointer ? "custom-pointer" : isNativeRange || isAriaSlider ? "range" : tag === "input" ? (input.type || "text") : tag === "select" ? ((element as HTMLSelectElement).multiple ? "select-multiple" : "select-one") : tag;
+        const sliderContainer = element.parentElement;
+        const sliderOutputId = sliderContainer?.getAttribute("data-output");
+        const sliderOutput = sliderOutputId ? document.getElementById(sliderOutputId) : null;
+        const rawSliderOutput = sliderOutput?.textContent?.trim() ?? "";
+        const parsedSliderOutput = rawSliderOutput ? Number(rawSliderOutput) : Number.NaN;
+        const isKeyboardWidgetSlider = element.matches(".ui-slider-handle[tabindex]")
+          && Boolean(sliderContainer?.matches(".ui-slider"))
+          && Boolean(sliderOutput && visible(sliderOutput) && Number.isFinite(parsedSliderOutput));
+        const role = customPointer ? "pointer-target" : element.getAttribute("role") ?? (isKeyboardWidgetSlider ? "slider" : tag === "a" ? "link" : tag === "button" ? "button" : tag === "select" ? "combobox" : tag);
+        const isAriaSlider = role === "slider" && !isKeyboardWidgetSlider && !isNativeRange;
+        const kind = customPointer ? "custom-pointer" : isNativeRange || isAriaSlider || isKeyboardWidgetSlider ? "range" : tag === "input" ? (input.type || "text") : tag === "select" ? ((element as HTMLSelectElement).multiple ? "select-multiple" : "select-one") : tag;
         const label = labelFor(element) || `${role} ${index + 1}`;
         const button = element as HTMLButtonElement;
         const riskyInput = tag === "input" && ["submit", "image", "reset"].includes(input.type);
@@ -223,7 +231,7 @@ export class BrowserManager {
           : undefined;
         const rawAriaValue = isAriaSlider ? element.getAttribute("aria-valuenow") : null;
         const parsedAriaValue = rawAriaValue === null ? undefined : Number(rawAriaValue);
-        const privateRangeValue = isNativeRange ? input.valueAsNumber : parsedAriaValue !== undefined && Number.isFinite(parsedAriaValue) ? parsedAriaValue : undefined;
+        const privateRangeValue = isNativeRange ? input.valueAsNumber : isKeyboardWidgetSlider ? parsedSliderOutput : parsedAriaValue !== undefined && Number.isFinite(parsedAriaValue) ? parsedAriaValue : undefined;
         const privateValuePresent = element instanceof HTMLInputElement && ["text", "search", "email", "tel", "url", "number", "date", "datetime-local", "time", "month"].includes(element.type)
           ? element.value.length > 0
           : element instanceof HTMLTextAreaElement ? element.value.length > 0
@@ -284,7 +292,7 @@ export class BrowserManager {
     const privateStateFingerprint = createHash("sha256").update(JSON.stringify({ privateFormState, privateActionState, privateRangeState })).digest("hex");
     const safeSnapshot = { ...snapshot, candidates };
     this.lastInspectionFingerprint = snapshotFingerprint({ ...safeSnapshot, privateStateFingerprint });
-    return { ...safeSnapshot, url: redactBrowserUrl(snapshot.url), candidates: candidates.map(({ ref, role, label, kind, risk, checked, expanded, selected, readOnly, optionLabels, selectedOptionLabels, min, max, step }) => ({ ref, role, label, kind, risk, ...(checked === undefined ? {} : { checked }), ...(expanded === undefined ? {} : { expanded }), ...(selected === undefined ? {} : { selected }), ...(readOnly === undefined ? {} : { readOnly }), ...(optionLabels === undefined ? {} : { optionLabels }), ...(selectedOptionLabels === undefined ? {} : { selectedOptionLabels }), ...(min === undefined ? {} : { min }), ...(max === undefined ? {} : { max }), ...(step === undefined ? {} : { step }) })), inspectMs: Math.round(performance.now() - before), candidateLimit: 80, note: "Bounded visible DOM/accessibility snapshot. Alongside semantic controls, it scans clear CSS pointer-only text targets within the same 80-candidate limit; custom targets have no semantic role and always require a separate approval. Native select options are limited to 12 enabled labels; editable values, passwords, cookies and storage are not returned. Editable values and action destinations are hashed locally only to invalidate stale approvals. URL credentials, query and hash are redacted." };
+    return { ...safeSnapshot, url: redactBrowserUrl(snapshot.url), candidates: candidates.map(({ ref, role, label, kind, risk, checked, expanded, selected, readOnly, optionLabels, selectedOptionLabels, min, max, step }) => ({ ref, role, label, kind, risk, ...(checked === undefined ? {} : { checked }), ...(expanded === undefined ? {} : { expanded }), ...(selected === undefined ? {} : { selected }), ...(readOnly === undefined ? {} : { readOnly }), ...(optionLabels === undefined ? {} : { optionLabels }), ...(selectedOptionLabels === undefined ? {} : { selectedOptionLabels }), ...(min === undefined ? {} : { min }), ...(max === undefined ? {} : { max }), ...(step === undefined ? {} : { step }) })), inspectMs: Math.round(performance.now() - before), candidateLimit: 80, note: "Bounded visible DOM/accessibility snapshot. Alongside semantic controls, it scans keyboard-operated jQuery UI slider handles with a linked visible numeric readout and clear CSS pointer-only text targets within the same 80-candidate limit; custom targets have no semantic role and always require a separate approval. Native select options are limited to 12 enabled labels; editable values, passwords, cookies and storage are not returned. Editable values, slider readings and action destinations are hashed locally only to invalidate stale approvals. URL credentials, query and hash are redacted." };
   }
 
   async decideAndAct(task: string, provider: DecisionProvider) {
@@ -535,7 +543,7 @@ export class BrowserManager {
     const snapshot = await this.inspect();
     if (this.lastInspectionFingerprint !== inspectedFingerprint) throw new Error("The page changed after inspection. Inspect it again and select a current range ref.");
     const candidate = this.candidates.get(ref);
-    if (!candidate || candidate.kind !== "range") throw new Error("This ref is not a visible native range or ARIA slider.");
+    if (!candidate || candidate.kind !== "range") throw new Error("This ref is not a visible native range, ARIA slider, or supported keyboard slider.");
     const locator = this.candidateLocator(candidate.ref);
     const constraints = await locator.evaluate((element) => {
       if (element instanceof HTMLInputElement && element.type === "range") {
@@ -550,7 +558,13 @@ export class BrowserManager {
           current: element.valueAsNumber,
         };
       }
-      if (element.getAttribute("role") !== "slider") throw new Error("This ref is not a native range input or an ARIA slider.");
+      if (element.getAttribute("role") !== "slider" && element.matches(".ui-slider-handle[tabindex]") && element.parentElement?.matches(".ui-slider[data-output]")) {
+        const outputId = element.parentElement.getAttribute("data-output");
+        const output = outputId ? document.getElementById(outputId) : null;
+        const rawCurrent = output?.textContent?.trim() ?? "";
+        return { mode: "keyboard" as const, current: rawCurrent ? Number(rawCurrent) : Number.NaN, step: undefined };
+      }
+      if (element.getAttribute("role") !== "slider") throw new Error("This ref is not a native range input, an ARIA slider, or a supported keyboard slider.");
       const readBound = (name: string, fallback: number) => {
         const raw = element.getAttribute(name);
         const parsed = raw === null ? fallback : Number(raw);
@@ -567,9 +581,9 @@ export class BrowserManager {
         current: rawCurrent === null ? Number.NaN : Number(rawCurrent),
       };
     });
-    if (!Number.isFinite(constraints.current)) throw new Error("This ARIA slider does not expose a finite aria-valuenow value.");
-    if (value < constraints.min || value > constraints.max) throw new Error(`Range value must be between ${constraints.min} and ${constraints.max}.`);
-    if (constraints.step !== undefined) {
+    if (!Number.isFinite(constraints.current)) throw new Error("This slider does not expose a finite current value.");
+    if ("min" in constraints && typeof constraints.min === "number" && typeof constraints.max === "number" && (value < constraints.min || value > constraints.max)) throw new Error(`Range value must be between ${constraints.min} and ${constraints.max}.`);
+    if (constraints.step !== undefined && "min" in constraints && typeof constraints.min === "number") {
       const offset = (value - constraints.min) / constraints.step;
       if (Math.abs(offset - Math.round(offset)) > 1e-7) throw new Error(`Range value must align with the ${constraints.step} step from ${constraints.min}.`);
     }
@@ -584,32 +598,41 @@ export class BrowserManager {
           element.dispatchEvent(new Event("change", { bubbles: true }));
         }, value);
       } else {
+        const readCurrentValue = async () => constraints.mode === "aria"
+          ? Number(await locator.getAttribute("aria-valuenow"))
+          : await locator.evaluate((element) => {
+            const outputId = element.parentElement?.getAttribute("data-output");
+            const raw = outputId ? document.getElementById(outputId)?.textContent?.trim() : "";
+            return raw ? Number(raw) : Number.NaN;
+          });
         // ARIA sliders must receive keyboard input so their page widget can update its own state.
         const direction = value > constraints.current ? "ArrowRight" : "ArrowLeft";
         const reverse = direction === "ArrowRight" ? "ArrowLeft" : "ArrowRight";
         let current = constraints.current;
+        let changedSteps = 0;
         let reachedTarget = false;
         await locator.focus();
         for (let attempt = 0; attempt < 200; attempt++) {
           const before = current;
           await locator.press(direction);
-          const next = Number(await locator.getAttribute("aria-valuenow"));
+          const next = await readCurrentValue();
           if (!Number.isFinite(next) || Math.abs(next - before) <= 1e-9) break;
+          changedSteps++;
+          current = next;
           if ((direction === "ArrowRight" && next < before) || (direction === "ArrowLeft" && next > before)) break;
           if (constraints.step !== undefined && Math.abs(Math.abs(next - before) - constraints.step) > 1e-7) break;
-          if ((direction === "ArrowRight" && next > value) || (direction === "ArrowLeft" && next < value)) {
-            await locator.press(reverse);
-            break;
-          }
-          current = next;
+          if ((direction === "ArrowRight" && next > value) || (direction === "ArrowLeft" && next < value)) break;
           if (Math.abs(current - value) <= 1e-9) {
             reachedTarget = true;
             break;
           }
         }
         if (!reachedTarget) {
+          for (let attempt = 0; attempt < changedSteps; attempt++) await locator.press(reverse);
           await this.inspect();
-          return { status: "range-value-not-applied", ref, valueReturned: false, submitted: false, note: "Keyboard steps did not reach the requested ARIA slider value exactly. The page was not submitted; inspect it before continuing." };
+          const restoredValue = this.privateRangeValues.get(ref);
+          const restored = restoredValue !== undefined && Math.abs(restoredValue - constraints.current) <= 1e-9;
+          return { status: "range-value-not-applied", ref, valueReturned: false, submitted: false, ...(restored ? { restored: true } : {}), note: `Keyboard steps did not reach the requested slider value exactly. ${restored ? "The original value was restored." : "Inspect the slider before continuing."} The page was not submitted.` };
         }
       }
       await this.inspect();
@@ -917,9 +940,8 @@ function findExplicitRangePlan(task: string, candidates: BrowserCandidate[], ran
   for (const [index, value] of values.entries()) {
     const candidate = ranges[index]!;
     const minimum = candidate.min ?? 0;
-    const maximum = candidate.max ?? 100;
     const step = candidate.step;
-    if (value < minimum || value > maximum) return { error: `Slider ${index + 1} target is outside its visible range (${minimum} to ${maximum}). No slider was changed.` };
+    if ((candidate.min !== undefined && value < candidate.min) || (candidate.max !== undefined && value > candidate.max)) return { error: `Slider ${index + 1} target is outside its visible range (${candidate.min ?? "unknown"} to ${candidate.max ?? "unknown"}). No slider was changed.` };
     if (step !== undefined && Math.abs((value - minimum) / step - Math.round((value - minimum) / step)) > 1e-7) return { error: `Slider ${index + 1} target does not align with its visible step size (${step}). No slider was changed.` };
   }
   const nextIndex = ranges.findIndex((candidate, index) => {

@@ -159,7 +159,7 @@ def main():
 
     summary = load_aggregator().summarize(records)
     exercised_tools = sorted({tool for record in records for tool in record.get("toolCoverage", [])})
-    supported_tools = {"browser_connect", "browser_decide_and_act", "browser_confirm", "browser_action", "browser_fill", "browser_select_option", "browser_visual_inspect", "browser_visual_text", "browser_visual_action"}
+    supported_tools = {"browser_connect", "browser_decide_and_act", "browser_confirm", "browser_action", "browser_fill", "browser_select_option", "browser_set_range", "browser_visual_inspect", "browser_visual_text", "browser_visual_action"}
     suite_name, runner_mode = suite_identity(records)
     summary["suite"] = {
         "name": suite_name,

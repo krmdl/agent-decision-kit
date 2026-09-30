@@ -138,7 +138,7 @@ export function createServer(options: { provider?: DecisionProvider } = {}) {
 
   server.registerTool("browser_set_range", {
     title: "Set a visible range slider",
-    description: "Set one explicit numeric value on a visible native range or ARIA slider ref from browser_inspect. The value must be within the slider's minimum, maximum, and any exposed step. The value is never returned, and the page is not submitted.",
+    description: "Set one explicit numeric value on a visible native range, ARIA slider, or supported keyboard slider ref from browser_inspect. Exposed bounds and step are checked; keyboard sliders are changed only when they accept the exact value. The value is never returned, and the page is not submitted.",
     inputSchema: { ref: z.string().regex(/^r\d+$/), value: z.number().finite() },
   }, async ({ ref, value }) => asToolResult(await browser.setRange(ref, value)));
 

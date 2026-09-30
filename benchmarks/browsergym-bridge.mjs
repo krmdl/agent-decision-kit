@@ -39,6 +39,9 @@ for await (const line of input) {
       case "select-option":
         result = await browser.selectOption(request.ref, request.optionLabel);
         break;
+      case "set-range":
+        result = await browser.setRange(request.ref, request.value);
+        break;
       case "act":
         result = await browser.act(request.ref);
         break;

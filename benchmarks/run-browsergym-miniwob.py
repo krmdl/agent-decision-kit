@@ -37,8 +37,28 @@ def is_expected_local_task_url(current_url, base_url, task):
     return base_url.startswith("file://") and current_url == base_url + f"{task}.html"
 
 
+def explicit_slider_values(task):
+    match = re.search(r"\b(?:set|adjust|move)\s+(?:the\s+)?sliders?\s+to\s+(?:the\s+)?(?:combination\s+)?\[([^\]]+)\]", task, re.IGNORECASE)
+    if not match:
+        return None
+    values = [part.strip() for part in match.group(1).split(",")]
+    if not values or any(not re.fullmatch(r"[+-]?(?:\d+(?:\.\d*)?|\.\d+)", value) for value in values):
+        return []
+    return [float(value) for value in values]
+
+
 def multi_tool_action(task, candidates, completed_fields, visible_text=""):
     """Extract only explicit MiniWoB task values for the tool integration smoke path."""
+    slider_values = explicit_slider_values(task)
+    if slider_values is not None:
+        ranges = [candidate for candidate in candidates if candidate.get("kind") == "range"]
+        if not slider_values or len(ranges) != len(slider_values):
+            return None
+        for ordinal, (candidate, value) in enumerate(zip(ranges, slider_values), start=1):
+            if field_key(candidate) not in completed_fields:
+                return "set-range", {"ref": candidate["ref"], "value": value}, {"fieldKind": "range", "fieldOrdinal": ordinal}
+        return None
+
     radio_match = re.search(r"\b(?:check|select|choose|tick)\s+(?:the\s+)?(\d+)(?:st|nd|rd|th)?\s+radio(?:\s+button)?\b", task, re.IGNORECASE)
     if radio_match:
         radios = [candidate for candidate in candidates if candidate.get("kind") == "radio" or candidate.get("role") in {"radio", "menuitemradio"}]
@@ -299,7 +319,7 @@ def main():
                 if planned:
                     operation, fields, metadata = planned
                     action_result = bridge.call(operation, **fields)
-                    tool_name = {"select-option": "browser_select_option", "fill": "browser_fill", "act": "browser_action"}[operation]
+                    tool_name = {"select-option": "browser_select_option", "set-range": "browser_set_range", "fill": "browser_fill", "act": "browser_action"}[operation]
                     tool_coverage.add(tool_name)
                     action_count += 1
                     synthetic_approval = False
@@ -309,9 +329,11 @@ def main():
                             synthetic_approval = True
                             synthetic_approval_count += 1
                             tool_coverage.add("browser_confirm")
-                    if operation in {"fill", "select-option", "act"}:
+                    if operation in {"fill", "select-option", "act", "set-range"}:
                         candidate = next(item for item in inspected["candidates"] if item["ref"] == fields["ref"])
-                        completed_fields.add(field_key(candidate))
+                        completed = action_result.get("status") in ({"set", "already-set"} if operation == "set-range" else {"filled", "selected", "action-executed", "action-executed-after-approval"})
+                        if completed:
+                            completed_fields.add(field_key(candidate))
                     tool_action_trace.append({"step": step_index + 1, "tool": tool_name, "status": action_result.get("status"), "syntheticApproval": synthetic_approval, **metadata})
                     if action_result.get("status") == "awaiting-user-approval":
                         reward, terminated, _, task_info = env.unwrapped.task.validate(env.unwrapped.page, env.unwrapped.chat.messages)
@@ -319,7 +341,12 @@ def main():
                     reward, terminated, _, task_info = env.unwrapped.task.validate(env.unwrapped.page, env.unwrapped.chat.messages)
                     if reward > 0 or terminated:
                         break
+                    if operation == "set-range" and action_result.get("status") not in {"set", "already-set"}:
+                        break
                     continue
+
+                if explicit_slider_values(task) is not None:
+                    break
 
                 links = [candidate for candidate in inspected.get("candidates", []) if candidate.get("role") == "link"]
                 ordinal = re.search(r"\b(\d+)(?:st|nd|rd|th)\s+(?:search\s+)?result\b", task, re.IGNORECASE)
@@ -485,7 +512,7 @@ def main():
             "taskPrompt": task,
             "runnerMode": "bounded-visual-ocr-approval-smoke" if visual_ocr_used else ("bounded-multi-tool-integration-smoke" if args.multi_tool else "bounded-repeated-browser-decide-and-act"),
             "toolCoverage": sorted(tool_coverage),
-            "notExercisedTools": sorted({"browser_connect", "browser_decide_and_act", "browser_confirm", "browser_action", "browser_fill", "browser_select_option", "browser_visual_inspect", "browser_visual_text", "browser_visual_action"} - tool_coverage),
+            "notExercisedTools": sorted({"browser_connect", "browser_decide_and_act", "browser_confirm", "browser_action", "browser_fill", "browser_select_option", "browser_set_range", "browser_visual_inspect", "browser_visual_text", "browser_visual_action"} - tool_coverage),
             "toolActionTrace": tool_action_trace,
             "success": bool(reward > 0),
             "timeout": False,
@@ -519,7 +546,7 @@ def main():
             "rawTaskInfo": task_info,
             "timestampUtc": datetime.now(timezone.utc).isoformat(),
             "maxActions": args.max_actions,
-            "note": "A curated MiniWoB integration smoke check, not a representative BrowserGym benchmark or a full autonomous agent. Multi-tool mode extracts only explicit task values and visible native options; field values are omitted from the raw record. The optional OCR path attempts only the quoted link target and its coordinate click remains behind the standard one-use approval gate; synthetic approval is possible only for the exact local MiniWoB file URL.",
+            "note": "A curated MiniWoB integration smoke check, not a representative BrowserGym benchmark or a full autonomous agent. Multi-tool mode extracts only explicit task values and visible native options; field values are omitted from action traces. The optional OCR path attempts only the quoted link target and its coordinate click remains behind the standard one-use approval gate; synthetic approval is possible only for the exact local MiniWoB file URL.",
             "visualOcrActionsEnabled": args.visual_ocr_actions,
         }
         if args.output:
@@ -539,7 +566,7 @@ def main():
                 "taskPrompt": task,
                 "runnerMode": "bounded-visual-ocr-approval-smoke" if visual_ocr_used else ("bounded-multi-tool-integration-smoke" if args.multi_tool else "bounded-repeated-browser-decide-and-act"),
                 "toolCoverage": sorted(tool_coverage),
-                "notExercisedTools": sorted({"browser_connect", "browser_decide_and_act", "browser_confirm", "browser_action", "browser_fill", "browser_select_option", "browser_visual_inspect", "browser_visual_text", "browser_visual_action"} - tool_coverage),
+                "notExercisedTools": sorted({"browser_connect", "browser_decide_and_act", "browser_confirm", "browser_action", "browser_fill", "browser_select_option", "browser_set_range", "browser_visual_inspect", "browser_visual_text", "browser_visual_action"} - tool_coverage),
                 "toolActionTrace": tool_action_trace,
                 "success": False,
                 "timeout": timed_out,

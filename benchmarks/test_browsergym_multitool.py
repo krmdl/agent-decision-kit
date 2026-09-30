@@ -14,6 +14,30 @@ SUITE_SPEC.loader.exec_module(SUITE)
 
 
 class MultiToolPlanningTests(unittest.TestCase):
+    def test_extracts_explicit_slider_targets_and_plans_one_direct_range_call_at_a_time(self):
+        candidates = [
+            {"ref": "r1", "role": "slider", "kind": "range", "label": "Slider one"},
+            {"ref": "r2", "role": "slider", "kind": "range", "label": "Slider two"},
+            {"ref": "r3", "role": "slider", "kind": "range", "label": "Slider three"},
+        ]
+        task = "Set the sliders to [16, 17, 0]."
+
+        first = RUNNER.multi_tool_action(task, candidates, set())
+        self.assertEqual(first, ("set-range", {"ref": "r1", "value": 16.0}, {"fieldKind": "range", "fieldOrdinal": 1}))
+        self.assertNotIn("16", str(first[2]))
+
+        completed = {RUNNER.field_key(candidates[0])}
+        second = RUNNER.multi_tool_action(task, candidates, completed)
+        self.assertEqual(second, ("set-range", {"ref": "r2", "value": 17.0}, {"fieldKind": "range", "fieldOrdinal": 2}))
+
+        completed.update(RUNNER.field_key(candidate) for candidate in candidates[1:])
+        self.assertIsNone(RUNNER.multi_tool_action(task, candidates, completed))
+
+    def test_does_not_plan_range_tool_calls_with_invalid_values_or_mismatched_slider_count(self):
+        candidates = [{"ref": "r1", "role": "slider", "kind": "range", "label": "Slider one"}]
+        self.assertIsNone(RUNNER.multi_tool_action("Set the sliders to [1, nope].", candidates, set()))
+        self.assertIsNone(RUNNER.multi_tool_action("Set the sliders to [1, 2].", candidates, set()))
+
     def test_suite_metadata_uses_tools_that_ran_not_just_enabled_flags(self):
         self.assertEqual(
             SUITE.suite_identity([{"runnerMode": "bounded-multi-tool-integration-smoke"}]),
