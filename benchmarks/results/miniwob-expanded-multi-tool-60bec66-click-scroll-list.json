@@ -1,0 +1,188 @@
+{
+  "benchmark": "miniwob",
+  "task": "click-scroll-list",
+  "taskPrompt": "Select Vatican City State from the scroll list and click Submit.",
+  "runnerMode": "bounded-multi-tool-integration-smoke",
+  "toolCoverage": [
+    "browser_confirm",
+    "browser_connect",
+    "browser_decide_and_act"
+  ],
+  "notExercisedTools": [
+    "browser_action",
+    "browser_fill",
+    "browser_select_option",
+    "browser_set_range",
+    "browser_visual_action",
+    "browser_visual_inspect",
+    "browser_visual_text"
+  ],
+  "toolActionTrace": [],
+  "success": true,
+  "timeout": false,
+  "failureReason": null,
+  "actions": 2,
+  "selectedAction": {
+    "ref": "r2",
+    "role": "button",
+    "label": "Submit",
+    "kind": "button",
+    "risk": "approval-required"
+  },
+  "decisionConfidence": null,
+  "decisionCalibration": "not-applicable-rule",
+  "decisionLatencyMs": 0,
+  "decisionCallLatenciesMs": [],
+  "decisionSnapshot": null,
+  "availableCandidates": null,
+  "decisionTrace": [
+    {
+      "step": 1,
+      "decisionStatus": "action-executed",
+      "provider": "local-literal-match",
+      "model": "explicit-native-select-option",
+      "selectionRule": "explicit-native-select-option",
+      "selectedAction": {
+        "ref": "r1",
+        "role": "combobox",
+        "label": "Options: Gibraltar, Indonesia, France, Vanuatu, China, Belgium, Madagascar, Ireland, Vatican City State",
+        "kind": "select-multiple",
+        "risk": "low",
+        "optionLabels": [
+          "Gibraltar",
+          "Indonesia",
+          "France",
+          "Vanuatu",
+          "China",
+          "Belgium",
+          "Madagascar",
+          "Ireland",
+          "Vatican City State"
+        ],
+        "selectedOptionLabels": []
+      },
+      "availableCandidates": [
+        {
+          "ref": "r1",
+          "role": "combobox",
+          "label": "Options: Gibraltar, Indonesia, France, Vanuatu, China, Belgium, Madagascar, Ireland, Vatican City State",
+          "kind": "select-multiple",
+          "risk": "low",
+          "optionLabels": [
+            "Gibraltar",
+            "Indonesia",
+            "France",
+            "Vanuatu",
+            "China",
+            "Belgium",
+            "Madagascar",
+            "Ireland",
+            "Vatican City State"
+          ],
+          "selectedOptionLabels": []
+        },
+        {
+          "ref": "r2",
+          "role": "button",
+          "label": "Submit",
+          "kind": "button",
+          "risk": "approval-required"
+        }
+      ],
+      "decisionLatencyMs": 0,
+      "candidateCount": 2,
+      "confidence": null,
+      "calibration": "not-applicable-rule",
+      "executionStatus": "action-executed"
+    },
+    {
+      "step": 2,
+      "decisionStatus": "awaiting-user-approval",
+      "provider": "local-literal-match",
+      "model": "unique-explicit-submit-control",
+      "selectionRule": "unique-explicit-submit-control",
+      "selectedAction": {
+        "ref": "r2",
+        "role": "button",
+        "label": "Submit",
+        "kind": "button",
+        "risk": "approval-required"
+      },
+      "availableCandidates": [
+        {
+          "ref": "r1",
+          "role": "combobox",
+          "label": "Currently selected: Vatican City State \u2014 Options: Gibraltar, Indonesia, France, Vanuatu, China, Belgium, Madagascar, Ireland, Vatican City State",
+          "kind": "select-multiple",
+          "risk": "low",
+          "optionLabels": [
+            "Gibraltar",
+            "Indonesia",
+            "France",
+            "Vanuatu",
+            "China",
+            "Belgium",
+            "Madagascar",
+            "Ireland",
+            "Vatican City State"
+          ],
+          "selectedOptionLabels": [
+            "Vatican City State"
+          ]
+        },
+        {
+          "ref": "r2",
+          "role": "button",
+          "label": "Submit",
+          "kind": "button",
+          "risk": "approval-required"
+        }
+      ],
+      "decisionLatencyMs": 0,
+      "candidateCount": 2,
+      "confidence": null,
+      "calibration": "not-applicable-rule",
+      "executionStatus": "action-executed-after-approval"
+    }
+  ],
+  "candidateCount": 2,
+  "selectionRule": "unique-explicit-submit-control",
+  "syntheticApprovalCount": 1,
+  "latencyMs": 1189,
+  "environmentResetLatencyMs": 824,
+  "agentActionLatencyMs": 365,
+  "reward": 1.0,
+  "terminated": true,
+  "decisionStatus": "action-executed-after-approval",
+  "decisionProvider": "local-literal-match",
+  "decisionModel": "unique-explicit-submit-control",
+  "agentDecisionKitCommit": "60bec668aaa1f5fa73a3ea863e2ada3193446367",
+  "browserGymVersion": "0.14.3",
+  "browserGymPackageCommit": "0a785fbed075224ae81ca9c1fe924f66050696fe",
+  "playwrightPythonVersion": "1.44.0",
+  "playwrightNodeVersion": "1.63.0",
+  "browserVersion": "HeadlessChrome/125.0.6422.26",
+  "pythonVersion": "3.12.3",
+  "nodeVersion": "v24.20.0",
+  "operatingSystem": "Linux-5.15.0-37-generic-x86_64-with-glibc2.39",
+  "cpu": "x86_64",
+  "accelerator": "CPU",
+  "modelCacheState": "local cache already populated before this episode",
+  "ocrLanguageCacheExistedBeforeEpisode": null,
+  "decisionWarmState": "no semantic decision-provider inference occurred; deterministic local rules and explicit tool calls handled the DOM path",
+  "miniWobCommit": "7fd85d71a4b60325c6585396ec4f48377d049838",
+  "browserStillOpenAfterDisconnect": true,
+  "rawTaskInfo": {
+    "REWARD_GLOBAL": 0.998741,
+    "RAW_REWARD_GLOBAL": 1,
+    "REWARD_REASON": null,
+    "DONE_GLOBAL": true,
+    "EPISODE_ID": 1,
+    "TASK_READY": true
+  },
+  "timestampUtc": "2026-09-30T11:27:13.676012+00:00",
+  "maxActions": 8,
+  "note": "A curated MiniWoB integration smoke check, not a representative BrowserGym benchmark or a full autonomous agent. Multi-tool mode extracts only explicit task values and visible native options; field values are omitted from action traces. The optional OCR path attempts only the quoted link target and its coordinate click remains behind the standard one-use approval gate; synthetic approval is possible only for the exact local MiniWoB file URL.",
+  "visualOcrActionsEnabled": false,
+  "runnerExitCode": 0
+}

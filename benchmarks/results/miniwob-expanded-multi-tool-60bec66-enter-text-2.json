@@ -1,0 +1,124 @@
+{
+  "benchmark": "miniwob",
+  "task": "enter-text-2",
+  "taskPrompt": "Type \"chas\" in all upper case letters in the text input and press Submit.",
+  "runnerMode": "bounded-multi-tool-integration-smoke",
+  "toolCoverage": [
+    "browser_confirm",
+    "browser_connect",
+    "browser_decide_and_act",
+    "browser_fill"
+  ],
+  "notExercisedTools": [
+    "browser_action",
+    "browser_select_option",
+    "browser_set_range",
+    "browser_visual_action",
+    "browser_visual_inspect",
+    "browser_visual_text"
+  ],
+  "toolActionTrace": [
+    {
+      "step": 1,
+      "tool": "browser_fill",
+      "status": "filled",
+      "syntheticApproval": false,
+      "fieldKind": "text",
+      "characterCount": 4
+    }
+  ],
+  "success": true,
+  "timeout": false,
+  "failureReason": null,
+  "actions": 2,
+  "selectedAction": {
+    "ref": "r2",
+    "role": "button",
+    "label": "Submit",
+    "kind": "button",
+    "risk": "approval-required"
+  },
+  "decisionConfidence": null,
+  "decisionCalibration": "not-applicable-rule",
+  "decisionLatencyMs": 0,
+  "decisionCallLatenciesMs": [],
+  "decisionSnapshot": null,
+  "availableCandidates": null,
+  "decisionTrace": [
+    {
+      "step": 2,
+      "decisionStatus": "awaiting-user-approval",
+      "provider": "local-literal-match",
+      "model": "unique-explicit-submit-control",
+      "selectionRule": "unique-explicit-submit-control",
+      "selectedAction": {
+        "ref": "r2",
+        "role": "button",
+        "label": "Submit",
+        "kind": "button",
+        "risk": "approval-required"
+      },
+      "availableCandidates": [
+        {
+          "ref": "r1",
+          "role": "input",
+          "label": "input 1",
+          "kind": "text",
+          "risk": "low"
+        },
+        {
+          "ref": "r2",
+          "role": "button",
+          "label": "Submit",
+          "kind": "button",
+          "risk": "approval-required"
+        }
+      ],
+      "decisionLatencyMs": 0,
+      "candidateCount": 2,
+      "confidence": null,
+      "calibration": "not-applicable-rule",
+      "executionStatus": "action-executed-after-approval"
+    }
+  ],
+  "candidateCount": 2,
+  "selectionRule": "unique-explicit-submit-control",
+  "syntheticApprovalCount": 1,
+  "latencyMs": 1102,
+  "environmentResetLatencyMs": 772,
+  "agentActionLatencyMs": 330,
+  "reward": 1.0,
+  "terminated": true,
+  "decisionStatus": "action-executed-after-approval",
+  "decisionProvider": "local-literal-match",
+  "decisionModel": "unique-explicit-submit-control",
+  "agentDecisionKitCommit": "60bec668aaa1f5fa73a3ea863e2ada3193446367",
+  "browserGymVersion": "0.14.3",
+  "browserGymPackageCommit": "0a785fbed075224ae81ca9c1fe924f66050696fe",
+  "playwrightPythonVersion": "1.44.0",
+  "playwrightNodeVersion": "1.63.0",
+  "browserVersion": "HeadlessChrome/125.0.6422.26",
+  "pythonVersion": "3.12.3",
+  "nodeVersion": "v24.20.0",
+  "operatingSystem": "Linux-5.15.0-37-generic-x86_64-with-glibc2.39",
+  "cpu": "x86_64",
+  "accelerator": "CPU",
+  "modelCacheState": "local cache already populated before this episode",
+  "ocrLanguageCacheExistedBeforeEpisode": null,
+  "decisionWarmState": "no semantic decision-provider inference occurred; deterministic local rules and explicit tool calls handled the DOM path",
+  "miniWobCommit": "7fd85d71a4b60325c6585396ec4f48377d049838",
+  "browserStillOpenAfterDisconnect": true,
+  "rawTaskInfo": {
+    "REWARD_GLOBAL": 0.99885,
+    "RAW_REWARD_GLOBAL": 1,
+    "REWARD_REASON": null,
+    "DONE_GLOBAL": true,
+    "EPISODE_ID": 1,
+    "TASK_READY": true
+  },
+  "timestampUtc": "2026-09-30T11:28:12.471165+00:00",
+  "maxActions": 8,
+  "note": "A curated MiniWoB integration smoke check, not a representative BrowserGym benchmark or a full autonomous agent. Multi-tool mode extracts only explicit task values and visible native options; field values are omitted from action traces. The optional OCR path attempts only the quoted link target and its coordinate click remains behind the standard one-use approval gate; synthetic approval is possible only for the exact local MiniWoB file URL.",
+  "visualOcrActionsEnabled": false,
+  "runnerExitCode": 0
+}

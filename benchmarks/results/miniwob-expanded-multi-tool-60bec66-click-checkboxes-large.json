@@ -1,0 +1,953 @@
+{
+  "benchmark": "miniwob",
+  "task": "click-checkboxes-large",
+  "taskPrompt": "Select iCWsn, 1dy5xN, atRktH, VMqtp, ebjocp, Xe, wqb8K, pbfYg, ZAVGi, DGnQB and click Submit.",
+  "runnerMode": "bounded-multi-tool-integration-smoke",
+  "toolCoverage": [
+    "browser_connect",
+    "browser_decide_and_act"
+  ],
+  "notExercisedTools": [
+    "browser_action",
+    "browser_confirm",
+    "browser_fill",
+    "browser_select_option",
+    "browser_set_range",
+    "browser_visual_action",
+    "browser_visual_inspect",
+    "browser_visual_text"
+  ],
+  "toolActionTrace": [],
+  "success": false,
+  "timeout": false,
+  "failureReason": "task-goal-not-achieved",
+  "actions": 8,
+  "selectedAction": {
+    "ref": "r2",
+    "role": "input",
+    "label": "pbfYg \u2014 Currently unchecked",
+    "kind": "checkbox",
+    "risk": "low",
+    "checked": false
+  },
+  "decisionConfidence": null,
+  "decisionCalibration": "not-applicable-rule",
+  "decisionLatencyMs": 0,
+  "decisionCallLatenciesMs": [],
+  "decisionSnapshot": null,
+  "availableCandidates": null,
+  "decisionTrace": [
+    {
+      "step": 1,
+      "decisionStatus": "action-executed",
+      "provider": "local-literal-match",
+      "model": "explicit-checkbox-target",
+      "selectionRule": "explicit-checkbox-target",
+      "selectedAction": {
+        "ref": "r7",
+        "role": "input",
+        "label": "iCWsn \u2014 Currently unchecked",
+        "kind": "checkbox",
+        "risk": "low",
+        "checked": false
+      },
+      "availableCandidates": [
+        {
+          "ref": "r1",
+          "role": "input",
+          "label": "VMqtp \u2014 Currently unchecked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": false
+        },
+        {
+          "ref": "r2",
+          "role": "input",
+          "label": "pbfYg \u2014 Currently unchecked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": false
+        },
+        {
+          "ref": "r3",
+          "role": "input",
+          "label": "ebjocp \u2014 Currently unchecked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": false
+        },
+        {
+          "ref": "r4",
+          "role": "input",
+          "label": "ZAVGi \u2014 Currently unchecked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": false
+        },
+        {
+          "ref": "r5",
+          "role": "input",
+          "label": "wqb8K \u2014 Currently unchecked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": false
+        },
+        {
+          "ref": "r6",
+          "role": "input",
+          "label": "DGnQB \u2014 Currently unchecked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": false
+        },
+        {
+          "ref": "r7",
+          "role": "input",
+          "label": "iCWsn \u2014 Currently unchecked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": false
+        },
+        {
+          "ref": "r8",
+          "role": "input",
+          "label": "1dy5xN \u2014 Currently unchecked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": false
+        },
+        {
+          "ref": "r9",
+          "role": "input",
+          "label": "atRktH \u2014 Currently unchecked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": false
+        },
+        {
+          "ref": "r10",
+          "role": "input",
+          "label": "Xe \u2014 Currently unchecked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": false
+        },
+        {
+          "ref": "r11",
+          "role": "button",
+          "label": "Submit",
+          "kind": "button",
+          "risk": "approval-required"
+        }
+      ],
+      "decisionLatencyMs": 0,
+      "candidateCount": 11,
+      "confidence": null,
+      "calibration": "not-applicable-rule",
+      "executionStatus": "action-executed"
+    },
+    {
+      "step": 2,
+      "decisionStatus": "action-executed",
+      "provider": "local-literal-match",
+      "model": "explicit-checkbox-target",
+      "selectionRule": "explicit-checkbox-target",
+      "selectedAction": {
+        "ref": "r8",
+        "role": "input",
+        "label": "1dy5xN \u2014 Currently unchecked",
+        "kind": "checkbox",
+        "risk": "low",
+        "checked": false
+      },
+      "availableCandidates": [
+        {
+          "ref": "r1",
+          "role": "input",
+          "label": "VMqtp \u2014 Currently unchecked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": false
+        },
+        {
+          "ref": "r2",
+          "role": "input",
+          "label": "pbfYg \u2014 Currently unchecked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": false
+        },
+        {
+          "ref": "r3",
+          "role": "input",
+          "label": "ebjocp \u2014 Currently unchecked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": false
+        },
+        {
+          "ref": "r4",
+          "role": "input",
+          "label": "ZAVGi \u2014 Currently unchecked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": false
+        },
+        {
+          "ref": "r5",
+          "role": "input",
+          "label": "wqb8K \u2014 Currently unchecked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": false
+        },
+        {
+          "ref": "r6",
+          "role": "input",
+          "label": "DGnQB \u2014 Currently unchecked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": false
+        },
+        {
+          "ref": "r7",
+          "role": "input",
+          "label": "iCWsn \u2014 Currently checked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": true
+        },
+        {
+          "ref": "r8",
+          "role": "input",
+          "label": "1dy5xN \u2014 Currently unchecked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": false
+        },
+        {
+          "ref": "r9",
+          "role": "input",
+          "label": "atRktH \u2014 Currently unchecked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": false
+        },
+        {
+          "ref": "r10",
+          "role": "input",
+          "label": "Xe \u2014 Currently unchecked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": false
+        },
+        {
+          "ref": "r11",
+          "role": "button",
+          "label": "Submit",
+          "kind": "button",
+          "risk": "approval-required"
+        }
+      ],
+      "decisionLatencyMs": 0,
+      "candidateCount": 11,
+      "confidence": null,
+      "calibration": "not-applicable-rule",
+      "executionStatus": "action-executed"
+    },
+    {
+      "step": 3,
+      "decisionStatus": "action-executed",
+      "provider": "local-literal-match",
+      "model": "explicit-checkbox-target",
+      "selectionRule": "explicit-checkbox-target",
+      "selectedAction": {
+        "ref": "r9",
+        "role": "input",
+        "label": "atRktH \u2014 Currently unchecked",
+        "kind": "checkbox",
+        "risk": "low",
+        "checked": false
+      },
+      "availableCandidates": [
+        {
+          "ref": "r1",
+          "role": "input",
+          "label": "VMqtp \u2014 Currently unchecked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": false
+        },
+        {
+          "ref": "r2",
+          "role": "input",
+          "label": "pbfYg \u2014 Currently unchecked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": false
+        },
+        {
+          "ref": "r3",
+          "role": "input",
+          "label": "ebjocp \u2014 Currently unchecked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": false
+        },
+        {
+          "ref": "r4",
+          "role": "input",
+          "label": "ZAVGi \u2014 Currently unchecked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": false
+        },
+        {
+          "ref": "r5",
+          "role": "input",
+          "label": "wqb8K \u2014 Currently unchecked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": false
+        },
+        {
+          "ref": "r6",
+          "role": "input",
+          "label": "DGnQB \u2014 Currently unchecked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": false
+        },
+        {
+          "ref": "r7",
+          "role": "input",
+          "label": "iCWsn \u2014 Currently checked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": true
+        },
+        {
+          "ref": "r8",
+          "role": "input",
+          "label": "1dy5xN \u2014 Currently checked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": true
+        },
+        {
+          "ref": "r9",
+          "role": "input",
+          "label": "atRktH \u2014 Currently unchecked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": false
+        },
+        {
+          "ref": "r10",
+          "role": "input",
+          "label": "Xe \u2014 Currently unchecked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": false
+        },
+        {
+          "ref": "r11",
+          "role": "button",
+          "label": "Submit",
+          "kind": "button",
+          "risk": "approval-required"
+        }
+      ],
+      "decisionLatencyMs": 0,
+      "candidateCount": 11,
+      "confidence": null,
+      "calibration": "not-applicable-rule",
+      "executionStatus": "action-executed"
+    },
+    {
+      "step": 4,
+      "decisionStatus": "action-executed",
+      "provider": "local-literal-match",
+      "model": "explicit-checkbox-target",
+      "selectionRule": "explicit-checkbox-target",
+      "selectedAction": {
+        "ref": "r1",
+        "role": "input",
+        "label": "VMqtp \u2014 Currently unchecked",
+        "kind": "checkbox",
+        "risk": "low",
+        "checked": false
+      },
+      "availableCandidates": [
+        {
+          "ref": "r1",
+          "role": "input",
+          "label": "VMqtp \u2014 Currently unchecked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": false
+        },
+        {
+          "ref": "r2",
+          "role": "input",
+          "label": "pbfYg \u2014 Currently unchecked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": false
+        },
+        {
+          "ref": "r3",
+          "role": "input",
+          "label": "ebjocp \u2014 Currently unchecked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": false
+        },
+        {
+          "ref": "r4",
+          "role": "input",
+          "label": "ZAVGi \u2014 Currently unchecked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": false
+        },
+        {
+          "ref": "r5",
+          "role": "input",
+          "label": "wqb8K \u2014 Currently unchecked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": false
+        },
+        {
+          "ref": "r6",
+          "role": "input",
+          "label": "DGnQB \u2014 Currently unchecked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": false
+        },
+        {
+          "ref": "r7",
+          "role": "input",
+          "label": "iCWsn \u2014 Currently checked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": true
+        },
+        {
+          "ref": "r8",
+          "role": "input",
+          "label": "1dy5xN \u2014 Currently checked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": true
+        },
+        {
+          "ref": "r9",
+          "role": "input",
+          "label": "atRktH \u2014 Currently checked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": true
+        },
+        {
+          "ref": "r10",
+          "role": "input",
+          "label": "Xe \u2014 Currently unchecked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": false
+        },
+        {
+          "ref": "r11",
+          "role": "button",
+          "label": "Submit",
+          "kind": "button",
+          "risk": "approval-required"
+        }
+      ],
+      "decisionLatencyMs": 0,
+      "candidateCount": 11,
+      "confidence": null,
+      "calibration": "not-applicable-rule",
+      "executionStatus": "action-executed"
+    },
+    {
+      "step": 5,
+      "decisionStatus": "action-executed",
+      "provider": "local-literal-match",
+      "model": "explicit-checkbox-target",
+      "selectionRule": "explicit-checkbox-target",
+      "selectedAction": {
+        "ref": "r3",
+        "role": "input",
+        "label": "ebjocp \u2014 Currently unchecked",
+        "kind": "checkbox",
+        "risk": "low",
+        "checked": false
+      },
+      "availableCandidates": [
+        {
+          "ref": "r1",
+          "role": "input",
+          "label": "VMqtp \u2014 Currently checked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": true
+        },
+        {
+          "ref": "r2",
+          "role": "input",
+          "label": "pbfYg \u2014 Currently unchecked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": false
+        },
+        {
+          "ref": "r3",
+          "role": "input",
+          "label": "ebjocp \u2014 Currently unchecked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": false
+        },
+        {
+          "ref": "r4",
+          "role": "input",
+          "label": "ZAVGi \u2014 Currently unchecked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": false
+        },
+        {
+          "ref": "r5",
+          "role": "input",
+          "label": "wqb8K \u2014 Currently unchecked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": false
+        },
+        {
+          "ref": "r6",
+          "role": "input",
+          "label": "DGnQB \u2014 Currently unchecked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": false
+        },
+        {
+          "ref": "r7",
+          "role": "input",
+          "label": "iCWsn \u2014 Currently checked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": true
+        },
+        {
+          "ref": "r8",
+          "role": "input",
+          "label": "1dy5xN \u2014 Currently checked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": true
+        },
+        {
+          "ref": "r9",
+          "role": "input",
+          "label": "atRktH \u2014 Currently checked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": true
+        },
+        {
+          "ref": "r10",
+          "role": "input",
+          "label": "Xe \u2014 Currently unchecked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": false
+        },
+        {
+          "ref": "r11",
+          "role": "button",
+          "label": "Submit",
+          "kind": "button",
+          "risk": "approval-required"
+        }
+      ],
+      "decisionLatencyMs": 0,
+      "candidateCount": 11,
+      "confidence": null,
+      "calibration": "not-applicable-rule",
+      "executionStatus": "action-executed"
+    },
+    {
+      "step": 6,
+      "decisionStatus": "action-executed",
+      "provider": "local-literal-match",
+      "model": "explicit-checkbox-target",
+      "selectionRule": "explicit-checkbox-target",
+      "selectedAction": {
+        "ref": "r10",
+        "role": "input",
+        "label": "Xe \u2014 Currently unchecked",
+        "kind": "checkbox",
+        "risk": "low",
+        "checked": false
+      },
+      "availableCandidates": [
+        {
+          "ref": "r1",
+          "role": "input",
+          "label": "VMqtp \u2014 Currently checked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": true
+        },
+        {
+          "ref": "r2",
+          "role": "input",
+          "label": "pbfYg \u2014 Currently unchecked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": false
+        },
+        {
+          "ref": "r3",
+          "role": "input",
+          "label": "ebjocp \u2014 Currently checked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": true
+        },
+        {
+          "ref": "r4",
+          "role": "input",
+          "label": "ZAVGi \u2014 Currently unchecked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": false
+        },
+        {
+          "ref": "r5",
+          "role": "input",
+          "label": "wqb8K \u2014 Currently unchecked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": false
+        },
+        {
+          "ref": "r6",
+          "role": "input",
+          "label": "DGnQB \u2014 Currently unchecked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": false
+        },
+        {
+          "ref": "r7",
+          "role": "input",
+          "label": "iCWsn \u2014 Currently checked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": true
+        },
+        {
+          "ref": "r8",
+          "role": "input",
+          "label": "1dy5xN \u2014 Currently checked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": true
+        },
+        {
+          "ref": "r9",
+          "role": "input",
+          "label": "atRktH \u2014 Currently checked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": true
+        },
+        {
+          "ref": "r10",
+          "role": "input",
+          "label": "Xe \u2014 Currently unchecked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": false
+        },
+        {
+          "ref": "r11",
+          "role": "button",
+          "label": "Submit",
+          "kind": "button",
+          "risk": "approval-required"
+        }
+      ],
+      "decisionLatencyMs": 0,
+      "candidateCount": 11,
+      "confidence": null,
+      "calibration": "not-applicable-rule",
+      "executionStatus": "action-executed"
+    },
+    {
+      "step": 7,
+      "decisionStatus": "action-executed",
+      "provider": "local-literal-match",
+      "model": "explicit-checkbox-target",
+      "selectionRule": "explicit-checkbox-target",
+      "selectedAction": {
+        "ref": "r5",
+        "role": "input",
+        "label": "wqb8K \u2014 Currently unchecked",
+        "kind": "checkbox",
+        "risk": "low",
+        "checked": false
+      },
+      "availableCandidates": [
+        {
+          "ref": "r1",
+          "role": "input",
+          "label": "VMqtp \u2014 Currently checked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": true
+        },
+        {
+          "ref": "r2",
+          "role": "input",
+          "label": "pbfYg \u2014 Currently unchecked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": false
+        },
+        {
+          "ref": "r3",
+          "role": "input",
+          "label": "ebjocp \u2014 Currently checked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": true
+        },
+        {
+          "ref": "r4",
+          "role": "input",
+          "label": "ZAVGi \u2014 Currently unchecked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": false
+        },
+        {
+          "ref": "r5",
+          "role": "input",
+          "label": "wqb8K \u2014 Currently unchecked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": false
+        },
+        {
+          "ref": "r6",
+          "role": "input",
+          "label": "DGnQB \u2014 Currently unchecked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": false
+        },
+        {
+          "ref": "r7",
+          "role": "input",
+          "label": "iCWsn \u2014 Currently checked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": true
+        },
+        {
+          "ref": "r8",
+          "role": "input",
+          "label": "1dy5xN \u2014 Currently checked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": true
+        },
+        {
+          "ref": "r9",
+          "role": "input",
+          "label": "atRktH \u2014 Currently checked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": true
+        },
+        {
+          "ref": "r10",
+          "role": "input",
+          "label": "Xe \u2014 Currently checked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": true
+        },
+        {
+          "ref": "r11",
+          "role": "button",
+          "label": "Submit",
+          "kind": "button",
+          "risk": "approval-required"
+        }
+      ],
+      "decisionLatencyMs": 0,
+      "candidateCount": 11,
+      "confidence": null,
+      "calibration": "not-applicable-rule",
+      "executionStatus": "action-executed"
+    },
+    {
+      "step": 8,
+      "decisionStatus": "action-executed",
+      "provider": "local-literal-match",
+      "model": "explicit-checkbox-target",
+      "selectionRule": "explicit-checkbox-target",
+      "selectedAction": {
+        "ref": "r2",
+        "role": "input",
+        "label": "pbfYg \u2014 Currently unchecked",
+        "kind": "checkbox",
+        "risk": "low",
+        "checked": false
+      },
+      "availableCandidates": [
+        {
+          "ref": "r1",
+          "role": "input",
+          "label": "VMqtp \u2014 Currently checked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": true
+        },
+        {
+          "ref": "r2",
+          "role": "input",
+          "label": "pbfYg \u2014 Currently unchecked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": false
+        },
+        {
+          "ref": "r3",
+          "role": "input",
+          "label": "ebjocp \u2014 Currently checked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": true
+        },
+        {
+          "ref": "r4",
+          "role": "input",
+          "label": "ZAVGi \u2014 Currently unchecked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": false
+        },
+        {
+          "ref": "r5",
+          "role": "input",
+          "label": "wqb8K \u2014 Currently checked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": true
+        },
+        {
+          "ref": "r6",
+          "role": "input",
+          "label": "DGnQB \u2014 Currently unchecked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": false
+        },
+        {
+          "ref": "r7",
+          "role": "input",
+          "label": "iCWsn \u2014 Currently checked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": true
+        },
+        {
+          "ref": "r8",
+          "role": "input",
+          "label": "1dy5xN \u2014 Currently checked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": true
+        },
+        {
+          "ref": "r9",
+          "role": "input",
+          "label": "atRktH \u2014 Currently checked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": true
+        },
+        {
+          "ref": "r10",
+          "role": "input",
+          "label": "Xe \u2014 Currently checked",
+          "kind": "checkbox",
+          "risk": "low",
+          "checked": true
+        },
+        {
+          "ref": "r11",
+          "role": "button",
+          "label": "Submit",
+          "kind": "button",
+          "risk": "approval-required"
+        }
+      ],
+      "decisionLatencyMs": 0,
+      "candidateCount": 11,
+      "confidence": null,
+      "calibration": "not-applicable-rule",
+      "executionStatus": "action-executed"
+    }
+  ],
+  "candidateCount": 11,
+  "selectionRule": "explicit-checkbox-target",
+  "syntheticApprovalCount": 0,
+  "latencyMs": 1676,
+  "environmentResetLatencyMs": 935,
+  "agentActionLatencyMs": 741,
+  "reward": 0.0,
+  "terminated": false,
+  "decisionStatus": "action-executed",
+  "decisionProvider": "local-literal-match",
+  "decisionModel": "explicit-checkbox-target",
+  "agentDecisionKitCommit": "60bec668aaa1f5fa73a3ea863e2ada3193446367",
+  "browserGymVersion": "0.14.3",
+  "browserGymPackageCommit": "0a785fbed075224ae81ca9c1fe924f66050696fe",
+  "playwrightPythonVersion": "1.44.0",
+  "playwrightNodeVersion": "1.63.0",
+  "browserVersion": "HeadlessChrome/125.0.6422.26",
+  "pythonVersion": "3.12.3",
+  "nodeVersion": "v24.20.0",
+  "operatingSystem": "Linux-5.15.0-37-generic-x86_64-with-glibc2.39",
+  "cpu": "x86_64",
+  "accelerator": "CPU",
+  "modelCacheState": "local cache already populated before this episode",
+  "ocrLanguageCacheExistedBeforeEpisode": null,
+  "decisionWarmState": "no semantic decision-provider inference occurred; deterministic local rules and explicit tool calls handled the DOM path",
+  "miniWobCommit": "7fd85d71a4b60325c6585396ec4f48377d049838",
+  "browserStillOpenAfterDisconnect": true,
+  "rawTaskInfo": {
+    "REWARD_GLOBAL": 0,
+    "RAW_REWARD_GLOBAL": 0,
+    "REWARD_REASON": null,
+    "DONE_GLOBAL": false,
+    "EPISODE_ID": 0,
+    "TASK_READY": true
+  },
+  "timestampUtc": "2026-09-30T11:26:56.360933+00:00",
+  "maxActions": 8,
+  "note": "A curated MiniWoB integration smoke check, not a representative BrowserGym benchmark or a full autonomous agent. Multi-tool mode extracts only explicit task values and visible native options; field values are omitted from action traces. The optional OCR path attempts only the quoted link target and its coordinate click remains behind the standard one-use approval gate; synthetic approval is possible only for the exact local MiniWoB file URL.",
+  "visualOcrActionsEnabled": false,
+  "runnerExitCode": 1
+}

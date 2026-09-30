@@ -1,7 +1,7 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 import { siteBase } from "../utils/site.js";
-import latestRun from "../../../benchmarks/results/miniwob-expanded-multi-tool-361f236.json";
+import latestRun from "../../../benchmarks/results/miniwob-expanded-multi-tool-60bec66.json";
 import focusedRun from "../../../benchmarks/results/miniwob-targeted-browser-fixes-8490bd7.json";
 
 const episodeCount = latestRun.episodeCount;
@@ -10,7 +10,7 @@ const failureCount = episodeCount - successCount;
 const successPercent = Math.round(latestRun.taskSuccessRate * 100);
 const environment = latestRun.rawRecords[0];
 const commitUrl = `https://github.com/krmdl/agent-decision-kit/commit/${latestRun.suite.agentDecisionKitCommit}`;
-const rawRunUrl = "https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/miniwob-expanded-multi-tool-361f236.json";
+const rawRunUrl = "https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/miniwob-expanded-multi-tool-60bec66.json";
 ---
 
 <BaseLayout title="Real Browser Automation Benchmarks | Agent Decision Kit" description="Reproducible Playwright and BrowserGym MiniWoB results for Agent Decision Kit, with task success, latency, environment details, and raw episodes." canonicalPath="benchmarks/">
@@ -25,7 +25,7 @@ const rawRunUrl = "https://github.com/krmdl/agent-decision-kit/blob/main/benchma
       <div class="section-heading">
         <p class="eyebrow">LATEST MULTI-TOOL INTEGRATION</p>
         <h2 id="latest-title">{successCount} of {episodeCount} tasks succeeded.</h2>
-        <p>The run used a bounded harness that copies explicit values from fake task instructions, selects visible native options, and calls the browser tools. It measures tool integration, not an autonomous coding-agent score. The no-progress guard stopped a repeated no-op; visual inspection described two pages without acting.</p>
+        <p>The bounded harness copied explicit values from synthetic task instructions, selected visible native options, and exercised <code>browser_set_range</code> on keyboard-operated sliders. It measures tool integration, not an autonomous coding-agent score. The slider task passed after its Submit action received the runner's local-only synthetic approval; the no-progress guard stopped a repeated no-op, and visual inspection described two pages without acting.</p>
       </div>
 
       <figure class="success-chart">
@@ -63,7 +63,7 @@ const rawRunUrl = "https://github.com/krmdl/agent-decision-kit/blob/main/benchma
       </div>
       <aside>
         <b>How to read the latency</b>
-        <p>Every task starts a fresh Node bridge. Six measured decision calls had p50 200 ms / p95 400 ms; this run does not establish warm throughput or the consumer-GPU target.</p>
+        <p>Every task starts a fresh Node bridge. Six measured decision calls had p50 211 ms / p95 471 ms; this run does not establish warm throughput or the consumer-GPU target.</p>
         <p>Two visual-only pages used local image description on CPU and took tens of seconds. The tool reports this fallback as slower.</p>
         <a class="text-link" href={rawRunUrl}>Inspect the summary and all raw episodes ↗</a>
       </aside>
@@ -73,6 +73,11 @@ const rawRunUrl = "https://github.com/krmdl/agent-decision-kit/blob/main/benchma
       <p class="eyebrow">OTHER RECORDED RUNS</p>
       <h2 id="other-runs-title">Different runs answer different questions.</h2>
       <div class="run-list">
+        <article>
+          <div><strong>19/26</strong><span>Prior multi-tool baseline</span></div>
+          <p>The same task set before support for MiniWoB's keyboard-operated sliders. It did not call <code>browser_set_range</code>; <code>use-slider-2</code> was the only task outcome that changed in the later run.</p>
+          <a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/miniwob-expanded-multi-tool-b901f05.json">Raw run ↗</a>
+        </article>
         <article>
           <div><strong>{focusedRun.successCount}/{focusedRun.episodeCount}</strong><span>Focused browser regressions</span></div>
           <p>Six previously troublesome MiniWoB cases on Linux CPU. Browser action-loop p50 258 ms / p95 721 ms, with zero semantic model calls. This is a targeted regression set, not a general success estimate.</p>
