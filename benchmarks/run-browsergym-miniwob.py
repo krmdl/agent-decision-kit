@@ -90,6 +90,8 @@ def multi_tool_action(task, candidates, completed_fields, visible_text=""):
     if target:
         if re.search(r"\b(?:all\s+)?upper\s+case\b|\buppercase\b", task, re.IGNORECASE):
             target = target.upper()
+        if not re.search(r"\b(?:type|enter|input|write|fill)\b", task, re.IGNORECASE):
+            return None
         text_kinds = {"text", "search", "email", "tel", "url", "number", "textarea"}
         ordinal_match = re.search(r"\b(?:into|in)\s+(?:the\s+)?(\d+)(?:st|nd|rd|th)\s+(?:(?:input\s+)?(?:text\s*box|textbox|text\s+field))\b", task, re.IGNORECASE)
         if ordinal_match:
@@ -99,6 +101,17 @@ def multi_tool_action(task, candidates, completed_fields, visible_text=""):
                 return None
             candidate = fields[ordinal - 1]
             if field_key(candidate) in completed_fields:
+                if radio_match:
+                    radios = [item for item in candidates if item.get("kind") == "radio" or item.get("role") in {"radio", "menuitemradio"}]
+                    radio_ordinal = int(radio_match.group(1))
+                    radio_is_checked = 1 <= radio_ordinal <= len(radios) and radios[radio_ordinal - 1].get("checked") is True
+                    submit_controls = [
+                        item for item in candidates
+                        if item.get("kind") in {"submit", "button"}
+                        and (item.get("kind") == "submit" or normalized(item.get("label", "").split("—", 1)[0]) == "submit")
+                    ]
+                    if radio_is_checked and len(submit_controls) == 1:
+                        return "act", {"ref": submit_controls[0]["ref"]}, {"fieldKind": "submit-after-explicit-local-form-entry"}
                 return None
             return "fill", {"ref": candidate["ref"], "text": target}, {"fieldKind": candidate["kind"], "characterCount": len(target), "fieldOrdinal": ordinal}
         candidate = next((item for item in candidates if item["kind"] in text_kinds and field_key(item) not in completed_fields), None)
@@ -289,10 +302,20 @@ def main():
                     tool_name = {"select-option": "browser_select_option", "fill": "browser_fill", "act": "browser_action"}[operation]
                     tool_coverage.add(tool_name)
                     action_count += 1
+                    synthetic_approval = False
+                    if action_result.get("status") == "awaiting-user-approval":
+                        if args.approve_synthetic_actions and is_expected_local_task_url(env.unwrapped.page.url, base_url, args.task):
+                            action_result = bridge.call("confirm", approvalToken=action_result["approvalToken"], approve=True)
+                            synthetic_approval = True
+                            synthetic_approval_count += 1
+                            tool_coverage.add("browser_confirm")
                     if operation in {"fill", "select-option", "act"}:
                         candidate = next(item for item in inspected["candidates"] if item["ref"] == fields["ref"])
                         completed_fields.add(field_key(candidate))
-                    tool_action_trace.append({"step": step_index + 1, "tool": tool_name, "status": action_result.get("status"), **metadata})
+                    tool_action_trace.append({"step": step_index + 1, "tool": tool_name, "status": action_result.get("status"), "syntheticApproval": synthetic_approval, **metadata})
+                    if action_result.get("status") == "awaiting-user-approval":
+                        reward, terminated, _, task_info = env.unwrapped.task.validate(env.unwrapped.page, env.unwrapped.chat.messages)
+                        break
                     reward, terminated, _, task_info = env.unwrapped.task.validate(env.unwrapped.page, env.unwrapped.chat.messages)
                     if reward > 0 or terminated:
                         break

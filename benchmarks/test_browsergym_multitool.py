@@ -59,7 +59,8 @@ class MultiToolPlanningTests(unittest.TestCase):
         ]
         textbox_one = {"ref": "r4", "role": "input", "kind": "text", "label": "Text one"}
         textbox_two = {"ref": "r5", "role": "input", "kind": "text", "label": "Text two"}
-        candidates = radios + [textbox_one, textbox_two]
+        submit = {"ref": "r6", "role": "button", "kind": "button", "label": "Submit", "risk": "approval-required"}
+        candidates = radios + [textbox_one, textbox_two, submit]
         task = 'Check the 3rd radio button and enter the number "-3" into the 2nd textbox.'
 
         radio_action = RUNNER.multi_tool_action(task, candidates, set())
@@ -72,6 +73,20 @@ class MultiToolPlanningTests(unittest.TestCase):
         self.assertEqual(field_action[0], "fill")
         self.assertEqual(field_action[1], {"ref": "r5", "text": "-3"})
         self.assertEqual(field_action[2], {"fieldKind": "text", "characterCount": 2, "fieldOrdinal": 2})
+
+        checked_radios = [dict(item, checked=(item["ref"] == "r3")) for item in radios]
+        completed_after_fill = completed | {RUNNER.field_key(textbox_two)}
+        submit_action = RUNNER.multi_tool_action(task, checked_radios + [textbox_one, textbox_two, submit], completed_after_fill)
+        self.assertEqual(submit_action[0], "act")
+        self.assertEqual(submit_action[1], {"ref": "r6"})
+        self.assertEqual(submit_action[2], {"fieldKind": "submit-after-explicit-local-form-entry"})
+
+    def test_does_not_treat_a_quoted_widget_type_as_text_to_enter(self):
+        candidates = [
+            {"ref": "r1", "role": "textarea", "kind": "textarea", "label": "U"},
+            {"ref": "r2", "role": "textarea", "kind": "textarea", "label": "qtpDp"},
+        ]
+        self.assertIsNone(RUNNER.multi_tool_action('Click on a "textarea" widget.', candidates, set()))
 
     def test_never_falls_back_to_a_different_field_when_the_requested_ordinal_is_missing(self):
         candidates = [{"ref": "r1", "role": "input", "kind": "text", "label": "Only textbox"}]

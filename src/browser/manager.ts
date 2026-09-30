@@ -13,6 +13,7 @@ type ViewportMetrics = { width: number; height: number; devicePixelRatio: number
 type ScreenshotPixels = { width: number; height: number };
 type VisualMatchSource = "automatic" | "sparse-text-fallback";
 type VisualSnapshot = { url: string; fingerprint: string; lines: OcrLine[]; matchSource: VisualMatchSource; viewport: ViewportMetrics; screenshotPixels: ScreenshotPixels; createdAt: number };
+type DisclosureSearchIntent = { task: string; url: string; createdAt: number; visitedCandidateKeys: string[] };
 type PendingBrowserApproval =
   | { kind: "dom"; ref: string; createdAt: number; url: string; fingerprint: string }
   | { kind: "visual"; text: string; box: OcrBox; confidence: number; matchSource: VisualMatchSource; createdAt: number; url: string; fingerprint: string; viewport: ViewportMetrics; screenshotPixels: ScreenshotPixels };
@@ -29,6 +30,7 @@ export class BrowserManager {
   private ownsContext = false;
   private lastInspectionFingerprint = "";
   private completedDisclosureIntent: { task: string; url: string; createdAt: number } | undefined;
+  private disclosureSearchIntent: DisclosureSearchIntent | undefined;
   private lastVisualSnapshot: VisualSnapshot | undefined;
   private readonly headless: boolean;
   private readonly profileDir: string;
@@ -237,13 +239,38 @@ export class BrowserManager {
       };
     }
     let localMatch: ReturnType<typeof findDeterministicMatch>;
+    const searchIntent = this.disclosureSearchIntent;
+    const searchIsActive = searchIntent
+      && searchIntent.url === pageIdentity(this.requirePage().url())
+      && searchIntent.task === normalizeLabel(task)
+      && Date.now() - searchIntent.createdAt <= 5 * 60_000;
+    if (searchIsActive) {
+      const exactTarget = findUniqueQuotedLabel(task, snapshot.candidates);
+      if (exactTarget) {
+        localMatch = { candidate: exactTarget, rule: "unique-exact-quoted-label", note: "The exact quoted target is now visible in the disclosure search. Its unique visible label is selected locally." };
+        this.disclosureSearchIntent = undefined;
+      } else {
+        const nextDisclosure = snapshot.candidates.find((candidate) =>
+          ["button", "tab"].includes(candidate.role)
+          && candidate.expanded !== undefined
+          && !searchIntent.visitedCandidateKeys.includes(disclosureSearchCandidateKey(candidate)),
+        );
+        if (!nextDisclosure) {
+          this.disclosureSearchIntent = undefined;
+          return { status: "no-safe-selection", candidateCount: snapshot.candidates.length, candidates: snapshot.candidates, note: "Every visible disclosure has already been checked and the quoted target is not visible. No control was repeated or guessed." };
+        }
+        localMatch = { candidate: nextDisclosure, rule: "ordered-disclosure-search", note: "The task asks to find a quoted target through multiple disclosures. This is the next unvisited visible section; inspect again to continue. No form submission or other consequential action is performed." };
+      }
+    } else if (this.disclosureSearchIntent) {
+      this.disclosureSearchIntent = undefined;
+    }
     const priorDisclosure = this.completedDisclosureIntent;
     this.completedDisclosureIntent = undefined;
-    if (priorDisclosure && priorDisclosure.url === pageIdentity(this.requirePage().url()) && priorDisclosure.task === normalizeLabel(task) && Date.now() - priorDisclosure.createdAt <= 5 * 60_000) {
+    if (!searchIsActive && priorDisclosure && priorDisclosure.url === pageIdentity(this.requirePage().url()) && priorDisclosure.task === normalizeLabel(task) && Date.now() - priorDisclosure.createdAt <= 5 * 60_000) {
       const submit = findUniqueSubmitCandidate(snapshot.candidates);
       if (submit) localMatch = { candidate: submit, rule: "expanded-section-then-submit", note: "The previous call expanded the requested section. This explicit next step still requires separate approval before submission." };
     }
-    localMatch ??= findDeterministicMatch(task, snapshot.candidates);
+    if (!searchIsActive) localMatch ??= findDeterministicMatch(task, snapshot.candidates);
     if (localMatch) return this.applyLocalMatch(localMatch.candidate, snapshot, localMatch.rule, localMatch.note, task);
     if (provider.id !== "semantic-local" && process.env.AGENT_ALLOW_REMOTE_BROWSER_CONTEXT !== "true") {
       return { status: "remote-provider-blocked-for-browser-privacy", provider: provider.id, candidates: snapshot.candidates, note: "Page labels and text are untrusted browser data. Set AGENT_ALLOW_REMOTE_BROWSER_CONTEXT=true only if you intend to send these bounded labels to the configured remote provider." };
@@ -317,9 +344,18 @@ export class BrowserManager {
       this.pending.set(token, { kind: "dom", ref: candidate.ref, createdAt: Date.now(), url: snapshot.url, fingerprint: this.lastInspectionFingerprint });
       return { status: "awaiting-user-approval", approvalToken: token, proposedAction: candidate, ...metadata, note };
     }
-    const effect = await this.perform(candidate);
+    const clickTextControl = rule === "explicit-any-textarea" && /\bclick\b/i.test(task);
+    const effect = await this.perform(candidate, clickTextControl);
     if (["single-collapsed-control", "unique-expand-control"].includes(rule)) {
       this.completedDisclosureIntent = { task: normalizeLabel(task), url: pageIdentity(this.requirePage().url()), createdAt: Date.now() };
+    }
+    if (rule === "ordered-disclosure-search") {
+      const url = pageIdentity(this.requirePage().url());
+      const active = this.disclosureSearchIntent;
+      const visitedCandidateKeys = active?.url === url && active.task === normalizeLabel(task) ? active.visitedCandidateKeys : [];
+      const key = disclosureSearchCandidateKey(candidate);
+      if (!visitedCandidateKeys.includes(key)) visitedCandidateKeys.push(key);
+      this.disclosureSearchIntent = { task: normalizeLabel(task), url, createdAt: Date.now(), visitedCandidateKeys };
     }
     return { status: "action-executed", action: candidate, ...metadata, effect, note };
   }
@@ -472,11 +508,11 @@ export class BrowserManager {
     if (this.context && this.ownsContext) await this.context.close().catch(() => undefined);
     if (this.browser) await this.browser.close().catch(() => undefined);
     await closeOcrWorker().catch(() => undefined);
-    this.context = undefined; this.browser = undefined; this.page = undefined; this.ownsContext = false; this.lastInspectionFingerprint = ""; this.candidates.clear(); this.pending.clear(); this.completedDisclosureIntent = undefined; this.lastVisualSnapshot = undefined;
+    this.context = undefined; this.browser = undefined; this.page = undefined; this.ownsContext = false; this.lastInspectionFingerprint = ""; this.candidates.clear(); this.pending.clear(); this.completedDisclosureIntent = undefined; this.disclosureSearchIntent = undefined; this.lastVisualSnapshot = undefined;
     return { closed: true };
   }
 
-  private async perform(candidate: BrowserCandidate) {
+  private async perform(candidate: BrowserCandidate, clickTextControl = false) {
     const page = this.requirePage();
     const locator = this.candidateLocator(candidate.ref);
     if (candidate.checked !== undefined) {
@@ -494,6 +530,10 @@ export class BrowserManager {
       return { focused: true, note: "Choose a visible option with browser_select_option; the page was not submitted." };
     }
     if (candidate.role === "textarea" || (candidate.role === "input" && ["text", "search", "email", "tel", "url", "number", "date", "datetime-local", "time", "month", "week"].includes(candidate.kind))) {
+      if (clickTextControl) {
+        await locator.click({ timeout: 5_000 });
+        return { clicked: true, note: "The explicitly requested text widget was clicked. No content was entered." };
+      }
       await locator.focus();
       return { focused: true, note: "Text entry is deliberately separate; no user-provided text was entered." };
     }
@@ -590,6 +630,11 @@ function findDeterministicMatch(task: string, candidates: BrowserCandidate[]) {
     }
   }
 
+  if (/\b(?:find|look\s+for|locate|search\s+for)\b/i.test(task)) {
+    const visibleSearchTarget = findUniqueQuotedLabel(task, candidates);
+    if (visibleSearchTarget) return { candidate: visibleSearchTarget, rule: "unique-exact-quoted-label", note: "The requested quoted search target is already uniquely visible, so it can be selected without opening another section." };
+  }
+
   if (/\b(?:expand|open|show|reveal)\b/i.test(task) && /\b(?:sections?|panels?|details|content|more)\b/i.test(task)) {
     const collapsed = candidates.filter((candidate) => candidate.expanded === false);
     const submitStep = /\b(?:click|press|tap)\s+(?:the\s+)?submit\b/i.test(task);
@@ -678,11 +723,15 @@ function findOrdinalTaskCandidate(task: string, candidates: BrowserCandidate[]) 
 function findAnyTextareaRequest(task: string, candidates: BrowserCandidate[]) {
   if (!/\b(?:click|focus|select)\b/i.test(task) || !/\b(?:a|any)\b/i.test(task) || !/\btextarea\b/i.test(task)) return undefined;
   const target = candidates.find((candidate) => candidate.kind === "textarea" && candidate.role === "textarea" && !candidate.readOnly);
-  return target ? { candidate: target, rule: "explicit-any-textarea", note: "The task asks for any visible editable textarea. The first visible match is focused; no content is entered." } : undefined;
+  return target ? { candidate: target, rule: "explicit-any-textarea", note: "The task asks for any visible editable textarea. The first visible match is clicked; no content is entered." } : undefined;
 }
 
 function labelParts(candidate: BrowserCandidate) {
   return candidate.label.split(/\s*[—–|:]\s*/u).map(normalizeLabel);
+}
+
+function disclosureSearchCandidateKey(candidate: BrowserCandidate) {
+  return `${candidate.role}:${candidate.ref}:${labelParts(candidate)[0] ?? normalizeLabel(candidate.label)}`;
 }
 
 function isCheckboxCandidate(candidate: BrowserCandidate) {

@@ -54,7 +54,7 @@ describe("Playwright browser safety flow", () => {
     dynamicRefsHtml = Buffer.from('<!doctype html><button id="old">Old action</button><button id="new" hidden onclick="document.querySelector(\'#status\').textContent=\'New action clicked\'">New action</button><p id="status">Not clicked</p>');
     menuHtml = Buffer.from('<!doctype html><button id="menu" aria-expanded="false">Menu</button><div id="items" role="menu" hidden><button role="menuitem" onclick="document.querySelector(\'#status\').textContent=\'Zoomed\'">Zoom In</button></div><p id="status">Menu closed</p><script>document.querySelector(\'#menu\').addEventListener(\'click\',e=>{const open=e.currentTarget.getAttribute(\'aria-expanded\')!==\'true\';e.currentTarget.setAttribute(\'aria-expanded\',String(open));document.querySelector(\'#items\').hidden=!open})</script>');
     ordinalFieldsHtml = Buffer.from('<!doctype html><form><label><input type="radio" name="choice"> Alpha</label><label><input type="radio" name="choice"> Beta</label><label><input type="radio" name="choice"> Gamma</label><label>Text one <input type="text"></label><label>Text two <input type="text"></label></form>');
-    textareaWidgetsHtml = Buffer.from('<!doctype html><textarea aria-label="First notes"></textarea><textarea aria-label="Second notes"></textarea>');
+    textareaWidgetsHtml = Buffer.from('<!doctype html><textarea aria-label="First notes" onclick="document.querySelector(\'#status\').textContent=\'Clicked textarea\'"></textarea><textarea aria-label="Second notes"></textarea><p id="status">Not clicked</p>');
     ordinalButtonHtml = Buffer.from('<!doctype html><button>ONE</button><button>TWO</button>');
     multiDisclosureHtml = Buffer.from('<!doctype html><button id="one" aria-expanded="false">Section one</button><div id="content-one" hidden><p>Nothing here</p></div><button id="two" aria-expanded="false">Section two</button><div id="content-two" hidden><a href="#target">Ultrices</a></div><script>for(const id of [\'one\',\'two\'])document.querySelector(`#${id}`).addEventListener(\'click\',e=>{const open=e.currentTarget.getAttribute(\'aria-expanded\')!==\'true\';e.currentTarget.setAttribute(\'aria-expanded\',String(open));document.querySelector(`#content-${id}`).hidden=!open})</script>');
     server = createServer((request, response) => {
@@ -502,7 +502,8 @@ describe("Playwright browser safety flow", () => {
     };
 
     const result = await browser.decideAndAct('Click on a "textarea" widget.', provider);
-    expect(result).toMatchObject({ status: "action-executed", selectionRule: "explicit-any-textarea", action: { label: "First notes" } });
+    expect(result).toMatchObject({ status: "action-executed", selectionRule: "explicit-any-textarea", action: { label: "First notes" }, effect: { clicked: true } });
+    expect((await browser.inspect()).textExcerpt).toContain("Clicked textarea");
   }, 45_000);
 
   it("opens multiple collapsed sections in DOM order when searching for an exact target", async () => {
