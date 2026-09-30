@@ -16,6 +16,11 @@
 
 ![Local browser demo screenshot](website/public/images/demo-browser.png)
 
+<p align="center">
+  <strong>Watch the bounded browser workflow</strong><br>
+  <img src="website/public/images/browser-demo.gif" alt="Short Playwright recording of Agent Decision Kit inspecting fake browser tasks, choosing a bounded action, and reporting the page change" width="860">
+</p>
+
 Agent Decision Kit is an experimental Apache-2.0 MCP server and CLI for the small decisions inside agent loops: which visible browser action to take, which file to inspect, what context to keep, whether a diff deserves review, and whether supplied evidence supports a completion claim.
 
 It uses ordinary code to constrain choices and execute actions. Its default decision backend is a small model that runs locally through Transformers.js. Optional Jev and OpenAI-compatible providers are adapters, not requirements.
