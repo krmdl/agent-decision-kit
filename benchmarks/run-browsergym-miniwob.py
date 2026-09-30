@@ -57,6 +57,14 @@ def multi_tool_action(task, candidates, completed_fields, visible_text=""):
         for ordinal, (candidate, value) in enumerate(zip(ranges, slider_values), start=1):
             if field_key(candidate) not in completed_fields:
                 return "set-range", {"ref": candidate["ref"], "value": value}, {"fieldKind": "range", "fieldOrdinal": ordinal}
+        if re.search(r"\bsubmit\b", task, re.IGNORECASE):
+            submit_controls = [
+                candidate for candidate in candidates
+                if candidate.get("kind") == "submit"
+                or candidate.get("kind") == "button" and normalized(candidate.get("label", "").split("—", 1)[0]) == "submit"
+            ]
+            if len(submit_controls) == 1 and field_key(submit_controls[0]) not in completed_fields:
+                return "act", {"ref": submit_controls[0]["ref"]}, {"fieldKind": "submit-after-explicit-slider-entry"}
         return None
 
     radio_match = re.search(r"\b(?:check|select|choose|tick)\s+(?:the\s+)?(\d+)(?:st|nd|rd|th)?\s+radio(?:\s+button)?\b", task, re.IGNORECASE)
@@ -342,6 +350,8 @@ def main():
                     if reward > 0 or terminated:
                         break
                     if operation == "set-range" and action_result.get("status") not in {"set", "already-set"}:
+                        break
+                    if metadata.get("fieldKind") == "submit-after-explicit-slider-entry":
                         break
                     continue
 

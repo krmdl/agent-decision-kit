@@ -38,6 +38,21 @@ class MultiToolPlanningTests(unittest.TestCase):
         self.assertIsNone(RUNNER.multi_tool_action("Set the sliders to [1, nope].", candidates, set()))
         self.assertIsNone(RUNNER.multi_tool_action("Set the sliders to [1, 2].", candidates, set()))
 
+    def test_submits_only_after_every_explicit_slider_target_is_complete(self):
+        sliders = [
+            {"ref": "r1", "role": "slider", "kind": "range", "label": "Slider one"},
+            {"ref": "r2", "role": "slider", "kind": "range", "label": "Slider two"},
+        ]
+        submit = {"ref": "r3", "role": "button", "kind": "button", "label": "Submit", "risk": "approval-required"}
+        task = "Set the sliders to [16, 17] and submit."
+
+        first = RUNNER.multi_tool_action(task, sliders + [submit], set())
+        self.assertEqual(first[0], "set-range")
+        completed = {RUNNER.field_key(slider) for slider in sliders}
+        final = RUNNER.multi_tool_action(task, sliders + [submit], completed)
+        self.assertEqual(final, ("act", {"ref": "r3"}, {"fieldKind": "submit-after-explicit-slider-entry"}))
+        self.assertNotIn("16", str(final[2]))
+
     def test_suite_metadata_uses_tools_that_ran_not_just_enabled_flags(self):
         self.assertEqual(
             SUITE.suite_identity([{"runnerMode": "bounded-multi-tool-integration-smoke"}]),
