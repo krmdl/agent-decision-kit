@@ -1,0 +1,346 @@
+{
+  "benchmark": "miniwob",
+  "task": "choose-date-easy",
+  "taskPrompt": "Select 12/22/2016 as the date and hit submit.",
+  "runnerMode": "bounded-multi-tool-integration-smoke",
+  "toolCoverage": [
+    "browser_action",
+    "browser_confirm",
+    "browser_connect",
+    "browser_decide_and_act"
+  ],
+  "notExercisedTools": [
+    "browser_fill",
+    "browser_select_option",
+    "browser_visual_action",
+    "browser_visual_inspect",
+    "browser_visual_text"
+  ],
+  "toolActionTrace": [
+    {
+      "step": 1,
+      "tool": "browser_action",
+      "status": "action-executed",
+      "fieldKind": "read-only-date-picker"
+    },
+    {
+      "step": 2,
+      "tool": "browser_action",
+      "status": "action-executed",
+      "fieldKind": "calendar-day",
+      "dateMatch": "visible-month-and-day"
+    }
+  ],
+  "success": true,
+  "timeout": false,
+  "failureReason": null,
+  "actions": 3,
+  "selectedAction": {
+    "ref": "r2",
+    "role": "button",
+    "label": "Submit",
+    "kind": "button",
+    "risk": "approval-required"
+  },
+  "decisionConfidence": null,
+  "decisionCalibration": "not-applicable-rule",
+  "decisionLatencyMs": 0,
+  "decisionCallLatenciesMs": [],
+  "decisionSnapshot": null,
+  "availableCandidates": null,
+  "decisionTrace": [
+    {
+      "step": 3,
+      "decisionStatus": "awaiting-user-approval",
+      "provider": "local-literal-match",
+      "model": "unique-explicit-submit-control",
+      "selectionRule": "unique-explicit-submit-control",
+      "selectedAction": {
+        "ref": "r2",
+        "role": "button",
+        "label": "Submit",
+        "kind": "button",
+        "risk": "approval-required"
+      },
+      "availableCandidates": [
+        {
+          "ref": "r1",
+          "role": "input",
+          "label": "input 1",
+          "kind": "text",
+          "risk": "low",
+          "readOnly": true
+        },
+        {
+          "ref": "r2",
+          "role": "button",
+          "label": "Submit",
+          "kind": "button",
+          "risk": "approval-required"
+        },
+        {
+          "ref": "r3",
+          "role": "link",
+          "label": "1",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r4",
+          "role": "link",
+          "label": "2",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r5",
+          "role": "link",
+          "label": "3",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r6",
+          "role": "link",
+          "label": "4",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r7",
+          "role": "link",
+          "label": "5",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r8",
+          "role": "link",
+          "label": "6",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r9",
+          "role": "link",
+          "label": "7",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r10",
+          "role": "link",
+          "label": "8",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r11",
+          "role": "link",
+          "label": "9",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r12",
+          "role": "link",
+          "label": "10",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r13",
+          "role": "link",
+          "label": "11",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r14",
+          "role": "link",
+          "label": "12",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r15",
+          "role": "link",
+          "label": "13",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r16",
+          "role": "link",
+          "label": "14",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r17",
+          "role": "link",
+          "label": "15",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r18",
+          "role": "link",
+          "label": "16",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r19",
+          "role": "link",
+          "label": "17",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r20",
+          "role": "link",
+          "label": "18",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r21",
+          "role": "link",
+          "label": "19",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r22",
+          "role": "link",
+          "label": "20",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r23",
+          "role": "link",
+          "label": "21",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r24",
+          "role": "link",
+          "label": "22",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r25",
+          "role": "link",
+          "label": "23",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r26",
+          "role": "link",
+          "label": "24",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r27",
+          "role": "link",
+          "label": "25",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r28",
+          "role": "link",
+          "label": "26",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r29",
+          "role": "link",
+          "label": "27",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r30",
+          "role": "link",
+          "label": "28",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r31",
+          "role": "link",
+          "label": "29",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r32",
+          "role": "link",
+          "label": "30",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r33",
+          "role": "link",
+          "label": "31",
+          "kind": "a",
+          "risk": "low"
+        }
+      ],
+      "decisionLatencyMs": 0,
+      "candidateCount": 33,
+      "confidence": null,
+      "calibration": "not-applicable-rule",
+      "executionStatus": "action-executed-after-approval"
+    }
+  ],
+  "candidateCount": 33,
+  "selectionRule": "unique-explicit-submit-control",
+  "syntheticApprovalCount": 1,
+  "latencyMs": 1569,
+  "environmentResetLatencyMs": 851,
+  "agentActionLatencyMs": 718,
+  "reward": 1.0,
+  "terminated": true,
+  "decisionStatus": "action-executed-after-approval",
+  "decisionProvider": "local-literal-match",
+  "decisionModel": "unique-explicit-submit-control",
+  "agentDecisionKitCommit": "0b721e93d7b87209ab8a8cb404c9d4c6b48a8de3",
+  "browserGymVersion": "0.14.3",
+  "browserGymPackageCommit": "0a785fbed075224ae81ca9c1fe924f66050696fe",
+  "playwrightPythonVersion": "1.44.0",
+  "playwrightNodeVersion": "1.63.0",
+  "browserVersion": "HeadlessChrome/125.0.6422.26",
+  "pythonVersion": "3.12.3",
+  "nodeVersion": "v24.20.0",
+  "operatingSystem": "Linux-5.15.0-37-generic-x86_64-with-glibc2.39",
+  "cpu": "x86_64",
+  "accelerator": "CPU",
+  "modelCacheState": "local cache already populated before this episode",
+  "ocrLanguageCacheExistedBeforeEpisode": null,
+  "decisionWarmState": "no semantic decision-provider inference occurred; deterministic local rules and explicit tool calls handled the DOM path",
+  "miniWobCommit": "7fd85d71a4b60325c6585396ec4f48377d049838",
+  "browserStillOpenAfterDisconnect": true,
+  "rawTaskInfo": {
+    "REWARD_GLOBAL": 0.998441,
+    "RAW_REWARD_GLOBAL": 1,
+    "REWARD_REASON": null,
+    "DONE_GLOBAL": true,
+    "EPISODE_ID": 1,
+    "TASK_READY": true
+  },
+  "timestampUtc": "2026-09-30T02:31:48.004074+00:00",
+  "maxActions": 8,
+  "note": "A curated MiniWoB integration smoke check, not a representative BrowserGym benchmark or a full autonomous agent. Multi-tool mode extracts only explicit task values and visible native options; field values are omitted from the raw record. The optional OCR path attempts only the quoted link target and its coordinate click remains behind the standard one-use approval gate; synthetic approval is possible only for the exact local MiniWoB file URL.",
+  "visualOcrActionsEnabled": false,
+  "runnerExitCode": 0
+}

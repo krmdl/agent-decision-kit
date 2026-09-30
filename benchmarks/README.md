@@ -50,9 +50,27 @@ The checked-in run completed 7/8 tasks (87.5%) with no harness timeouts. End-to-
 
 `results/miniwob-expanded-smoke-suite.json` and the 26 per-task files preserve a broader curated run across visual-only, menu, tab, form, search, and widget tasks. It completed 3/26 tasks with no harness timeouts. End-to-end latency was p50 3,318 ms and p95 4,658 ms; the bounded browser action loop was p50 840 ms and p95 2,147 ms; 51 provider calls had p50 111 ms and p95 789 ms. Five episodes ended on pages with no DOM action candidates, six ended with ambiguous selection, and the action cap was eight rounds. This CPU run used Windows 10 with a Ryzen 5 5600H; its pre-run cache state was not recorded separately.
 
+`results/miniwob-expanded-multi-tool-followup.json` and its 26 episode files record a multi-tool integration run over the same task mix on Linux x64 CPU. It completed 10/26 tasks with no harness timeouts. End-to-end latency was p50 1,288 ms and p95 22,142 ms; the browser/tool action loop was p50 494 ms and p95 21,325 ms; 33 semantic decision calls had p50 97 ms and p95 542 ms. Two local vision descriptions account for the long visual-only tail. Each task used a fresh Node bridge, so its semantic call includes cold process/model initialization; this CPU p95 does not represent warm throughput or the consumer-GPU target. The harness only copies explicit values from synthetic task instructions and visible options, so this is not an autonomous-agent score. It used Agent Decision Kit commit `0b721e9`, BrowserGym 0.14.3, MiniWoB++ commit `7fd85d7`, Node 24.20.0, and Chromium 125. The earlier email-task locator timeout did not recur after the dynamic DOM reference fix; the task still failed its goal, and all failures remain in the raw records.
+
 Interpret these as limited tool-loop integration results, not full coding-agent task-success scores. The original runners repeatedly invoke `browser_decide_and_act`; the 26-task run does not orchestrate field values, native select options, or visual inspection. Both record ambiguous and visual-only states instead of guessing. The focused eight-task and varied 26-task runs are not directly comparable; neither represents the full benchmark distribution or verifies the GPU latency target. The raw suite metadata lists exactly which tools each harness exercises.
 
 `results/miniwob-multi-tool-smoke.json` exercises the form and visual tools in a separate five-task curated run: `enter-text-2`, `choose-date-easy`, `choose-list`, `search-engine`, and `click-link`, with seed 7 and an eight-action cap. The harness copies only explicit values from these synthetic task instructions, chooses an exact enabled visible select label, opens a read-only date picker before selecting its visible day, and clicks the requested paginated search result. It completed 4/5 tasks without harness timeouts. The visual-only `click-link` page triggered local screenshot description but remained unacted, as the vision API does not click controls. End-to-end latency, including environment reset and vision, was p50 2,195 ms and p95 34,812 ms; the browser/tool action loop was p50 698 ms and p95 33,411 ms. No semantic decision-provider call was made in this run; the single visual call took 33,344 ms on CPU. These numbers describe this explicit-value integration harness, not an autonomous agent, general browser success, or speed advantage. Raw records omit the entered fake field values.
+
+Reproduce the expanded multi-tool run with the same BrowserGym and MiniWoB++ setup:
+
+```sh
+python benchmarks/run-browsergym-miniwob-suite.py \
+  --miniwob-root /tmp/miniwob-plusplus/miniwob/html/miniwob \
+  --tasks ascending-numbers choose-date-easy choose-list click-button \
+    click-checkboxes-large click-collapsible-2 click-dialog-2 click-link \
+    click-menu-2 click-option click-scroll-list click-tab-2-easy click-test-2 \
+    click-widget copy-paste daily-calendar email-inbox-noscroll enter-date \
+    enter-text-2 focus-text-2 form-sequence-2 navigate-tree read-table-2 \
+    search-engine use-autocomplete-nodelay use-slider-2 \
+  --seed 7 --max-actions 8 --timeout-seconds 180 \
+  --multi-tool --approve-synthetic-actions \
+  --output benchmarks/results/miniwob-expanded-multi-tool-followup.json
+```
 
 Reproduce the multi-tool fixture with the same BrowserGym setup:
 
