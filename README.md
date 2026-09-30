@@ -55,7 +55,7 @@ npm run browser:install
 npm run mcp
 ```
 
-Configure your agent to start `node /absolute/path/to/agent-decision-kit/dist/cli.js mcp`. Agent-specific files and examples are in [`docs/agents/`](docs/agents/). When the package is published, the shorter command will be `npx -y agent-decision-kit mcp`.
+Configure your agent to start `node /absolute/path/to/agent-decision-kit/dist/cli.js mcp`. Run `node dist/cli.js config claude-code` (or another supported alias) to print a ready-to-copy config for this built checkout. Agent-specific files and examples are in [`docs/agents/`](docs/agents/). When the package is published, the shorter command will be `npx -y agent-decision-kit mcp`.
 
 For a one-shot CLI decision, pass JSON on stdin:
 
@@ -101,7 +101,7 @@ The browser tool does not bypass CAPTCHAs, site access controls, or authenticati
 | Cline | [Guide](docs/agents/cline.md) | CLI MCP wizard or IDE settings |
 | OpenCode | [Guide](docs/agents/opencode.md) | `opencode.json` |
 
-All integrations use the standard MCP stdio transport. CI starts the actual CLI subprocess, discovers its MCP tools, and calls a local workflow tool; separate protocol tests cover the in-memory transport. In a local Windows check, Claude Code 2.1.218 reported the isolated server as connected; Codex CLI 0.154.0 loaded an isolated entry as enabled, but that check did not run an agent turn or tool call. The other vendor clients have not been runtime-tested here.
+All integrations use the standard MCP stdio transport. CI parses each guide and the generated command for every alias, starts all nine generated server commands, and calls `model_route` through MCP; separate protocol tests cover the in-memory transport. This validates the project's side of each config, not each vendor's parser or UI. In local Windows checks, Claude Code 2.1.218 reported the isolated server as connected and Codex CLI 0.154.0 loaded an isolated entry as enabled, but no model-backed agent turn was run. The other vendor clients have not been runtime-tested here.
 
 Claude Code users can also opt into the [prompt-routing hook](integrations/claude-code-hooks/README.md). It adds a local, unbenchmarked route suggestion to submitted prompts; it never changes the active model.
 

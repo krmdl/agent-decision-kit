@@ -2,6 +2,7 @@
 import { Command } from "commander";
 import { readFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import { runServer } from "./server.js";
 import { createProvider } from "./providers/index.js";
 import { DecisionRequestSchema, type DecisionRequest } from "./core/types.js";
@@ -120,15 +121,16 @@ async function readStdin(): Promise<string> {
 }
 
 function agentConfig(agent: string) {
-  const command = "npx";
-  const args = ["-y", "agent-decision-kit", "mcp"];
+  const command = "node";
+  const args = [fileURLToPath(import.meta.url), "mcp"];
   const entry = { command, args };
+  const codexSnippet = `[mcp_servers.agent-decision-kit]\ncommand = ${JSON.stringify(command)}\nargs = ${JSON.stringify(args)}`;
   const normalized = agent.toLowerCase().replace(/[^a-z]/g, "");
   const configurations: Record<string, { file: string; snippet: unknown; note?: string }> = {
     claude: { file: "~/.claude.json or project .mcp.json", snippet: { mcpServers: { "agent-decision-kit": entry } } },
     claudecode: { file: "~/.claude.json or project .mcp.json", snippet: { mcpServers: { "agent-decision-kit": entry } } },
-    codex: { file: "~/.codex/config.toml", snippet: '[mcp_servers.agent-decision-kit]\ncommand = "npx"\nargs = ["-y", "agent-decision-kit", "mcp"]' },
-    codexcli: { file: "~/.codex/config.toml", snippet: '[mcp_servers.agent-decision-kit]\ncommand = "npx"\nargs = ["-y", "agent-decision-kit", "mcp"]' },
+    codex: { file: "~/.codex/config.toml", snippet: codexSnippet },
+    codexcli: { file: "~/.codex/config.toml", snippet: codexSnippet },
     cursor: { file: ".cursor/mcp.json", snippet: { mcpServers: { "agent-decision-kit": { type: "stdio", ...entry } } } },
     gemini: { file: "~/.gemini/settings.json", snippet: { mcpServers: { "agent-decision-kit": entry } } },
     geminicli: { file: "~/.gemini/settings.json", snippet: { mcpServers: { "agent-decision-kit": entry } } },
@@ -144,5 +146,5 @@ function agentConfig(agent: string) {
   };
   const found = configurations[normalized];
   if (!found) throw new Error(`Unknown agent '${agent}'. Supported: Claude Code, Codex CLI, Cursor, Gemini CLI, Windsurf Cascade, VS Code/Copilot Chat, GitHub Copilot CLI, Cline, OpenCode.`);
-  return { agent, ...found, note: "The published npm command becomes usable after a release. For source checkout, replace npx/args with node and the absolute path to dist/cli.js. Verify the generated config against your installed agent version." };
+  return { agent, ...found, note: "This command runs the built dist/cli.js in the current source checkout. Run npm run build again after updating the checkout, then verify the generated config against your installed agent version." };
 }
