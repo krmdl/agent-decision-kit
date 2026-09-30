@@ -1,7 +1,8 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 import { siteBase } from "../utils/site.js";
-import latestRun from "../../../benchmarks/results/miniwob-expanded-multi-tool-followup.json";
+import latestRun from "../../../benchmarks/results/miniwob-expanded-multi-tool-8490bd7.json";
+import focusedRun from "../../../benchmarks/results/miniwob-targeted-browser-fixes-8490bd7.json";
 
 const episodeCount = latestRun.episodeCount;
 const successCount = latestRun.successCount;
@@ -9,7 +10,7 @@ const failureCount = episodeCount - successCount;
 const successPercent = Math.round(latestRun.taskSuccessRate * 100);
 const environment = latestRun.rawRecords[0];
 const commitUrl = `https://github.com/krmdl/agent-decision-kit/commit/${latestRun.suite.agentDecisionKitCommit}`;
-const rawRunUrl = "https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/miniwob-expanded-multi-tool-followup.json";
+const rawRunUrl = "https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/miniwob-expanded-multi-tool-8490bd7.json";
 ---
 
 <BaseLayout title="Real Browser Automation Benchmarks | Agent Decision Kit" description="Reproducible Playwright and BrowserGym MiniWoB results for Agent Decision Kit, with task success, latency, environment details, and raw episodes." canonicalPath="benchmarks/">
@@ -23,7 +24,7 @@ const rawRunUrl = "https://github.com/krmdl/agent-decision-kit/blob/main/benchma
     <section class="latest" aria-labelledby="latest-title">
       <div class="section-heading">
         <p class="eyebrow">LATEST MULTI-TOOL INTEGRATION</p>
-        <h2 id="latest-title">10 of 26 tasks succeeded.</h2>
+        <h2 id="latest-title">{successCount} of {episodeCount} tasks succeeded.</h2>
         <p>The run used a bounded harness that copies explicit values from fake task instructions, selects visible native options, and calls the browser tools. It measures tool integration, not an autonomous coding-agent score.</p>
       </div>
 
@@ -40,7 +41,7 @@ const rawRunUrl = "https://github.com/krmdl/agent-decision-kit/blob/main/benchma
       </figure>
 
       <div class="metrics-grid">
-        <article class="metric"><p class="eyebrow">TASK SUCCESS</p><strong>{successCount}/{episodeCount}</strong><span>38% on this curated set</span></article>
+        <article class="metric"><p class="eyebrow">TASK SUCCESS</p><strong>{successCount}/{episodeCount}</strong><span>{successPercent}% on this curated set</span></article>
         <article class="metric"><p class="eyebrow">BROWSER LOOP P50</p><strong>{(latestRun.agentActionLatencyMs.p50 / 1000).toFixed(2)}s</strong><span>Includes tool actions and inspection</span></article>
         <article class="metric"><p class="eyebrow">BROWSER LOOP P95</p><strong>{(latestRun.agentActionLatencyMs.p95 / 1000).toFixed(1)}s</strong><span>Two local vision descriptions drive the slow tail</span></article>
         <article class="metric"><p class="eyebrow">DECISION CALL P95</p><strong>{latestRun.decisionCallLatencyMs.p95}ms</strong><span>Cold call in a new Node process per task</span></article>
@@ -72,6 +73,11 @@ const rawRunUrl = "https://github.com/krmdl/agent-decision-kit/blob/main/benchma
       <p class="eyebrow">OTHER RECORDED RUNS</p>
       <h2 id="other-runs-title">Different runs answer different questions.</h2>
       <div class="run-list">
+        <article>
+          <div><strong>{focusedRun.successCount}/{focusedRun.episodeCount}</strong><span>Focused browser regressions</span></div>
+          <p>Six previously troublesome MiniWoB cases on Linux CPU. Browser action-loop p50 258 ms / p95 721 ms, with zero semantic model calls. This is a targeted regression set, not a general success estimate.</p>
+          <a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/miniwob-targeted-browser-fixes-8490bd7.json">Raw run ↗</a>
+        </article>
         <article>
           <div><strong>8/8</strong><span>Focused MiniWoB smoke</span></div>
           <p>Eight curated tasks on Linux CPU. Browser action-loop p50 305 ms / p95 699 ms. One integration run; not a general success estimate.</p>

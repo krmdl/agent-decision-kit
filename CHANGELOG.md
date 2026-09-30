@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Resolve role-prefixed labels, ordinal radio/textbox instructions, and revealed menu-item targets locally; track visited disclosures so multi-section searches do not toggle tabs back and forth.
+- Include bounded CSS `cursor: pointer` targets alongside semantic browser controls; custom targets remain subject to the sensitive-action approval gate.
 - Click an explicitly requested textarea widget instead of only focusing it, and keep the synthetic MiniWoB form workflow aligned with explicit ordinals and its local submit approval gate.
 - Expose read-only browser fields in bounded snapshots and open their visible picker with `browser_action`; reject attempts to fill them directly.
 - Match an explicit unique submit request locally while preserving the separate sensitive-action approval call.

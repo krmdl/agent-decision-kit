@@ -1,0 +1,951 @@
+{
+  "episodeCount": 6,
+  "successCount": 6,
+  "taskSuccessRate": 1,
+  "timeoutRate": 0,
+  "failureReasons": {},
+  "decisionStatuses": {
+    "action-executed-after-approval": 1,
+    "action-executed": 4,
+    "null": 1
+  },
+  "decisionProviders": {
+    "local-literal-match": 5,
+    "semantic-local": 1
+  },
+  "syntheticApprovalCount": 2,
+  "latencyMs": {
+    "p50": 1065,
+    "p95": 1750
+  },
+  "agentActionLatencyMs": {
+    "sampleCount": 6,
+    "p50": 258,
+    "p95": 721
+  },
+  "decisionCallLatencyMs": {
+    "sampleCount": 0,
+    "p50": null,
+    "p95": null
+  },
+  "decisionLatencyPerEpisodeMs": {
+    "sampleCount": 6,
+    "p50": 0,
+    "p95": 0
+  },
+  "actions": {
+    "mean": 1.6666666666666667,
+    "p50": 1,
+    "p95": 3
+  },
+  "rawRecords": [
+    {
+      "benchmark": "miniwob",
+      "task": "click-collapsible-2",
+      "taskPrompt": "Expand the sections below, to find and click on the link \"Ultrices.\".",
+      "runnerMode": "bounded-multi-tool-integration-smoke",
+      "toolCoverage": [
+        "browser_confirm",
+        "browser_connect",
+        "browser_decide_and_act"
+      ],
+      "notExercisedTools": [
+        "browser_action",
+        "browser_fill",
+        "browser_select_option",
+        "browser_visual_action",
+        "browser_visual_inspect",
+        "browser_visual_text"
+      ],
+      "toolActionTrace": [],
+      "success": true,
+      "timeout": false,
+      "failureReason": null,
+      "actions": 2,
+      "selectedAction": {
+        "ref": "r8",
+        "role": "pointer-target",
+        "label": "Ultrices.",
+        "kind": "custom-pointer",
+        "risk": "approval-required"
+      },
+      "decisionConfidence": null,
+      "decisionCalibration": "not-applicable-rule",
+      "decisionLatencyMs": 0,
+      "decisionCallLatenciesMs": [],
+      "decisionSnapshot": null,
+      "availableCandidates": null,
+      "decisionTrace": [
+        {
+          "step": 1,
+          "decisionStatus": "action-executed",
+          "provider": "local-literal-match",
+          "model": "ordered-disclosure-search",
+          "selectionRule": "ordered-disclosure-search",
+          "selectedAction": {
+            "ref": "r1",
+            "role": "tab",
+            "label": "Section #1 — Collapsed",
+            "kind": "h3",
+            "risk": "low",
+            "expanded": false,
+            "selected": false
+          },
+          "availableCandidates": [
+            {
+              "ref": "r1",
+              "role": "tab",
+              "label": "Section #1 — Collapsed",
+              "kind": "h3",
+              "risk": "low",
+              "expanded": false,
+              "selected": false
+            },
+            {
+              "ref": "r2",
+              "role": "tab",
+              "label": "Section #2 — Collapsed",
+              "kind": "h3",
+              "risk": "low",
+              "expanded": false,
+              "selected": false
+            },
+            {
+              "ref": "r3",
+              "role": "tab",
+              "label": "Section #3 — Collapsed",
+              "kind": "h3",
+              "risk": "low",
+              "expanded": false,
+              "selected": false
+            }
+          ],
+          "decisionLatencyMs": 0,
+          "candidateCount": 3,
+          "confidence": null,
+          "calibration": "not-applicable-rule",
+          "executionStatus": "action-executed"
+        },
+        {
+          "step": 2,
+          "decisionStatus": "awaiting-user-approval",
+          "provider": "local-literal-match",
+          "model": "unique-exact-quoted-label",
+          "selectionRule": "unique-exact-quoted-label",
+          "selectedAction": {
+            "ref": "r8",
+            "role": "pointer-target",
+            "label": "Ultrices.",
+            "kind": "custom-pointer",
+            "risk": "approval-required"
+          },
+          "availableCandidates": [
+            {
+              "ref": "r1",
+              "role": "tab",
+              "label": "Section #1 — Expanded",
+              "kind": "h3",
+              "risk": "low",
+              "expanded": true,
+              "selected": true
+            },
+            {
+              "ref": "r2",
+              "role": "tab",
+              "label": "Section #2 — Collapsed",
+              "kind": "h3",
+              "risk": "low",
+              "expanded": false,
+              "selected": false
+            },
+            {
+              "ref": "r3",
+              "role": "tab",
+              "label": "Section #3 — Collapsed",
+              "kind": "h3",
+              "risk": "low",
+              "expanded": false,
+              "selected": false
+            },
+            {
+              "ref": "r4",
+              "role": "pointer-target",
+              "label": "adipiscing.",
+              "kind": "custom-pointer",
+              "risk": "approval-required"
+            },
+            {
+              "ref": "r5",
+              "role": "pointer-target",
+              "label": "mauris",
+              "kind": "custom-pointer",
+              "risk": "approval-required"
+            },
+            {
+              "ref": "r6",
+              "role": "pointer-target",
+              "label": "sagittis",
+              "kind": "custom-pointer",
+              "risk": "approval-required"
+            },
+            {
+              "ref": "r7",
+              "role": "pointer-target",
+              "label": "mi.",
+              "kind": "custom-pointer",
+              "risk": "approval-required"
+            },
+            {
+              "ref": "r8",
+              "role": "pointer-target",
+              "label": "Ultrices.",
+              "kind": "custom-pointer",
+              "risk": "approval-required"
+            },
+            {
+              "ref": "r9",
+              "role": "pointer-target",
+              "label": "ultricies",
+              "kind": "custom-pointer",
+              "risk": "approval-required"
+            },
+            {
+              "ref": "r10",
+              "role": "pointer-target",
+              "label": "aliquet",
+              "kind": "custom-pointer",
+              "risk": "approval-required"
+            }
+          ],
+          "decisionLatencyMs": 0,
+          "candidateCount": 10,
+          "confidence": null,
+          "calibration": "not-applicable-rule",
+          "executionStatus": "action-executed-after-approval"
+        }
+      ],
+      "candidateCount": 10,
+      "selectionRule": "unique-exact-quoted-label",
+      "syntheticApprovalCount": 1,
+      "latencyMs": 1750,
+      "environmentResetLatencyMs": 1029,
+      "agentActionLatencyMs": 721,
+      "reward": 1,
+      "terminated": true,
+      "decisionStatus": "action-executed-after-approval",
+      "decisionProvider": "local-literal-match",
+      "decisionModel": "unique-exact-quoted-label",
+      "agentDecisionKitCommit": "8490bd750e7f8741e779ae329c6ba1eb832e1b8c",
+      "browserGymVersion": "0.14.3",
+      "browserGymPackageCommit": "0a785fbed075224ae81ca9c1fe924f66050696fe",
+      "playwrightPythonVersion": "1.44.0",
+      "playwrightNodeVersion": "1.63.0",
+      "browserVersion": "HeadlessChrome/125.0.6422.26",
+      "pythonVersion": "3.12.3",
+      "nodeVersion": "v24.20.0",
+      "operatingSystem": "Linux-5.15.0-37-generic-x86_64-with-glibc2.39",
+      "cpu": "x86_64",
+      "accelerator": "CPU",
+      "modelCacheState": "local cache already populated before this episode",
+      "ocrLanguageCacheExistedBeforeEpisode": null,
+      "decisionWarmState": "no semantic decision-provider inference occurred; deterministic local rules and explicit tool calls handled the DOM path",
+      "miniWobCommit": "7fd85d71a4b60325c6585396ec4f48377d049838",
+      "browserStillOpenAfterDisconnect": true,
+      "rawTaskInfo": {
+        "REWARD_GLOBAL": 0.998312,
+        "RAW_REWARD_GLOBAL": 1,
+        "REWARD_REASON": null,
+        "DONE_GLOBAL": true,
+        "EPISODE_ID": 1,
+        "TASK_READY": true
+      },
+      "timestampUtc": "2026-09-30T03:58:43.106452+00:00",
+      "maxActions": 8,
+      "note": "A curated MiniWoB integration smoke check, not a representative BrowserGym benchmark or a full autonomous agent. Multi-tool mode extracts only explicit task values and visible native options; field values are omitted from the raw record. The optional OCR path attempts only the quoted link target and its coordinate click remains behind the standard one-use approval gate; synthetic approval is possible only for the exact local MiniWoB file URL.",
+      "visualOcrActionsEnabled": false,
+      "runnerExitCode": 0
+    },
+    {
+      "benchmark": "miniwob",
+      "task": "click-menu-2",
+      "taskPrompt": "Click the \"Menu\" button, and then find and click on the item labeled \"Zoom In\".",
+      "runnerMode": "bounded-multi-tool-integration-smoke",
+      "toolCoverage": [
+        "browser_connect",
+        "browser_decide_and_act"
+      ],
+      "notExercisedTools": [
+        "browser_action",
+        "browser_confirm",
+        "browser_fill",
+        "browser_select_option",
+        "browser_visual_action",
+        "browser_visual_inspect",
+        "browser_visual_text"
+      ],
+      "toolActionTrace": [],
+      "success": true,
+      "timeout": false,
+      "failureReason": null,
+      "actions": 2,
+      "selectedAction": {
+        "ref": "r5",
+        "role": "menuitem",
+        "label": "Zoom In",
+        "kind": "div",
+        "risk": "low"
+      },
+      "decisionConfidence": null,
+      "decisionCalibration": "not-applicable-rule",
+      "decisionLatencyMs": 0,
+      "decisionCallLatenciesMs": [],
+      "decisionSnapshot": null,
+      "availableCandidates": null,
+      "decisionTrace": [
+        {
+          "step": 1,
+          "decisionStatus": "action-executed",
+          "provider": "local-literal-match",
+          "model": "unique-exact-quoted-label",
+          "selectionRule": "unique-exact-quoted-label",
+          "selectedAction": {
+            "ref": "r1",
+            "role": "button",
+            "label": "Menu",
+            "kind": "button",
+            "risk": "low"
+          },
+          "availableCandidates": [
+            {
+              "ref": "r1",
+              "role": "button",
+              "label": "Menu",
+              "kind": "button",
+              "risk": "low"
+            }
+          ],
+          "decisionLatencyMs": 0,
+          "candidateCount": 1,
+          "confidence": null,
+          "calibration": "not-applicable-rule",
+          "executionStatus": "action-executed"
+        },
+        {
+          "step": 2,
+          "decisionStatus": "action-executed",
+          "provider": "local-literal-match",
+          "model": "unique-exact-quoted-label",
+          "selectionRule": "unique-exact-quoted-label",
+          "selectedAction": {
+            "ref": "r5",
+            "role": "menuitem",
+            "label": "Zoom In",
+            "kind": "div",
+            "risk": "low"
+          },
+          "availableCandidates": [
+            {
+              "ref": "r1",
+              "role": "button",
+              "label": "Menu",
+              "kind": "button",
+              "risk": "low"
+            },
+            {
+              "ref": "r2",
+              "role": "menuitem",
+              "label": "Save",
+              "kind": "div",
+              "risk": "low"
+            },
+            {
+              "ref": "r3",
+              "role": "menuitem",
+              "label": "Playback",
+              "kind": "div",
+              "risk": "low"
+            },
+            {
+              "ref": "r4",
+              "role": "menuitem",
+              "label": "Print...",
+              "kind": "div",
+              "risk": "low"
+            },
+            {
+              "ref": "r5",
+              "role": "menuitem",
+              "label": "Zoom In",
+              "kind": "div",
+              "risk": "low"
+            },
+            {
+              "ref": "r6",
+              "role": "menuitem",
+              "label": "Zoom Out",
+              "kind": "div",
+              "risk": "low"
+            },
+            {
+              "ref": "r7",
+              "role": "pointer-target",
+              "label": "Save Playback Prev Stop Play Next Print... Zoom In Zoom Out",
+              "kind": "custom-pointer",
+              "risk": "approval-required"
+            }
+          ],
+          "decisionLatencyMs": 0,
+          "candidateCount": 7,
+          "confidence": null,
+          "calibration": "not-applicable-rule",
+          "executionStatus": "action-executed"
+        }
+      ],
+      "candidateCount": 7,
+      "selectionRule": "unique-exact-quoted-label",
+      "syntheticApprovalCount": 0,
+      "latencyMs": 1368,
+      "environmentResetLatencyMs": 842,
+      "agentActionLatencyMs": 526,
+      "reward": 1,
+      "terminated": true,
+      "decisionStatus": "action-executed",
+      "decisionProvider": "local-literal-match",
+      "decisionModel": "unique-exact-quoted-label",
+      "agentDecisionKitCommit": "8490bd750e7f8741e779ae329c6ba1eb832e1b8c",
+      "browserGymVersion": "0.14.3",
+      "browserGymPackageCommit": "0a785fbed075224ae81ca9c1fe924f66050696fe",
+      "playwrightPythonVersion": "1.44.0",
+      "playwrightNodeVersion": "1.63.0",
+      "browserVersion": "HeadlessChrome/125.0.6422.26",
+      "pythonVersion": "3.12.3",
+      "nodeVersion": "v24.20.0",
+      "operatingSystem": "Linux-5.15.0-37-generic-x86_64-with-glibc2.39",
+      "cpu": "x86_64",
+      "accelerator": "CPU",
+      "modelCacheState": "local cache already populated before this episode",
+      "ocrLanguageCacheExistedBeforeEpisode": null,
+      "decisionWarmState": "no semantic decision-provider inference occurred; deterministic local rules and explicit tool calls handled the DOM path",
+      "miniWobCommit": "7fd85d71a4b60325c6585396ec4f48377d049838",
+      "browserStillOpenAfterDisconnect": true,
+      "rawTaskInfo": {
+        "REWARD_GLOBAL": 0.998631,
+        "RAW_REWARD_GLOBAL": 1,
+        "REWARD_REASON": null,
+        "DONE_GLOBAL": true,
+        "EPISODE_ID": 1,
+        "TASK_READY": true
+      },
+      "timestampUtc": "2026-09-30T03:58:46.044210+00:00",
+      "maxActions": 8,
+      "note": "A curated MiniWoB integration smoke check, not a representative BrowserGym benchmark or a full autonomous agent. Multi-tool mode extracts only explicit task values and visible native options; field values are omitted from the raw record. The optional OCR path attempts only the quoted link target and its coordinate click remains behind the standard one-use approval gate; synthetic approval is possible only for the exact local MiniWoB file URL.",
+      "visualOcrActionsEnabled": false,
+      "runnerExitCode": 0
+    },
+    {
+      "benchmark": "miniwob",
+      "task": "click-test-2",
+      "taskPrompt": "Click button ONE.",
+      "runnerMode": "bounded-multi-tool-integration-smoke",
+      "toolCoverage": [
+        "browser_connect",
+        "browser_decide_and_act"
+      ],
+      "notExercisedTools": [
+        "browser_action",
+        "browser_confirm",
+        "browser_fill",
+        "browser_select_option",
+        "browser_visual_action",
+        "browser_visual_inspect",
+        "browser_visual_text"
+      ],
+      "toolActionTrace": [],
+      "success": true,
+      "timeout": false,
+      "failureReason": null,
+      "actions": 1,
+      "selectedAction": {
+        "ref": "r1",
+        "role": "button",
+        "label": "ONE",
+        "kind": "button",
+        "risk": "low"
+      },
+      "decisionConfidence": null,
+      "decisionCalibration": "not-applicable-rule",
+      "decisionLatencyMs": 0,
+      "decisionCallLatenciesMs": [],
+      "decisionSnapshot": null,
+      "availableCandidates": null,
+      "decisionTrace": [
+        {
+          "step": 1,
+          "decisionStatus": "action-executed",
+          "provider": "local-literal-match",
+          "model": "unique-explicit-command-label",
+          "selectionRule": "unique-explicit-command-label",
+          "selectedAction": {
+            "ref": "r1",
+            "role": "button",
+            "label": "ONE",
+            "kind": "button",
+            "risk": "low"
+          },
+          "availableCandidates": [
+            {
+              "ref": "r1",
+              "role": "button",
+              "label": "ONE",
+              "kind": "button",
+              "risk": "low"
+            },
+            {
+              "ref": "r2",
+              "role": "button",
+              "label": "TWO",
+              "kind": "button",
+              "risk": "low"
+            }
+          ],
+          "decisionLatencyMs": 0,
+          "candidateCount": 2,
+          "confidence": null,
+          "calibration": "not-applicable-rule",
+          "executionStatus": "action-executed"
+        }
+      ],
+      "candidateCount": 2,
+      "selectionRule": "unique-explicit-command-label",
+      "syntheticApprovalCount": 0,
+      "latencyMs": 1065,
+      "environmentResetLatencyMs": 807,
+      "agentActionLatencyMs": 258,
+      "reward": 1,
+      "terminated": true,
+      "decisionStatus": "action-executed",
+      "decisionProvider": "local-literal-match",
+      "decisionModel": "unique-explicit-command-label",
+      "agentDecisionKitCommit": "8490bd750e7f8741e779ae329c6ba1eb832e1b8c",
+      "browserGymVersion": "0.14.3",
+      "browserGymPackageCommit": "0a785fbed075224ae81ca9c1fe924f66050696fe",
+      "playwrightPythonVersion": "1.44.0",
+      "playwrightNodeVersion": "1.63.0",
+      "browserVersion": "HeadlessChrome/125.0.6422.26",
+      "pythonVersion": "3.12.3",
+      "nodeVersion": "v24.20.0",
+      "operatingSystem": "Linux-5.15.0-37-generic-x86_64-with-glibc2.39",
+      "cpu": "x86_64",
+      "accelerator": "CPU",
+      "modelCacheState": "local cache already populated before this episode",
+      "ocrLanguageCacheExistedBeforeEpisode": null,
+      "decisionWarmState": "no semantic decision-provider inference occurred; deterministic local rules and explicit tool calls handled the DOM path",
+      "miniWobCommit": "7fd85d71a4b60325c6585396ec4f48377d049838",
+      "browserStillOpenAfterDisconnect": true,
+      "rawTaskInfo": {
+        "REWARD_GLOBAL": 0.998916,
+        "RAW_REWARD_GLOBAL": 1,
+        "REWARD_REASON": null,
+        "DONE_GLOBAL": true,
+        "EPISODE_ID": 1,
+        "TASK_READY": true
+      },
+      "timestampUtc": "2026-09-30T03:58:48.594263+00:00",
+      "maxActions": 8,
+      "note": "A curated MiniWoB integration smoke check, not a representative BrowserGym benchmark or a full autonomous agent. Multi-tool mode extracts only explicit task values and visible native options; field values are omitted from the raw record. The optional OCR path attempts only the quoted link target and its coordinate click remains behind the standard one-use approval gate; synthetic approval is possible only for the exact local MiniWoB file URL.",
+      "visualOcrActionsEnabled": false,
+      "runnerExitCode": 0
+    },
+    {
+      "benchmark": "miniwob",
+      "task": "click-widget",
+      "taskPrompt": "Click on a \"textarea\" widget.",
+      "runnerMode": "bounded-multi-tool-integration-smoke",
+      "toolCoverage": [
+        "browser_connect",
+        "browser_decide_and_act"
+      ],
+      "notExercisedTools": [
+        "browser_action",
+        "browser_confirm",
+        "browser_fill",
+        "browser_select_option",
+        "browser_visual_action",
+        "browser_visual_inspect",
+        "browser_visual_text"
+      ],
+      "toolActionTrace": [],
+      "success": true,
+      "timeout": false,
+      "failureReason": null,
+      "actions": 1,
+      "selectedAction": {
+        "ref": "r1",
+        "role": "textarea",
+        "label": "U",
+        "kind": "textarea",
+        "risk": "low"
+      },
+      "decisionConfidence": null,
+      "decisionCalibration": "not-applicable-rule",
+      "decisionLatencyMs": 0,
+      "decisionCallLatenciesMs": [],
+      "decisionSnapshot": null,
+      "availableCandidates": null,
+      "decisionTrace": [
+        {
+          "step": 1,
+          "decisionStatus": "action-executed",
+          "provider": "local-literal-match",
+          "model": "explicit-any-textarea",
+          "selectionRule": "explicit-any-textarea",
+          "selectedAction": {
+            "ref": "r1",
+            "role": "textarea",
+            "label": "U",
+            "kind": "textarea",
+            "risk": "low"
+          },
+          "availableCandidates": [
+            {
+              "ref": "r1",
+              "role": "textarea",
+              "label": "U",
+              "kind": "textarea",
+              "risk": "low"
+            },
+            {
+              "ref": "r2",
+              "role": "textarea",
+              "label": "qtpDp",
+              "kind": "textarea",
+              "risk": "low"
+            },
+            {
+              "ref": "r3",
+              "role": "input",
+              "label": "Yg — Currently unchecked",
+              "kind": "checkbox",
+              "risk": "low",
+              "checked": false
+            },
+            {
+              "ref": "r4",
+              "role": "button",
+              "label": "b",
+              "kind": "button",
+              "risk": "low"
+            },
+            {
+              "ref": "r5",
+              "role": "input",
+              "label": "c — Currently unchecked",
+              "kind": "checkbox",
+              "risk": "low",
+              "checked": false
+            }
+          ],
+          "decisionLatencyMs": 0,
+          "candidateCount": 5,
+          "confidence": null,
+          "calibration": "not-applicable-rule",
+          "executionStatus": "action-executed"
+        }
+      ],
+      "candidateCount": 5,
+      "selectionRule": "explicit-any-textarea",
+      "syntheticApprovalCount": 0,
+      "latencyMs": 924,
+      "environmentResetLatencyMs": 820,
+      "agentActionLatencyMs": 104,
+      "reward": 1,
+      "terminated": true,
+      "decisionStatus": "action-executed",
+      "decisionProvider": "local-literal-match",
+      "decisionModel": "explicit-any-textarea",
+      "agentDecisionKitCommit": "8490bd750e7f8741e779ae329c6ba1eb832e1b8c",
+      "browserGymVersion": "0.14.3",
+      "browserGymPackageCommit": "0a785fbed075224ae81ca9c1fe924f66050696fe",
+      "playwrightPythonVersion": "1.44.0",
+      "playwrightNodeVersion": "1.63.0",
+      "browserVersion": "HeadlessChrome/125.0.6422.26",
+      "pythonVersion": "3.12.3",
+      "nodeVersion": "v24.20.0",
+      "operatingSystem": "Linux-5.15.0-37-generic-x86_64-with-glibc2.39",
+      "cpu": "x86_64",
+      "accelerator": "CPU",
+      "modelCacheState": "local cache already populated before this episode",
+      "ocrLanguageCacheExistedBeforeEpisode": null,
+      "decisionWarmState": "no semantic decision-provider inference occurred; deterministic local rules and explicit tool calls handled the DOM path",
+      "miniWobCommit": "7fd85d71a4b60325c6585396ec4f48377d049838",
+      "browserStillOpenAfterDisconnect": true,
+      "rawTaskInfo": {
+        "REWARD_GLOBAL": 0.99889,
+        "RAW_REWARD_GLOBAL": 1,
+        "REWARD_REASON": null,
+        "DONE_GLOBAL": true,
+        "EPISODE_ID": 1,
+        "TASK_READY": true
+      },
+      "timestampUtc": "2026-09-30T03:58:51.007893+00:00",
+      "maxActions": 8,
+      "note": "A curated MiniWoB integration smoke check, not a representative BrowserGym benchmark or a full autonomous agent. Multi-tool mode extracts only explicit task values and visible native options; field values are omitted from the raw record. The optional OCR path attempts only the quoted link target and its coordinate click remains behind the standard one-use approval gate; synthetic approval is possible only for the exact local MiniWoB file URL.",
+      "visualOcrActionsEnabled": false,
+      "runnerExitCode": 0
+    },
+    {
+      "benchmark": "miniwob",
+      "task": "focus-text-2",
+      "taskPrompt": "Focus into the 1st input textbox.",
+      "runnerMode": "bounded-multi-tool-integration-smoke",
+      "toolCoverage": [
+        "browser_connect",
+        "browser_decide_and_act"
+      ],
+      "notExercisedTools": [
+        "browser_action",
+        "browser_confirm",
+        "browser_fill",
+        "browser_select_option",
+        "browser_visual_action",
+        "browser_visual_inspect",
+        "browser_visual_text"
+      ],
+      "toolActionTrace": [],
+      "success": true,
+      "timeout": false,
+      "failureReason": null,
+      "actions": 1,
+      "selectedAction": {
+        "ref": "r1",
+        "role": "input",
+        "label": "input 1",
+        "kind": "text",
+        "risk": "low"
+      },
+      "decisionConfidence": null,
+      "decisionCalibration": "not-applicable-rule",
+      "decisionLatencyMs": 0,
+      "decisionCallLatenciesMs": [],
+      "decisionSnapshot": null,
+      "availableCandidates": null,
+      "decisionTrace": [
+        {
+          "step": 1,
+          "decisionStatus": "action-executed",
+          "provider": "local-literal-match",
+          "model": "explicit-text-field-ordinal",
+          "selectionRule": "explicit-text-field-ordinal",
+          "selectedAction": {
+            "ref": "r1",
+            "role": "input",
+            "label": "input 1",
+            "kind": "text",
+            "risk": "low"
+          },
+          "availableCandidates": [
+            {
+              "ref": "r1",
+              "role": "input",
+              "label": "input 1",
+              "kind": "text",
+              "risk": "low"
+            },
+            {
+              "ref": "r2",
+              "role": "input",
+              "label": "input 2",
+              "kind": "text",
+              "risk": "low"
+            },
+            {
+              "ref": "r3",
+              "role": "input",
+              "label": "input 3",
+              "kind": "text",
+              "risk": "low"
+            }
+          ],
+          "decisionLatencyMs": 0,
+          "candidateCount": 3,
+          "confidence": null,
+          "calibration": "not-applicable-rule",
+          "executionStatus": "action-executed"
+        }
+      ],
+      "candidateCount": 3,
+      "selectionRule": "explicit-text-field-ordinal",
+      "syntheticApprovalCount": 0,
+      "latencyMs": 889,
+      "environmentResetLatencyMs": 810,
+      "agentActionLatencyMs": 79,
+      "reward": 1,
+      "terminated": true,
+      "decisionStatus": "action-executed",
+      "decisionProvider": "local-literal-match",
+      "decisionModel": "explicit-text-field-ordinal",
+      "agentDecisionKitCommit": "8490bd750e7f8741e779ae329c6ba1eb832e1b8c",
+      "browserGymVersion": "0.14.3",
+      "browserGymPackageCommit": "0a785fbed075224ae81ca9c1fe924f66050696fe",
+      "playwrightPythonVersion": "1.44.0",
+      "playwrightNodeVersion": "1.63.0",
+      "browserVersion": "HeadlessChrome/125.0.6422.26",
+      "pythonVersion": "3.12.3",
+      "nodeVersion": "v24.20.0",
+      "operatingSystem": "Linux-5.15.0-37-generic-x86_64-with-glibc2.39",
+      "cpu": "x86_64",
+      "accelerator": "CPU",
+      "modelCacheState": "local cache already populated before this episode",
+      "ocrLanguageCacheExistedBeforeEpisode": null,
+      "decisionWarmState": "no semantic decision-provider inference occurred; deterministic local rules and explicit tool calls handled the DOM path",
+      "miniWobCommit": "7fd85d71a4b60325c6585396ec4f48377d049838",
+      "browserStillOpenAfterDisconnect": true,
+      "rawTaskInfo": {
+        "REWARD_GLOBAL": 0.998949,
+        "RAW_REWARD_GLOBAL": 1,
+        "REWARD_REASON": null,
+        "DONE_GLOBAL": true,
+        "EPISODE_ID": 1,
+        "TASK_READY": true
+      },
+      "timestampUtc": "2026-09-30T03:58:53.443749+00:00",
+      "maxActions": 8,
+      "note": "A curated MiniWoB integration smoke check, not a representative BrowserGym benchmark or a full autonomous agent. Multi-tool mode extracts only explicit task values and visible native options; field values are omitted from the raw record. The optional OCR path attempts only the quoted link target and its coordinate click remains behind the standard one-use approval gate; synthetic approval is possible only for the exact local MiniWoB file URL.",
+      "visualOcrActionsEnabled": false,
+      "runnerExitCode": 0
+    },
+    {
+      "benchmark": "miniwob",
+      "task": "form-sequence-2",
+      "taskPrompt": "Check the 3rd radio button and enter the number \"-3\" into the 2nd textbox.",
+      "runnerMode": "bounded-multi-tool-integration-smoke",
+      "toolCoverage": [
+        "browser_action",
+        "browser_confirm",
+        "browser_connect",
+        "browser_fill"
+      ],
+      "notExercisedTools": [
+        "browser_decide_and_act",
+        "browser_select_option",
+        "browser_visual_action",
+        "browser_visual_inspect",
+        "browser_visual_text"
+      ],
+      "toolActionTrace": [
+        {
+          "step": 1,
+          "tool": "browser_action",
+          "status": "action-executed",
+          "syntheticApproval": false,
+          "fieldKind": "radio",
+          "fieldOrdinal": 3
+        },
+        {
+          "step": 2,
+          "tool": "browser_fill",
+          "status": "filled",
+          "syntheticApproval": false,
+          "fieldKind": "text",
+          "characterCount": 2,
+          "fieldOrdinal": 2
+        },
+        {
+          "step": 3,
+          "tool": "browser_action",
+          "status": "action-executed-after-approval",
+          "syntheticApproval": true,
+          "fieldKind": "submit-after-explicit-local-form-entry"
+        }
+      ],
+      "success": true,
+      "timeout": false,
+      "failureReason": null,
+      "actions": 3,
+      "selectedAction": null,
+      "decisionConfidence": null,
+      "decisionCalibration": null,
+      "decisionLatencyMs": 0,
+      "decisionCallLatenciesMs": [],
+      "decisionSnapshot": null,
+      "availableCandidates": null,
+      "decisionTrace": [],
+      "candidateCount": null,
+      "selectionRule": null,
+      "syntheticApprovalCount": 1,
+      "latencyMs": 1200,
+      "environmentResetLatencyMs": 838,
+      "agentActionLatencyMs": 362,
+      "reward": 1,
+      "terminated": true,
+      "decisionStatus": null,
+      "decisionProvider": "semantic-local",
+      "decisionModel": "not-reported",
+      "agentDecisionKitCommit": "8490bd750e7f8741e779ae329c6ba1eb832e1b8c",
+      "browserGymVersion": "0.14.3",
+      "browserGymPackageCommit": "0a785fbed075224ae81ca9c1fe924f66050696fe",
+      "playwrightPythonVersion": "1.44.0",
+      "playwrightNodeVersion": "1.63.0",
+      "browserVersion": "HeadlessChrome/125.0.6422.26",
+      "pythonVersion": "3.12.3",
+      "nodeVersion": "v24.20.0",
+      "operatingSystem": "Linux-5.15.0-37-generic-x86_64-with-glibc2.39",
+      "cpu": "x86_64",
+      "accelerator": "CPU",
+      "modelCacheState": "local cache already populated before this episode",
+      "ocrLanguageCacheExistedBeforeEpisode": null,
+      "decisionWarmState": "no semantic decision-provider inference occurred; deterministic local rules and explicit tool calls handled the DOM path",
+      "miniWobCommit": "7fd85d71a4b60325c6585396ec4f48377d049838",
+      "browserStillOpenAfterDisconnect": true,
+      "rawTaskInfo": {
+        "REWARD_GLOBAL": 0.998798,
+        "RAW_REWARD_GLOBAL": 1,
+        "REWARD_REASON": null,
+        "DONE_GLOBAL": true,
+        "EPISODE_ID": 1,
+        "TASK_READY": true
+      },
+      "timestampUtc": "2026-09-30T03:58:56.174886+00:00",
+      "maxActions": 8,
+      "note": "A curated MiniWoB integration smoke check, not a representative BrowserGym benchmark or a full autonomous agent. Multi-tool mode extracts only explicit task values and visible native options; field values are omitted from the raw record. The optional OCR path attempts only the quoted link target and its coordinate click remains behind the standard one-use approval gate; synthetic approval is possible only for the exact local MiniWoB file URL.",
+      "visualOcrActionsEnabled": false,
+      "runnerExitCode": 0
+    }
+  ],
+  "note": "Episode latency includes environment reset. Agent action latency includes browser inspection, decision, and any synthetic approval round-trip; decision latency is reported separately when available. These task and hardware samples are not representative quality or performance claims. The selected MiniWoB task set is a reproducible smoke suite, not a representative BrowserGym sample. It measures bounded tool integration, not a complete coding agent.",
+  "suite": {
+    "name": "miniwob-multi-tool-smoke",
+    "runnerMode": "bounded-multi-tool-integration-smoke",
+    "agentDecisionKitCommit": "8490bd750e7f8741e779ae329c6ba1eb832e1b8c",
+    "toolCoverage": [
+      "browser_action",
+      "browser_confirm",
+      "browser_connect",
+      "browser_decide_and_act",
+      "browser_fill"
+    ],
+    "notExercisedTools": [
+      "browser_select_option",
+      "browser_visual_action",
+      "browser_visual_inspect",
+      "browser_visual_text"
+    ],
+    "limitation": "This is a curated integration harness, not a full autonomous agent or representative BrowserGym benchmark. In multi-tool mode, it extracts only explicit values from synthetic task instructions and selects exact visible options. The optional visual OCR path tries only an explicitly quoted link label, and its coordinate click is approved only for the exact local file:// task page.",
+    "seed": 7,
+    "maxActionsPerTask": 8,
+    "timeoutSecondsPerTask": 180,
+    "syntheticApprovalsEnabled": true,
+    "visualOcrActionsEnabled": false,
+    "miniwobRoot": "<local-miniwob-root>",
+    "episodeFiles": [
+      "benchmarks/results/miniwob-targeted-browser-fixes-8490bd7-click-collapsible-2.json",
+      "benchmarks/results/miniwob-targeted-browser-fixes-8490bd7-click-menu-2.json",
+      "benchmarks/results/miniwob-targeted-browser-fixes-8490bd7-click-test-2.json",
+      "benchmarks/results/miniwob-targeted-browser-fixes-8490bd7-click-widget.json",
+      "benchmarks/results/miniwob-targeted-browser-fixes-8490bd7-focus-text-2.json",
+      "benchmarks/results/miniwob-targeted-browser-fixes-8490bd7-form-sequence-2.json"
+    ],
+    "pythonVersion": "3.12.3",
+    "operatingSystem": "Linux-5.15.0-37-generic-x86_64-with-glibc2.39"
+  }
+}
