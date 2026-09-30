@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Add `browser_drag` for visible native draggable sources and declared drop targets; every move needs a separate approval and is cancelled when the page changes.
 - Resolve role-prefixed labels, ordinal radio/textbox instructions, and revealed menu-item targets locally; track visited disclosures so multi-section searches do not toggle tabs back and forth.
 - Select exact requested options in native lists before proposing submission, set explicit native slider values without returning them, and block submit proposals while task-requested text fields remain empty.
 - Stop repeated automatic approval loops when a confirmed pointer-only click leaves the visible page unchanged.

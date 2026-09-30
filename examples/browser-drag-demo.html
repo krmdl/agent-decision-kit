@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#091521">
+  <title>Agent Decision Kit — Local Drag and Drop Demo</title>
+  <style>
+    :root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, sans-serif; background: #091521; color: #e6eff8; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; padding: 64px 22px; background: radial-gradient(circle at 50% 0, #173446 0, #091521 48rem); }
+    main { width: min(100%, 920px); margin: 0 auto; }
+    .eyebrow { color: #75e2c2; font-size: 12px; font-weight: 800; letter-spacing: .15em; text-transform: uppercase; }
+    h1 { margin: 14px 0; font-size: clamp(38px, 7vw, 64px); line-height: 1; letter-spacing: -.055em; }
+    .lead { max-width: 660px; color: #a8bbcc; line-height: 1.7; }
+    .board { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin: 40px 0 18px; }
+    .lane { min-height: 250px; padding: 18px; border: 1px solid #314b5f; border-radius: 18px; background: #0e1e2c; transition: border-color .16s, background .16s; }
+    .lane h2 { margin: 0 0 18px; color: #b5c7d7; font-size: 14px; letter-spacing: .08em; text-transform: uppercase; }
+    .lane[data-over="true"] { border-color: #75e2c2; background: #122a34; }
+    .card { display: flex; align-items: center; gap: 14px; min-height: 78px; padding: 16px; border: 1px solid #3d5a70; border-radius: 12px; background: linear-gradient(125deg, #183247, #122539); box-shadow: 0 12px 25px #0003; cursor: grab; }
+    .card:active { cursor: grabbing; }
+    .grip { color: #75e2c2; font-size: 20px; }
+    .card strong { display: block; font-size: 14px; }
+    .card small { display: block; margin-top: 4px; color: #9aafc2; font-size: 12px; }
+    .empty { display: grid; min-height: 175px; place-items: center; border: 1px dashed #355167; border-radius: 12px; color: #8298ab; font-size: 13px; }
+    .status-row { display: flex; align-items: center; gap: 10px; min-height: 44px; color: #a8bbcc; font-size: 13px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: #75e2c2; box-shadow: 0 0 0 4px #75e2c222; }
+    button { margin-top: 16px; padding: 10px 14px; border: 1px solid #3d5a70; border-radius: 9px; background: #102334; color: #d7e4ef; font: inherit; font-size: 13px; cursor: pointer; }
+    button:hover { border-color: #75e2c2; }
+    @media (max-width: 620px) { body { padding-top: 42px; } .board { grid-template-columns: 1fr; } .lane { min-height: 205px; } }
+  </style>
+</head>
+<body>
+  <main>
+    <p class="eyebrow">Agent Decision Kit · Safe local demo</p>
+    <h1>Move a card.<br><span style="color:#75e2c2">Review first.</span></h1>
+    <p class="lead">A fake kanban board for trying native browser drag and drop. The MCP tool proposes one visible card and one declared lane; the separate confirmation call is required before anything moves.</p>
+    <div class="board" aria-label="Sample task board">
+      <section id="todo" class="lane" role="list" aria-label="To do" data-drop-target="true">
+        <h2>To do</h2>
+        <article id="card" class="card" role="listitem" aria-label="Review the sample pull request" draggable="true" aria-grabbed="false">
+          <span class="grip" aria-hidden="true">⠿</span>
+          <span><strong>Review the sample pull request</strong><small>Fake task · no repository is connected</small></span>
+        </article>
+      </section>
+      <section id="done" class="lane" role="list" aria-label="Done" data-drop-target="true">
+        <h2>Done</h2>
+        <div id="empty" class="empty">Drop the sample card here</div>
+      </section>
+    </div>
+    <div class="status-row" role="status" aria-live="polite"><span class="dot" aria-hidden="true"></span><span id="status">Ready for a local drag.</span></div>
+    <button id="reset" type="button">Reset demo</button>
+  </main>
+  <script>
+    const card = document.querySelector("#card");
+    const todo = document.querySelector("#todo");
+    const done = document.querySelector("#done");
+    const empty = document.querySelector("#empty");
+    const status = document.querySelector("#status");
+
+    card.addEventListener("dragstart", (event) => {
+      event.dataTransfer.effectAllowed = "move";
+      event.dataTransfer.setData("text/plain", card.id);
+    });
+    for (const lane of [todo, done]) {
+      lane.addEventListener("dragover", (event) => event.preventDefault());
+      lane.addEventListener("dragenter", () => lane.dataset.over = "true");
+      lane.addEventListener("dragleave", (event) => {
+        if (!lane.contains(event.relatedTarget)) delete lane.dataset.over;
+      });
+      lane.addEventListener("drop", (event) => {
+        event.preventDefault();
+        delete lane.dataset.over;
+        if (event.dataTransfer.getData("text/plain") !== card.id) return;
+        lane.append(card);
+        empty.hidden = lane === done;
+        status.textContent = lane === done ? "Moved locally after approval." : "Returned to To do.";
+      });
+    }
+    document.querySelector("#reset").addEventListener("click", () => {
+      todo.append(card);
+      empty.hidden = false;
+      status.textContent = "Ready for a local drag.";
+    });
+  </script>
+</body>
+</html>

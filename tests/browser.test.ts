@@ -45,6 +45,7 @@ describe("Playwright browser safety flow", () => {
   let multipleSelectHtml: Buffer;
   let ariaSliderHtml: Buffer;
   let jqueryUiSliderHtml: Buffer;
+  let dragAndDropHtml: Buffer;
 
   beforeAll(async () => {
     const html = await readFile(path.resolve("examples/browser-demo.html"));
@@ -56,6 +57,7 @@ describe("Playwright browser safety flow", () => {
     sliderHtml = Buffer.from('<!doctype html><form onsubmit="event.preventDefault();document.querySelector(\'#status\').textContent=\'Submitted\'"><label for="level">Level</label><input id="level" type="range" min="0" max="20" step="1" value="5"><button type="submit">Submit</button></form><p id="status">Not submitted</p>');
     ariaSliderHtml = Buffer.from('<!doctype html><div id="level" role="slider" aria-label="Level" aria-valuemin="0" aria-valuemax="20" aria-valuenow="4" tabindex="0" style="width:120px;height:20px"></div><p id="value">4</p><script>document.querySelector("#level").addEventListener("keydown",event=>{const control=event.currentTarget;let value=Number(control.getAttribute("aria-valuenow"));if(event.key==="ArrowRight")value=Math.min(20,value+1);else if(event.key==="ArrowLeft")value=Math.max(0,value-1);else return;event.preventDefault();control.setAttribute("aria-valuenow",String(value));document.querySelector("#value").textContent=String(value)})</script>');
     jqueryUiSliderHtml = Buffer.from('<!doctype html><div id="slider-1" class="ui-slider" data-output="value"><span class="ui-slider-handle" tabindex="0" style="display:block;position:absolute;width:16px;height:16px"></span></div><p id="value">4</p><script>document.querySelector(".ui-slider-handle").addEventListener("keydown",event=>{let value=Number(document.querySelector("#value").textContent);if(event.key==="ArrowRight")value=Math.min(20,value+1);else if(event.key==="ArrowLeft")value=Math.max(0,value-1);else return;event.preventDefault();document.querySelector("#value").textContent=String(value)})</script>');
+    dragAndDropHtml = await readFile(path.resolve("examples/browser-drag-demo.html"));
     autocompleteHtml = Buffer.from('<!doctype html><style>.suggestion{cursor:pointer}</style><label>Tag <input id="tag" type="text"></label><div><span class="suggestion">Poland</span><span class="suggestion">Portugal</span></div>');
     multipleSelectHtml = Buffer.from('<!doctype html><label for="tags">Tags</label><select id="tags" multiple><option value="alpha" selected>Alpha</option><option value="beta">Beta</option><option value="gamma">Gamma</option></select><p id="status">Not submitted</p>');
     mixedPointerHtml = Buffer.from('<!doctype html><style>.faux-link { cursor: pointer }</style><button>Section</button><span id="target" class="faux-link">Ultrices</span><p id="status">Not clicked</p><script>document.querySelector("#target").addEventListener("click",()=>document.querySelector("#status").textContent="Clicked locally")</script>');
@@ -89,6 +91,10 @@ describe("Playwright browser safety flow", () => {
         return;
       }
       response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+      if (request.url === "/drag-and-drop") {
+        response.end(dragAndDropHtml);
+        return;
+      }
       response.end(request.url === "/visual-only" ? visualHtml : request.url === "/pointer-text" ? pointerTextHtml : request.url === "/icon-pointer" ? iconPointerHtml : request.url === "/silent-pointer" ? silentPointerHtml : request.url === "/silent-input" ? silentInputHtml : request.url === "/mixed-pointer" ? mixedPointerHtml : request.url === "/checkbox" ? checkboxHtml : request.url === "/submit" ? submitHtml : request.url === "/checkbox-task" ? checkboxTaskHtml : request.url === "/tabs" ? tabHtml : request.url === "/expand" ? expandHtml : request.url === "/native-fields" ? nativeFieldsHtml : request.url === "/copy-fields" ? copyFieldsHtml : request.url === "/slider" ? sliderHtml : request.url === "/aria-slider" ? ariaSliderHtml : request.url === "/jquery-ui-slider" ? jqueryUiSliderHtml : request.url === "/autocomplete" ? autocompleteHtml : request.url === "/multi-select" ? multipleSelectHtml : request.url === "/ambiguous-labels" ? ambiguousLabelsHtml : request.url === "/editable" ? editableContentHtml : request.url === "/silent-form" ? silentFormHtml : request.url === "/decision-race" ? decisionRaceHtml : request.url === "/replacement-action" ? replacementActionHtml : request.url === "/dynamic-refs" ? dynamicRefsHtml : request.url === "/menu" ? menuHtml : request.url === "/ordinal-fields" ? ordinalFieldsHtml : request.url === "/textareas" ? textareaWidgetsHtml : request.url === "/ordinal-button" ? ordinalButtonHtml : request.url === "/multi-disclosure" ? multiDisclosureHtml : html);
     });
     await new Promise<void>((resolve, reject) => {
@@ -214,6 +220,51 @@ describe("Playwright browser safety flow", () => {
 
     const updated = await browser.inspect();
     expect(updated.candidates.some((item) => item.label === "Setup task complete")).toBe(true);
+  }, 45_000);
+
+  it("requires a separate approval to drag a native source to a declared drop target", async () => {
+    profile = await mkdtemp(path.join(os.tmpdir(), "adk-browser-drag-test-"));
+    browser = new BrowserManager({ headless: true, profileDir: path.join(profile, "chromium") });
+    await browser.launch(`${baseUrl}drag-and-drop`);
+
+    const snapshot = await browser.inspect();
+    const source = snapshot.candidates.find((candidate) => candidate.dragSource);
+    const target = snapshot.candidates.find((candidate) => candidate.dropTarget && candidate.label.startsWith("Done —"));
+    expect(snapshot.candidates.filter((candidate) => candidate.dragSource)).toHaveLength(1);
+    expect(source).toMatchObject({ kind: "drag-source", label: expect.stringContaining("Review the sample pull request"), risk: "approval-required", dragSource: true });
+    expect(target).toMatchObject({ kind: "drop-target", label: expect.stringContaining("Done"), risk: "approval-required", dropTarget: true });
+
+    const cancelledProposal = await browser.drag(source!.ref, target!.ref);
+    expect(cancelledProposal).toMatchObject({ status: "awaiting-user-approval", proposedAction: { kind: "drag-and-drop", risk: "approval-required" } });
+    const cancelledToken = "approvalToken" in cancelledProposal ? cancelledProposal.approvalToken : "";
+    expect(await (browser as unknown as { page: Page }).page.locator("#status").innerText()).toBe("Ready for a local drag.");
+    expect(await browser.confirm(cancelledToken, false)).toMatchObject({ status: "cancelled", sourceRef: source!.ref, targetRef: target!.ref });
+
+    const current = await browser.inspect();
+    const currentSource = current.candidates.find((candidate) => candidate.dragSource);
+    const currentTarget = current.candidates.find((candidate) => candidate.dropTarget && candidate.label.startsWith("Done —"));
+    const proposal = await browser.drag(currentSource!.ref, currentTarget!.ref);
+    const token = "approvalToken" in proposal ? proposal.approvalToken : "";
+    const result = await browser.confirm(token, true);
+    expect(result).toMatchObject({ status: "action-executed-after-approval", action: { kind: "drag-and-drop" }, visibleStateChanged: true, effect: { changed: true } });
+    const page = (browser as unknown as { page: Page }).page;
+    expect(await page.locator("#card").evaluate((element) => element.parentElement?.id)).toBe("done");
+    expect(await page.locator("#status").innerText()).toBe("Moved locally after approval.");
+  }, 45_000);
+
+  it("invalidates an approved drag when the page changes after its proposal", async () => {
+    profile = await mkdtemp(path.join(os.tmpdir(), "adk-browser-stale-drag-test-"));
+    browser = new BrowserManager({ headless: true, profileDir: path.join(profile, "chromium") });
+    await browser.launch(`${baseUrl}drag-and-drop`);
+    const snapshot = await browser.inspect();
+    const source = snapshot.candidates.find((candidate) => candidate.dragSource)!;
+    const target = snapshot.candidates.find((candidate) => candidate.dropTarget && candidate.label.startsWith("Done —"))!;
+    const proposal = await browser.drag(source.ref, target.ref);
+    const token = "approvalToken" in proposal ? proposal.approvalToken : "";
+    const page = (browser as unknown as { page: Page }).page;
+    await page.locator("#status").evaluate((element) => { element.textContent = "Page changed after review"; });
+    await expect(browser.confirm(token, true)).rejects.toThrow("page or a declared drag target changed");
+    expect(await page.locator("#card").evaluate((element) => element.parentElement?.id)).toBe("todo");
   }, 45_000);
 
   it("keeps contenteditable drafts out of browser snapshots", async () => {

@@ -78,7 +78,7 @@ try {
   }
 } catch { check(false, "missing sitemap-0.xml"); }
 
-for (const image of ["images/logo.svg", "images/social-preview.png", "images/demo-browser.png", "images/visual-only-demo.png", "images/browser-demo.gif", "images/architecture.svg", "images/decision-flow.svg", "demos/visual-only-demo.html"]) {
+for (const image of ["images/logo.svg", "images/social-preview.png", "images/demo-browser.png", "images/visual-only-demo.png", "images/browser-demo.gif", "images/browser-drag-demo.png", "images/architecture.svg", "images/decision-flow.svg", "demos/visual-only-demo.html"]) {
   try { await stat(path.join(root, image)); }
   catch { check(false, `missing visual asset ${image}`); }
 }

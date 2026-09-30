@@ -6,7 +6,7 @@ import { chromium, type Browser, type BrowserContext, type Page } from "playwrig
 import { closeOcrWorker, findExactOcrTextMatches, recognizeScreenshotText, type OcrBox, type OcrLine } from "./ocr.js";
 import type { DecisionProvider } from "../core/types.js";
 
-export type BrowserCandidate = { ref: string; role: string; label: string; kind: string; risk: "low" | "approval-required"; checked?: boolean; expanded?: boolean; selected?: boolean; readOnly?: boolean; optionLabels?: string[]; selectedOptionLabels?: string[]; min?: number; max?: number; step?: number };
+export type BrowserCandidate = { ref: string; role: string; label: string; kind: string; risk: "low" | "approval-required"; checked?: boolean; expanded?: boolean; selected?: boolean; readOnly?: boolean; dragSource?: boolean; dropTarget?: boolean; optionLabels?: string[]; selectedOptionLabels?: string[]; min?: number; max?: number; step?: number };
 export type BrowserManagerOptions = { headless?: boolean; profileDir?: string; includeCandidateSnapshot?: boolean };
 
 type ViewportMetrics = { width: number; height: number; devicePixelRatio: number };
@@ -18,6 +18,7 @@ type DeterministicBrowserMatch = { candidate: BrowserCandidate; rule: string; no
 type InspectedBrowserCandidate = BrowserCandidate & { privateRangeValue?: number; privateValuePresent?: boolean };
 type PendingBrowserApproval =
   | { kind: "dom"; ref: string; createdAt: number; url: string; fingerprint: string }
+  | { kind: "drag"; sourceRef: string; targetRef: string; createdAt: number; url: string; fingerprint: string }
   | { kind: "visual"; text: string; box: OcrBox; confidence: number; matchSource: VisualMatchSource; createdAt: number; url: string; fingerprint: string; viewport: ViewportMetrics; screenshotPixels: ScreenshotPixels };
 
 const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "::1", "[::1]"]);
@@ -190,6 +191,16 @@ export class BrowserManager {
         return supportedInputTypes.has((element as HTMLInputElement).type || "text");
       });
       const semanticSet = new Set(semanticNodes);
+      const dragSources = Array.from(document.querySelectorAll('[draggable="true"], [aria-grabbed], [data-drag-source]'))
+        .filter(visible)
+        .filter((element) => labelFor(element).length > 0);
+      const dragTargets = dragSources.length
+        ? Array.from(document.querySelectorAll('[dropzone], [aria-dropeffect]:not([aria-dropeffect="none"]), [data-drop-target], [role="list"], [role="listbox"], [role="gridcell"]'))
+          .filter(visible)
+          .filter((element) => labelFor(element).length > 0)
+        : [];
+      const dragNodes = [...dragSources, ...dragTargets].filter((element, index, nodes) => !semanticSet.has(element) && nodes.indexOf(element) === index);
+      const dragNodeSet = new Set(dragNodes);
       const semanticAncestors = new Set<Element>();
       for (const node of semanticNodes) {
         let ancestor = node.parentElement;
@@ -200,7 +211,7 @@ export class BrowserManager {
       }
       const customPointerNodes = semanticNodes.length < 80 ? Array.from(document.querySelectorAll("body *"))
         .filter((element) => {
-          if (semanticSet.has(element) || semanticAncestors.has(element) || element.closest(semanticSelector) || element.closest(`${semanticSelector}, [contenteditable]:not([contenteditable=\"false\"])`)) return false;
+          if (semanticSet.has(element) || dragNodeSet.has(element) || semanticAncestors.has(element) || element.closest(semanticSelector) || element.closest(`${semanticSelector}, [contenteditable]:not([contenteditable=\"false\"])`)) return false;
           if (!visible(element)) return false;
           const label = labelFor(element);
           if (!label || label.length > 240) return false;
@@ -217,13 +228,17 @@ export class BrowserManager {
           return true;
         })
         .slice(0, 80 - semanticNodes.length) : [];
-      const nodes = [...semanticNodes, ...customPointerNodes].slice(0, 80);
+      const nodes = [...semanticNodes, ...dragNodes, ...customPointerNodes].slice(0, 80);
       const customPointerSet = new Set(customPointerNodes);
+      const dragSourceSet = new Set(dragSources);
+      const dragTargetSet = new Set(dragTargets);
       const candidates: InspectedBrowserCandidate[] = nodes.map((element, index) => {
         const ref = `r${index + 1}`;
         element.setAttribute(referenceAttributeName, ref);
         const tag = element.tagName.toLowerCase();
         const customPointer = customPointerSet.has(element);
+        const dragSource = dragSourceSet.has(element);
+        const dropTarget = dragTargetSet.has(element);
         const input = element as HTMLInputElement;
         const isNativeRange = element instanceof HTMLInputElement && input.type === "range";
         const sliderContainer = element.parentElement;
@@ -234,14 +249,14 @@ export class BrowserManager {
         const isKeyboardWidgetSlider = element.matches(".ui-slider-handle[tabindex]")
           && Boolean(sliderContainer?.matches(".ui-slider"))
           && Boolean(sliderOutput && visible(sliderOutput) && Number.isFinite(parsedSliderOutput));
-        const role = customPointer ? "pointer-target" : element.getAttribute("role") ?? (isKeyboardWidgetSlider ? "slider" : tag === "a" ? "link" : tag === "button" ? "button" : tag === "select" ? "combobox" : tag);
+        const role = customPointer ? "pointer-target" : element.getAttribute("role") ?? (isKeyboardWidgetSlider ? "slider" : dragSource && !semanticSet.has(element) ? "draggable" : dropTarget && !semanticSet.has(element) ? "drop-target" : tag === "a" ? "link" : tag === "button" ? "button" : tag === "select" ? "combobox" : tag);
         const isAriaSlider = role === "slider" && !isKeyboardWidgetSlider && !isNativeRange;
-        const kind = customPointer ? "custom-pointer" : isNativeRange || isAriaSlider || isKeyboardWidgetSlider ? "range" : tag === "input" ? (input.type || "text") : tag === "select" ? ((element as HTMLSelectElement).multiple ? "select-multiple" : "select-one") : tag;
+        const kind = customPointer ? "custom-pointer" : dragSource && !semanticSet.has(element) ? "drag-source" : dropTarget && !semanticSet.has(element) ? "drop-target" : isNativeRange || isAriaSlider || isKeyboardWidgetSlider ? "range" : tag === "input" ? (input.type || "text") : tag === "select" ? ((element as HTMLSelectElement).multiple ? "select-multiple" : "select-one") : tag;
         const label = labelFor(element) || `${role} ${index + 1}`;
         const button = element as HTMLButtonElement;
         const riskyInput = tag === "input" && ["submit", "image", "reset"].includes(input.type);
         const riskyButton = tag === "button" && Boolean(button.form) && ["submit", "reset"].includes(button.type);
-        const risky = customPointer || riskyInput || riskyButton || /\b(pay|payment|purchase|buy now|checkout|submit|send|publish|post|delete|remove|transfer|confirm order|place order|unsubscribe|share publicly)\b/i.test(label);
+        const risky = customPointer || dragSource || dropTarget || riskyInput || riskyButton || /\b(pay|payment|purchase|buy now|checkout|submit|send|publish|post|delete|remove|transfer|confirm order|place order|unsubscribe|share publicly)\b/i.test(label);
         const checked = ["checkbox", "radio"].includes(input.type) ? input.checked : ["checkbox", "radio", "switch", "menuitemcheckbox", "menuitemradio"].includes(role) && ["true", "false"].includes(element.getAttribute("aria-checked") ?? "") ? element.getAttribute("aria-checked") === "true" : undefined;
         const expanded = element.getAttribute("aria-expanded");
         const selected = element.getAttribute("aria-selected");
@@ -297,6 +312,8 @@ export class BrowserManager {
           ...(expanded === "true" || expanded === "false" ? { expanded: expanded === "true" } : {}),
           ...(selected === "true" || selected === "false" ? { selected: selected === "true" } : {}),
           ...(readOnly === undefined ? {} : { readOnly }),
+          ...(dragSource ? { dragSource: true } : {}),
+          ...(dropTarget ? { dropTarget: true } : {}),
           ...(optionLabels === undefined ? {} : { optionLabels }),
           ...(selectedOptionLabels === undefined ? {} : { selectedOptionLabels }),
           ...(rangeBounds === undefined ? {} : rangeBounds),
@@ -343,7 +360,7 @@ export class BrowserManager {
     const privateStateFingerprint = createHash("sha256").update(JSON.stringify({ privateFormState, privateActionState, privateRangeState })).digest("hex");
     const safeSnapshot = { ...snapshot, candidates };
     this.lastInspectionFingerprint = snapshotFingerprint({ ...safeSnapshot, privateStateFingerprint });
-    return { ...safeSnapshot, url: redactBrowserUrl(snapshot.url), candidates: candidates.map(({ ref, role, label, kind, risk, checked, expanded, selected, readOnly, optionLabels, selectedOptionLabels, min, max, step }) => ({ ref, role, label, kind, risk, ...(checked === undefined ? {} : { checked }), ...(expanded === undefined ? {} : { expanded }), ...(selected === undefined ? {} : { selected }), ...(readOnly === undefined ? {} : { readOnly }), ...(optionLabels === undefined ? {} : { optionLabels }), ...(selectedOptionLabels === undefined ? {} : { selectedOptionLabels }), ...(min === undefined ? {} : { min }), ...(max === undefined ? {} : { max }), ...(step === undefined ? {} : { step }) })), inspectMs: Math.round(performance.now() - before), candidateLimit: 80, note: "Bounded visible DOM/accessibility snapshot. Alongside semantic controls, it scans keyboard-operated jQuery UI slider handles with a linked visible numeric readout and clear CSS pointer-only text or icon targets within the same 80-candidate limit. Distinct labeled child targets are exposed separately; CSS image filenames may provide a fallback label for icon-only controls. Custom targets have no semantic role and always require a separate approval. Native select options are limited to 12 enabled labels; editable values, passwords, cookies and storage are not returned. Editable values, slider readings and action destinations are hashed locally only to invalidate stale approvals. URL credentials, query and hash are redacted." };
+    return { ...safeSnapshot, url: redactBrowserUrl(snapshot.url), candidates: candidates.map(({ ref, role, label, kind, risk, checked, expanded, selected, readOnly, dragSource, dropTarget, optionLabels, selectedOptionLabels, min, max, step }) => ({ ref, role, label, kind, risk, ...(checked === undefined ? {} : { checked }), ...(expanded === undefined ? {} : { expanded }), ...(selected === undefined ? {} : { selected }), ...(readOnly === undefined ? {} : { readOnly }), ...(dragSource === undefined ? {} : { dragSource }), ...(dropTarget === undefined ? {} : { dropTarget }), ...(optionLabels === undefined ? {} : { optionLabels }), ...(selectedOptionLabels === undefined ? {} : { selectedOptionLabels }), ...(min === undefined ? {} : { min }), ...(max === undefined ? {} : { max }), ...(step === undefined ? {} : { step }) })), inspectMs: Math.round(performance.now() - before), candidateLimit: 80, note: "Bounded visible DOM/accessibility snapshot. Alongside semantic controls, it scans keyboard-operated jQuery UI slider handles with a linked visible numeric readout, native drag sources and declared drop targets, and clear CSS pointer-only text or icon targets within the same 80-candidate limit. Distinct labeled child targets are exposed separately; CSS image filenames may provide a fallback label for icon-only controls. Custom targets have no semantic role and always require a separate approval. Native select options are limited to 12 enabled labels; editable values, passwords, cookies and storage are not returned. Editable values, slider readings and action destinations are hashed locally only to invalidate stale approvals. URL credentials, query and hash are redacted." };
   }
 
   async decideAndAct(task: string, provider: DecisionProvider) {
@@ -451,7 +468,7 @@ export class BrowserManager {
     const pending = this.pending.get(token);
     this.pending.delete(token);
     if (!pending || Date.now() - pending.createdAt > 5 * 60_000) throw new Error("Approval token is invalid or expired. Inspect the page and request the action again.");
-    if (!approve) return { status: "cancelled", ...(pending.kind === "dom" ? { actionRef: pending.ref } : { proposedText: pending.text }) };
+    if (!approve) return { status: "cancelled", ...(pending.kind === "dom" ? { actionRef: pending.ref } : pending.kind === "drag" ? { sourceRef: pending.sourceRef, targetRef: pending.targetRef } : { proposedText: pending.text }) };
     if (pending.kind === "visual") {
       const page = this.requirePage();
       const capture = await this.captureMaskedViewport();
@@ -466,6 +483,24 @@ export class BrowserManager {
       }
       await page.mouse.click(x, y);
       return { status: "action-executed-after-approval", action: { kind: "visual-text-click", text: pending.text, screenshotPixelBox: pending.box, engineConfidence: pending.confidence, calibration: "uncalibrated OCR engine score", matchSource: pending.matchSource }, clickedAtCss: { x: Math.round(x), y: Math.round(y) }, effect: { url: redactBrowserUrl(this.requirePage().url()), title: await this.requirePage().title().catch(() => "") }, note: "An OCR-grounded coordinate was clicked after explicit approval. OCR confidence is not a calibrated probability and the page may interpret the click in unexpected ways." };
+    }
+    if (pending.kind === "drag") {
+      const snapshot = await this.inspect();
+      const source = this.candidates.get(pending.sourceRef);
+      const target = this.candidates.get(pending.targetRef);
+      if (!source?.dragSource || !target?.dropTarget || snapshot.url !== pending.url || this.lastInspectionFingerprint !== pending.fingerprint) {
+        throw new Error("The page or a declared drag target changed after the action was proposed. Approval was cancelled; inspect the page and request the drag again.");
+      }
+      const before = snapshot.textExcerpt;
+      await this.candidateLocator(pending.sourceRef).dragTo(this.candidateLocator(pending.targetRef), { steps: 8, timeout: 5_000 });
+      await this.requirePage().waitForTimeout(100);
+      const after = await this.inspect();
+      return {
+        status: "action-executed-after-approval",
+        action: { kind: "drag-and-drop", source, target, risk: "approval-required" as const },
+        visibleStateChanged: this.lastInspectionFingerprint !== pending.fingerprint,
+        effect: { changed: before !== after.textExcerpt, excerpt: diffExcerpt(before, after.textExcerpt).excerpt },
+      };
     }
     const snapshot = await this.inspect();
     const candidate = this.candidates.get(pending.ref);
@@ -547,6 +582,26 @@ export class BrowserManager {
       return { status: "awaiting-user-approval", approvalToken: token, proposedAction: candidate };
     }
     return { status: "action-executed", action: candidate, effect: await this.perform(candidate) };
+  }
+
+  async drag(sourceRef: string, targetRef: string) {
+    if (sourceRef === targetRef) throw new Error("Choose different drag source and drop target refs.");
+    const inspectedFingerprint = this.lastInspectionFingerprint;
+    if (!inspectedFingerprint || !this.candidates.has(sourceRef) || !this.candidates.has(targetRef)) throw new Error("Unknown or stale drag ref. Call browser_inspect first.");
+    const snapshot = await this.inspect();
+    if (this.lastInspectionFingerprint !== inspectedFingerprint) throw new Error("The page changed after inspection. Inspect it again and select current drag refs.");
+    const source = this.candidates.get(sourceRef);
+    const target = this.candidates.get(targetRef);
+    if (!source?.dragSource) throw new Error("The source must be a visible native draggable element or a marked ARIA/data drag source.");
+    if (!target?.dropTarget) throw new Error("The target must be a visible declared drop target from browser_inspect.");
+    const token = randomUUID();
+    this.pending.set(token, { kind: "drag", sourceRef, targetRef, createdAt: Date.now(), url: snapshot.url, fingerprint: this.lastInspectionFingerprint });
+    return {
+      status: "awaiting-user-approval",
+      approvalToken: token,
+      proposedAction: { kind: "drag-and-drop", source, target, risk: "approval-required" as const },
+      note: "Dragging can move, replace, or submit page content. It never runs until browser_confirm is called. The page and both declared targets must still match the inspected state when approved.",
+    };
   }
 
   async fill(ref: string, text: string) {
