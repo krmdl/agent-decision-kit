@@ -35,6 +35,7 @@ const cases = (await readFile(fixtureSource, "utf8"))
   .split(/\r?\n/).filter(Boolean).map((line) => JSON.parse(line));
 if (cases.length === 0) throw new Error("The decision fixture file must contain at least one JSONL record");
 const provider = createProvider();
+const reportedAccelerator = process.env.AGENT_DECISION_BENCHMARK_ACCELERATOR?.trim() || null;
 const modelCacheDirectoryPresentBeforeRun = provider.id === "semantic-local"
   ? await modelCacheDirectoryExists(provider.model)
   : null;
@@ -105,7 +106,16 @@ const report = `${JSON.stringify({
     architecture: process.arch,
     osVersion: os.release(),
     cpuModel: os.cpus()[0]?.model ?? "not reported",
-    accelerator: provider.id === "semantic-local" ? "CPU (Transformers.js default backend)" : "provider-specific; not inspected",
+    requestedDevice: provider.id === "semantic-local" ? provider.device : null,
+    reportedAccelerator,
+    reportedAcceleratorSource: reportedAccelerator
+      ? "provided by the benchmark operator; this script does not independently detect GPU hardware"
+      : null,
+    accelerator: provider.id !== "semantic-local"
+      ? "provider-specific; not inspected"
+      : provider.device === "cpu"
+        ? "CPU"
+        : `${provider.device} requested; actual per-node execution provider and fallback were not inspected`,
     modelCacheDirectoryPresentBeforeRun,
     modelCacheState: provider.id !== "semantic-local"
       ? "not applicable; provider does not use the Transformers.js model cache"

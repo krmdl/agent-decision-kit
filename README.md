@@ -69,7 +69,7 @@ For local semantic filtering of newline-delimited items:
 cat examples/tasks.txt | node dist/cli.js filter --query "is a browser automation task"
 ```
 
-The first decision call downloads the configured embedding model unless its files are already cached. It runs locally after that. To use a local Ollama or another OpenAI-compatible server instead, set `AGENT_DECISION_PROVIDER=openai-compatible`; the default endpoint is `http://127.0.0.1:11434/v1`.
+The first decision call downloads the configured embedding model unless its files are already cached. The local provider defaults to CPU for predictable behavior. To request an accelerator, set `AGENT_DECISION_DEVICE=auto` or choose a device supported by the installed Transformers.js runtime, such as `dml` on Windows, `cuda` on Linux x64, or `coreml` on macOS; set it to `cpu` to force CPU inference. Device availability depends on the runtime build and drivers, and acceleration can be slower for small batches. Benchmark the same workload on the target machine before changing the default. The upstream [ONNX Runtime Node.js support matrix](https://onnxruntime.ai/docs/get-started/with-javascript/node.html) lists platform-specific execution providers. To use a local Ollama or another OpenAI-compatible server instead, set `AGENT_DECISION_PROVIDER=openai-compatible`; the default endpoint is `http://127.0.0.1:11434/v1`.
 
 ## Browser demo
 

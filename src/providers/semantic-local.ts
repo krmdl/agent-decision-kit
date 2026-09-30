@@ -1,4 +1,4 @@
-import { pipeline } from "@huggingface/transformers";
+import { pipeline, type DeviceType } from "@huggingface/transformers";
 import type { DecisionProvider, DecisionRequest, DecisionResult, DecisionAnswer } from "../core/types.js";
 import { maxProbability, serializeState, softmax, validateProbabilities } from "../core/types.js";
 
@@ -8,14 +8,24 @@ type EmbeddingPipeline = (
 ) => Promise<{ tolist: () => number[][] }>;
 
 const sharedPipelines = new Map<string, Promise<EmbeddingPipeline>>();
+const supportedDevices = ["auto", "gpu", "cpu", "wasm", "webgpu", "cuda", "dml", "coreml"] as const satisfies readonly DeviceType[];
 
-async function getPipeline(model: string): Promise<EmbeddingPipeline> {
-  const existing = sharedPipelines.get(model);
+function resolveDevice(device: string): DeviceType {
+  const normalized = device.trim().toLowerCase();
+  if (!supportedDevices.includes(normalized as (typeof supportedDevices)[number])) {
+    throw new Error(`Unsupported AGENT_DECISION_DEVICE '${device}'. Choose one of: ${supportedDevices.join(", ")}`);
+  }
+  return normalized as DeviceType;
+}
+
+async function getPipeline(model: string, device: DeviceType): Promise<EmbeddingPipeline> {
+  const cacheKey = `${model}\u0000${device}`;
+  const existing = sharedPipelines.get(cacheKey);
   if (existing) return existing;
-  const pending = pipeline("feature-extraction", model, { dtype: "q8" }).then((value) => value as unknown as EmbeddingPipeline);
-  sharedPipelines.set(model, pending);
+  const pending = pipeline("feature-extraction", model, { dtype: "q8", device }).then((value) => value as unknown as EmbeddingPipeline);
+  sharedPipelines.set(cacheKey, pending);
   void pending.catch(() => {
-    if (sharedPipelines.get(model) === pending) sharedPipelines.delete(model);
+    if (sharedPipelines.get(cacheKey) === pending) sharedPipelines.delete(cacheKey);
   });
   return pending;
 }
@@ -42,21 +52,23 @@ function cosine(left: number[], right: number[]): number {
 export class SemanticLocalProvider implements DecisionProvider {
   readonly id = "semantic-local";
   readonly model: string;
+  readonly device: DeviceType;
 
-  constructor(model = process.env.AGENT_DECISION_MODEL ?? "Xenova/all-MiniLM-L6-v2") {
+  constructor(model = process.env.AGENT_DECISION_MODEL ?? "Xenova/all-MiniLM-L6-v2", device = process.env.AGENT_DECISION_DEVICE ?? "cpu") {
     this.model = model;
+    this.device = resolveDevice(device);
   }
 
   async warmup() {
     const start = performance.now();
-    const extractor = await getPipeline(this.model);
+    const extractor = await getPipeline(this.model, this.device);
     await extractor(["Agent Decision Kit local decision warm-up."], { pooling: "mean", normalize: true });
-    return { provider: this.id, model: this.model, latencyMs: Math.round(performance.now() - start) };
+    return { provider: this.id, model: this.model, device: this.device, latencyMs: Math.round(performance.now() - start) };
   }
 
   async decide(request: DecisionRequest): Promise<DecisionResult> {
     const start = performance.now();
-    const extractor = await getPipeline(this.model);
+    const extractor = await getPipeline(this.model, this.device);
     const state = serializeState(request.state).slice(0, 8_000);
     const questions = Object.entries(request.questions);
     const inputs: string[] = [];

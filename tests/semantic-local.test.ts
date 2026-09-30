@@ -71,15 +71,25 @@ describe("SemanticLocalProvider score answers", () => {
     expect(answer.score).toBeLessThanOrEqual(2);
   });
 
-  it("caches one embedding pipeline per configured model", async () => {
+  it("caches one embedding pipeline per model and device", async () => {
     mockPipeline.mockResolvedValue(async (inputs: string[]) => ({ tolist: () => inputs.map(() => [1, 0]) }));
     const request = { state: "Check this", questions: { ok: { type: "noul" as const, instructions: "Is this okay?" } } };
 
-    await new SemanticLocalProvider("model-a").decide(request);
-    await new SemanticLocalProvider("model-b").decide(request);
+    await new SemanticLocalProvider("model-a", "cpu").decide(request);
+    await new SemanticLocalProvider("model-a", "dml").decide(request);
+    await new SemanticLocalProvider("model-a", "cpu").decide(request);
 
     expect(mockPipeline).toHaveBeenCalledTimes(2);
-    expect(mockPipeline.mock.calls.map((call) => call[1])).toEqual(["model-a", "model-b"]);
+    expect(mockPipeline.mock.calls.map((call) => call[1])).toEqual(["model-a", "model-a"]);
+    expect(mockPipeline.mock.calls.map((call) => call[2])).toEqual([
+      { dtype: "q8", device: "cpu" },
+      { dtype: "q8", device: "dml" },
+    ]);
+  });
+
+  it("rejects an unknown inference device with the supported choices", () => {
+    expect(() => new SemanticLocalProvider("model-a", "tensor-core"))
+      .toThrow(/Unsupported AGENT_DECISION_DEVICE .*auto, gpu, cpu, wasm, webgpu, cuda, dml, coreml/);
   });
 
   it("retries pipeline initialization after a transient failure", async () => {
