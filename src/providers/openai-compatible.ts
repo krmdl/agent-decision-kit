@@ -10,6 +10,14 @@ type RawAnswer = {
   probabilities?: unknown;
 };
 
+function providerConfidence(raw: unknown, name: string): number | undefined {
+  if (raw === undefined || raw === null) return undefined;
+  if (typeof raw !== "number" || !Number.isFinite(raw) || raw < 0 || raw > 1) {
+    throw new Error(`Provider returned an invalid confidence for '${name}'`);
+  }
+  return raw;
+}
+
 export interface OpenAICompatibleOptions {
   baseUrl?: string;
   apiKey?: string;
@@ -80,9 +88,7 @@ export class OpenAICompatibleProvider implements DecisionProvider {
         const sourceProbabilities = raw.probabilities && typeof raw.probabilities === "object"
           ? raw.probabilities as Record<string, number>
           : undefined;
-        const confidence = typeof raw.confidence === "number" && Number.isFinite(raw.confidence)
-          ? Math.min(1, Math.max(0, raw.confidence))
-          : undefined;
+        const confidence = providerConfidence(raw.confidence, name);
         if (question.type === "choice") {
           const choice = String(raw.choice ?? "");
           if (!(choice in question.criteria)) throw new Error(`Provider chose unknown option '${choice}' for '${name}'`);
@@ -92,6 +98,7 @@ export class OpenAICompatibleProvider implements DecisionProvider {
           answers[name] = {
             type: "choice", choice,
             ...(probabilities ? { probabilities, confidence: confidence ?? maxProbability(probabilities) } : confidence === undefined ? {} : { confidence }),
+            confidenceSource: confidence !== undefined ? "provider-reported" : probabilities ? "maximum-probability" : "unavailable",
             calibration: "uncalibrated-estimate",
           };
         } else if (question.type === "score") {
@@ -103,6 +110,7 @@ export class OpenAICompatibleProvider implements DecisionProvider {
           answers[name] = {
             type: "score", score,
             ...(probabilities ? { probabilities, confidence: confidence ?? maxProbability(probabilities) } : confidence === undefined ? {} : { confidence }),
+            confidenceSource: confidence !== undefined ? "provider-reported" : probabilities ? "maximum-probability" : "unavailable",
             calibration: "uncalibrated-estimate",
           };
         } else {
@@ -111,6 +119,7 @@ export class OpenAICompatibleProvider implements DecisionProvider {
           answers[name] = {
             type: "noul", noul, probabilities: { true: noul, false: 1 - noul },
             ...(confidence === undefined ? { confidence: Math.max(noul, 1 - noul) } : { confidence }),
+            confidenceSource: confidence !== undefined ? "provider-reported" : "maximum-probability",
             calibration: "uncalibrated-estimate",
           };
         }

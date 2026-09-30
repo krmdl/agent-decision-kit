@@ -13,7 +13,8 @@ Agent Decision Kit runs locally with the permissions of the coding agent that st
 - The diff scanner is a fast pre-review, not a security audit.
 - The completion checker uses text overlap and cannot prove tests passed or behavior is correct.
 - Do not put secrets in browser pages used with remote providers. Remote browser context is blocked unless `AGENT_ALLOW_REMOTE_BROWSER_CONTEXT=true`.
-- Password, hidden, and file inputs are excluded from browser inspection and fill tools.
+- Password, hidden, and file inputs are excluded from browser snapshots and fill tools. Contenteditable draft text is masked from DOM excerpts. Private form values and action destinations are hashed locally only to invalidate stale approvals; raw values are not returned to the agent.
+- A pending approval is cancelled if its page, private form state, or action destination changes. A semantic browser decision is discarded if the page changes while the provider is working. These checks reduce stale-action risk but cannot guarantee how a page's JavaScript will handle a click.
 - CDP access grants control of a local Chrome debugging session. Only connect to a loopback endpoint you started and selected.
 
 Supported releases receive security fixes on the current alpha line. There is no hosted service or telemetry endpoint.

@@ -32,8 +32,24 @@ describe("optional Jev API adapter", () => {
     const sent = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body));
     expect(sent).toMatchObject({ model: "jev-latest", state: request.state, questions: request.questions });
     expect(fetchMock.mock.calls[0]?.[1]?.headers).toMatchObject({ authorization: "Bearer fixture-key" });
-    expect(result.answers.tone).toMatchObject({ choice: "calm", confidence: 0.91, calibration: "provider-calibrated" });
-    expect(result.answers.urgency).toMatchObject({ score: 1.2, calibration: "provider-calibrated" });
-    expect(result.answers.trueStatement).toMatchObject({ noul: 0.96, calibration: "provider-calibrated" });
+    expect(result.answers.tone).toMatchObject({ choice: "calm", confidence: 0.91, confidenceSource: "provider-reported", calibration: "provider-calibrated" });
+    expect(result.answers.urgency).toMatchObject({ score: 1.2, confidenceSource: "provider-reported", calibration: "provider-calibrated" });
+    expect(result.answers.trueStatement).toMatchObject({ noul: 0.96, confidenceSource: "maximum-probability", calibration: "provider-calibrated" });
+  });
+
+  it("rejects non-finite and out-of-range Jev estimates", async () => {
+    const provider = new JevProvider({ apiKey: "fixture-key" });
+    const response = (answer: Record<string, unknown>) => new Response(JSON.stringify({ model: "jev-latest", answers: { result: answer } }), { status: 200 });
+    const call = (answer: Record<string, unknown>, question: DecisionRequest["questions"][string]) => {
+      vi.stubGlobal("fetch", vi.fn(async () => response(answer)));
+      return provider.decide({ state: "fixture", questions: { result: question } });
+    };
+
+    await expect(call({ type: "score", score: null }, { type: "score", instructions: "Rate it", criteria: ["low", "high"] }))
+      .rejects.toThrow(/invalid score/);
+    await expect(call({ type: "noul", noul: 1.1 }, { type: "noul", instructions: "Is it true?" }))
+      .rejects.toThrow(/invalid yes\/no/);
+    await expect(call({ type: "noul", noul: 0.8, confidence: 1.2 }, { type: "noul", instructions: "Is it true?" }))
+      .rejects.toThrow(/invalid confidence/);
   });
 });

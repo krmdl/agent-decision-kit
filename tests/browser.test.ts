@@ -25,6 +25,10 @@ describe("Playwright browser safety flow", () => {
   let expandHtml: Buffer;
   let nativeFieldsHtml: Buffer;
   let ambiguousLabelsHtml: Buffer;
+  let editableContentHtml: Buffer;
+  let silentFormHtml: Buffer;
+  let decisionRaceHtml: Buffer;
+  let replacementActionHtml: Buffer;
 
   beforeAll(async () => {
     const html = await readFile(path.resolve("examples/browser-demo.html"));
@@ -37,6 +41,10 @@ describe("Playwright browser safety flow", () => {
     tabHtml = Buffer.from('<!doctype html><div role="tab">Tab #1</div><div role="tab">Tab #2</div><div role="tab">Tab #3</div>');
     expandHtml = Buffer.from('<!doctype html><button id="toggle" aria-expanded="false" aria-controls="details">Section details</button><div id="details" hidden><p role="tab" aria-expanded="false">Submit</p><form onsubmit="event.preventDefault(); document.querySelector(\'#status\').textContent = \'Submitted locally\'"><button type="submit">Submit</button></form></div><p id="status">Not sent</p><script>document.querySelector(\'#toggle\').addEventListener(\'click\',e=>{const open=e.currentTarget.getAttribute(\'aria-expanded\')!==\'true\';e.currentTarget.setAttribute(\'aria-expanded\',String(open));document.querySelector(\'#details\').hidden=!open;location.hash=\'details\'})</script>');
     nativeFieldsHtml = Buffer.from(`<!doctype html><form id="native-form" onsubmit="event.preventDefault(); document.querySelector('#status').textContent = 'Submitted'"><label for="country">Country</label><select id="country" name="country"><option value="">Choose one</option><option value="ca">Canada</option><option value="cn">China</option><optgroup label="Disabled" disabled><option value="blocked">Unavailable</option></optgroup></select><label for="date">Date</label><input id="date" name="date" type="date"><label for="datepicker">Appointment date</label><input id="datepicker" name="appointment" type="text" aria-label="Appointment date" readonly><div id="picker" role="group" aria-label="December 2016 date picker" hidden><button id="day22" type="button" aria-label="December 22, 2016">22</button></div><button type="submit">Submit</button></form><p id="status">Not submitted</p><script>document.querySelector('#country').addEventListener('change',()=>document.querySelector('#status').textContent='Selected country');document.querySelector('#date').addEventListener('change',()=>document.querySelector('#status').textContent='Date entry updated');document.querySelector('#datepicker').addEventListener('click',()=>document.querySelector('#picker').hidden=false);document.querySelector('#day22').addEventListener('click',()=>{document.querySelector('#datepicker').value='12/22/2016';document.querySelector('#picker').hidden=true;document.querySelector('#status').textContent='Date selected'})</script>`);
+    editableContentHtml = Buffer.from('<!doctype html><h1>Sample page</h1><div contenteditable="true">private-note-do-not-send-73b1</div><p>Public page context</p>');
+    silentFormHtml = Buffer.from('<!doctype html><form onsubmit="event.preventDefault();document.querySelector(\'#status\').textContent=\'Submitted\'"><label for="draft">Draft</label><input id="draft" type="text"><button type="submit">Submit draft</button></form><p id="status">No visible change</p>');
+    decisionRaceHtml = Buffer.from('<!doctype html><button>Read guide</button><p>Waiting for a decision</p>');
+    replacementActionHtml = Buffer.from('<!doctype html><button data-adk-ref="r1" onclick="document.querySelector(\'#status\').textContent=\'Dangerous action executed\'">Delete all data</button><p id="status">Not executed</p>');
     server = createServer((request, response) => {
       if (request.url === "/json/version") {
         if (cdpRedirect) {
@@ -49,7 +57,7 @@ describe("Playwright browser safety flow", () => {
         return;
       }
       response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-      response.end(request.url === "/visual-only" ? visualHtml : request.url === "/pointer-text" ? pointerTextHtml : request.url === "/checkbox" ? checkboxHtml : request.url === "/submit" ? submitHtml : request.url === "/checkbox-task" ? checkboxTaskHtml : request.url === "/tabs" ? tabHtml : request.url === "/expand" ? expandHtml : request.url === "/native-fields" ? nativeFieldsHtml : request.url === "/ambiguous-labels" ? ambiguousLabelsHtml : html);
+      response.end(request.url === "/visual-only" ? visualHtml : request.url === "/pointer-text" ? pointerTextHtml : request.url === "/checkbox" ? checkboxHtml : request.url === "/submit" ? submitHtml : request.url === "/checkbox-task" ? checkboxTaskHtml : request.url === "/tabs" ? tabHtml : request.url === "/expand" ? expandHtml : request.url === "/native-fields" ? nativeFieldsHtml : request.url === "/ambiguous-labels" ? ambiguousLabelsHtml : request.url === "/editable" ? editableContentHtml : request.url === "/silent-form" ? silentFormHtml : request.url === "/decision-race" ? decisionRaceHtml : request.url === "/replacement-action" ? replacementActionHtml : html);
     });
     await new Promise<void>((resolve, reject) => {
       server.once("error", reject);
@@ -174,6 +182,60 @@ describe("Playwright browser safety flow", () => {
 
     const updated = await browser.inspect();
     expect(updated.candidates.some((item) => item.label === "Setup task complete")).toBe(true);
+  }, 45_000);
+
+  it("keeps contenteditable drafts out of browser snapshots", async () => {
+    profile = await mkdtemp(path.join(os.tmpdir(), "adk-browser-editable-privacy-test-"));
+    browser = new BrowserManager({ headless: true, profileDir: path.join(profile, "chromium") });
+    await browser.launch(`${baseUrl}editable`);
+
+    const snapshot = await browser.inspect();
+    const serialized = JSON.stringify(snapshot);
+    expect(serialized).not.toContain("private-note-do-not-send-73b1");
+    expect(serialized).not.toContain("privateFormState");
+    expect(snapshot.textExcerpt).toContain("Public page context");
+  }, 45_000);
+
+  it("invalidates a pending submit approval when a private form value changes", async () => {
+    profile = await mkdtemp(path.join(os.tmpdir(), "adk-browser-form-state-test-"));
+    browser = new BrowserManager({ headless: true, profileDir: path.join(profile, "chromium") });
+    await browser.launch(`${baseUrl}silent-form`);
+
+    const snapshot = await browser.inspect();
+    const submit = snapshot.candidates.find((candidate) => candidate.label === "Submit draft");
+    const draft = snapshot.candidates.find((candidate) => candidate.kind === "text");
+    expect(submit?.risk).toBe("approval-required");
+    const proposed = await browser.act(submit!.ref);
+    const token = "approvalToken" in proposed ? proposed.approvalToken : "";
+    const filled = await browser.fill(draft!.ref, "private value changed after proposal");
+    expect(JSON.stringify(filled)).not.toContain("private value changed after proposal");
+    await expect(browser.confirm(token, true)).rejects.toThrow("The page changed after the action was proposed");
+    expect((await browser.inspect()).textExcerpt).toContain("No visible change");
+  }, 45_000);
+
+  it("does not execute a stale semantic choice after the page changes during inference", async () => {
+    profile = await mkdtemp(path.join(os.tmpdir(), "adk-browser-decision-race-test-"));
+    browser = new BrowserManager({ headless: true, profileDir: path.join(profile, "chromium") });
+    await browser.launch(`${baseUrl}decision-race`);
+    const provider: DecisionProvider = {
+      id: "semantic-local",
+      model: "fixture-model",
+      decide: async () => {
+        await browser.navigate(`${baseUrl}replacement-action`);
+        return {
+          provider: "semantic-local",
+          model: "fixture-model",
+          latencyMs: 1,
+          answers: {
+            action: { type: "choice", choice: "r1", probabilities: { r1: 1 }, confidence: 1, confidenceSource: "maximum-probability", calibration: "uncalibrated-estimate" },
+          },
+        };
+      },
+    };
+
+    const result = await browser.decideAndAct("Identify the most relevant control.", provider);
+    expect(result.status).toBe("page-changed-during-decision");
+    expect((await browser.inspect()).textExcerpt).toContain("Not executed");
   }, 45_000);
 
   it("redacts sensitive URL parts but still detects URL changes before acting", async () => {
@@ -322,6 +384,7 @@ describe("Playwright browser safety flow", () => {
     expect(result.status).toBe("awaiting-user-approval");
     expect(result.selectionRule).toBe("unique-exact-quoted-label");
     expect(result.confidence).toBeNull();
+    expect(result.confidenceSource).toBe("not-applicable-rule");
     expect(result.calibration).toBe("not-applicable-rule");
   }, 45_000);
 

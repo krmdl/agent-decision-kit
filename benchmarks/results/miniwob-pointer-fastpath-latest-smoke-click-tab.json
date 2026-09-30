@@ -1,0 +1,150 @@
+{
+  "benchmark": "miniwob",
+  "task": "click-tab",
+  "taskPrompt": "Click on Tab #2.",
+  "runnerMode": "bounded-repeated-browser-decide-and-act",
+  "toolCoverage": [
+    "browser_connect",
+    "browser_decide_and_act"
+  ],
+  "notExercisedTools": [
+    "browser_action",
+    "browser_confirm",
+    "browser_fill",
+    "browser_select_option",
+    "browser_visual_action",
+    "browser_visual_inspect",
+    "browser_visual_text"
+  ],
+  "toolActionTrace": [],
+  "success": true,
+  "timeout": false,
+  "failureReason": null,
+  "actions": 1,
+  "selectedAction": {
+    "ref": "r3",
+    "role": "tab",
+    "label": "Tab #2 \u2014 Collapsed",
+    "kind": "li",
+    "risk": "low",
+    "expanded": false,
+    "selected": false
+  },
+  "decisionConfidence": null,
+  "decisionCalibration": "not-applicable-rule",
+  "decisionLatencyMs": 0,
+  "decisionCallLatenciesMs": [],
+  "decisionSnapshot": null,
+  "availableCandidates": null,
+  "decisionTrace": [
+    {
+      "step": 1,
+      "decisionStatus": "action-executed",
+      "provider": "local-literal-match",
+      "model": "explicit-tab-number",
+      "selectionRule": "explicit-tab-number",
+      "selectedAction": {
+        "ref": "r3",
+        "role": "tab",
+        "label": "Tab #2 \u2014 Collapsed",
+        "kind": "li",
+        "risk": "low",
+        "expanded": false,
+        "selected": false
+      },
+      "availableCandidates": [
+        {
+          "ref": "r1",
+          "role": "tab",
+          "label": "Tab #1 \u2014 Expanded",
+          "kind": "li",
+          "risk": "low",
+          "expanded": true,
+          "selected": true
+        },
+        {
+          "ref": "r2",
+          "role": "presentation",
+          "label": "Tab #1",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r3",
+          "role": "tab",
+          "label": "Tab #2 \u2014 Collapsed",
+          "kind": "li",
+          "risk": "low",
+          "expanded": false,
+          "selected": false
+        },
+        {
+          "ref": "r4",
+          "role": "presentation",
+          "label": "Tab #2",
+          "kind": "a",
+          "risk": "low"
+        },
+        {
+          "ref": "r5",
+          "role": "tab",
+          "label": "Tab #3 \u2014 Collapsed",
+          "kind": "li",
+          "risk": "low",
+          "expanded": false,
+          "selected": false
+        },
+        {
+          "ref": "r6",
+          "role": "presentation",
+          "label": "Tab #3",
+          "kind": "a",
+          "risk": "low"
+        }
+      ],
+      "decisionLatencyMs": 0,
+      "candidateCount": 6,
+      "confidence": null,
+      "calibration": "not-applicable-rule",
+      "executionStatus": "action-executed"
+    }
+  ],
+  "candidateCount": 6,
+  "selectionRule": "explicit-tab-number",
+  "syntheticApprovalCount": 0,
+  "latencyMs": 1034,
+  "environmentResetLatencyMs": 783,
+  "agentActionLatencyMs": 251,
+  "reward": 1.0,
+  "terminated": true,
+  "decisionStatus": "action-executed",
+  "decisionProvider": "local-literal-match",
+  "decisionModel": "explicit-tab-number",
+  "browserGymVersion": "0.14.3",
+  "browserGymPackageCommit": "0a785fbed075224ae81ca9c1fe924f66050696fe",
+  "playwrightPythonVersion": "1.44.0",
+  "playwrightNodeVersion": "1.63.0",
+  "browserVersion": "HeadlessChrome/125.0.6422.26",
+  "pythonVersion": "3.12.3",
+  "nodeVersion": "v24.20.0",
+  "operatingSystem": "Linux-5.15.0-37-generic-x86_64-with-glibc2.39",
+  "cpu": "x86_64",
+  "accelerator": "CPU",
+  "modelCacheState": "local cache already populated before this episode",
+  "ocrLanguageCacheExistedBeforeEpisode": null,
+  "decisionWarmState": "no semantic decision-provider inference occurred; deterministic local rules and explicit tool calls handled the DOM path",
+  "miniWobCommit": "7fd85d71a4b60325c6585396ec4f48377d049838",
+  "browserStillOpenAfterDisconnect": true,
+  "rawTaskInfo": {
+    "REWARD_GLOBAL": 0.99901,
+    "RAW_REWARD_GLOBAL": 1,
+    "REWARD_REASON": null,
+    "DONE_GLOBAL": true,
+    "EPISODE_ID": 1,
+    "TASK_READY": true
+  },
+  "timestampUtc": "2026-09-30T00:48:23.876743+00:00",
+  "maxActions": 5,
+  "note": "A curated MiniWoB integration smoke check, not a representative BrowserGym benchmark or a full autonomous agent. Multi-tool mode extracts only explicit task values and visible native options; field values are omitted from the raw record. The optional OCR path attempts only the quoted link target and its coordinate click remains behind the standard one-use approval gate; synthetic approval is possible only for the exact local MiniWoB file URL.",
+  "visualOcrActionsEnabled": false
+}

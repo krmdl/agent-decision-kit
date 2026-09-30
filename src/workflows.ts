@@ -40,18 +40,38 @@ export async function findRelevantFiles(root: string, query: string, maxFiles = 
 
 export function pruneContext(input: string, budgetChars = 12_000, retain: string[] = []) {
   if (!Number.isInteger(budgetChars) || budgetChars < 0) throw new Error("budgetChars must be a non-negative integer");
-  const uniqueRetained = [...new Set(retain)];
-  const retainedChars = uniqueRetained.reduce((total, item) => total + item.length, 0);
-  if (retainedChars > budgetChars) throw new Error("The verbatim retained text exceeds the context budget");
+  const uniqueRetained = [...new Set(retain.filter((item) => item.length > 0))];
   const chunks = input.split(/(?<=\n)/);
+  const starts: number[] = [];
+  let offset = 0;
+  for (const chunk of chunks) {
+    starts.push(offset);
+    offset += chunk.length;
+  }
+  const chunkAt = (position: number): number => {
+    let low = 0;
+    let high = chunks.length - 1;
+    while (low <= high) {
+      const middle = Math.floor((low + high) / 2);
+      const start = starts[middle]!;
+      const end = start + chunks[middle]!.length;
+      if (position < start) high = middle - 1;
+      else if (position >= end) low = middle + 1;
+      else return middle;
+    }
+    return Math.max(0, Math.min(chunks.length - 1, low));
+  };
   const kept = new Set<number>();
   let used = 0;
-  for (let index = 0; index < chunks.length; index += 1) {
-    if (uniqueRetained.some((item) => chunks[index]!.includes(item))) {
-      kept.add(index);
-      used += chunks[index]!.length;
-    }
+  for (const item of uniqueRetained) {
+    const matchStart = input.indexOf(item);
+    if (matchStart < 0) throw new Error("A requested retained string does not occur verbatim in the input");
+    const firstChunk = chunkAt(matchStart);
+    const lastChunk = chunkAt(matchStart + item.length - 1);
+    for (let index = firstChunk; index <= lastChunk; index += 1) kept.add(index);
   }
+  used = [...kept].reduce((total, index) => total + chunks[index]!.length, 0);
+  if (used > budgetChars) throw new Error("The source chunks required to preserve retained text exceed the context budget");
   const ranked = chunks.map((text, index) => ({ index, text, score: (text.match(/\b(?:TODO|FIXME|error|export|function|class|interface|async|await|test|return)\b/gi) ?? []).length }))
     .filter((item) => !kept.has(item.index)).sort((a, b) => b.score - a.score || a.index - b.index);
   for (const item of ranked) if (used + item.text.length <= budgetChars) { kept.add(item.index); used += item.text.length; }

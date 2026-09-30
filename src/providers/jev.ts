@@ -13,9 +13,21 @@ type JevRawAnswer = {
   choice?: string;
   score?: number;
   noul?: number;
-  confidence?: number;
+  confidence?: unknown;
   probabilities?: Record<string, number>;
 };
+
+function confidenceMetadata(raw: unknown, fallback: number | undefined, name: string) {
+  if (raw !== undefined && raw !== null) {
+    if (typeof raw !== "number" || !Number.isFinite(raw) || raw < 0 || raw > 1) {
+      throw new Error(`Jev returned an invalid confidence for '${name}'`);
+    }
+    return { confidence: raw, confidenceSource: "provider-reported" as const };
+  }
+  return fallback === undefined
+    ? { confidenceSource: "unavailable" as const }
+    : { confidence: fallback, confidenceSource: "maximum-probability" as const };
+}
 
 export class JevProvider implements DecisionProvider {
   readonly id = "jev";
@@ -53,33 +65,37 @@ export class JevProvider implements DecisionProvider {
       for (const [name, question] of Object.entries(request.questions)) {
         const raw = payload.answers[name];
         if (!raw || raw.type !== question.type) throw new Error(`Jev returned a missing or invalid answer for '${name}'`);
+        const confidence = (fallback?: number) => confidenceMetadata(raw.confidence, fallback, name);
         if (question.type === "choice") {
           if (!raw.choice || !(raw.choice in question.criteria)) throw new Error(`Jev returned an unknown choice for '${name}'`);
           const probabilities = raw.probabilities
             ? validateProbabilities(Object.fromEntries(Object.keys(question.criteria).map((key) => [key, Number(raw.probabilities?.[key] ?? 0)])))
             : undefined;
+          const confidenceFields = confidence(probabilities ? maxProbability(probabilities) : undefined);
           answers[name] = {
             type: "choice", choice: raw.choice,
             ...(probabilities ? { probabilities } : {}),
-            ...(typeof raw.confidence === "number" ? { confidence: raw.confidence } : probabilities ? { confidence: maxProbability(probabilities) } : {}),
+            ...confidenceFields,
             calibration: "provider-calibrated",
           };
         } else if (question.type === "score") {
-          if (typeof raw.score !== "number" || raw.score < 0 || raw.score > question.criteria.length - 1) throw new Error(`Jev returned an invalid score for '${name}'`);
+          if (typeof raw.score !== "number" || !Number.isFinite(raw.score) || raw.score < 0 || raw.score > question.criteria.length - 1) throw new Error(`Jev returned an invalid score for '${name}'`);
           const probabilities = raw.probabilities
             ? validateProbabilities(Object.fromEntries(question.criteria.map((_, index) => [String(index), Number(raw.probabilities?.[String(index)] ?? 0)])))
             : undefined;
+          const confidenceFields = confidence(probabilities ? maxProbability(probabilities) : undefined);
           answers[name] = {
             type: "score", score: raw.score,
             ...(probabilities ? { probabilities } : {}),
-            ...(typeof raw.confidence === "number" ? { confidence: raw.confidence } : probabilities ? { confidence: maxProbability(probabilities) } : {}),
+            ...confidenceFields,
             calibration: "provider-calibrated",
           };
         } else {
-          if (typeof raw.noul !== "number" || raw.noul < 0 || raw.noul > 1) throw new Error(`Jev returned an invalid yes/no result for '${name}'`);
+          if (typeof raw.noul !== "number" || !Number.isFinite(raw.noul) || raw.noul < 0 || raw.noul > 1) throw new Error(`Jev returned an invalid yes/no result for '${name}'`);
+          const confidenceFields = confidence(Math.max(raw.noul, 1 - raw.noul));
           answers[name] = {
             type: "noul", noul: raw.noul, probabilities: { true: raw.noul, false: 1 - raw.noul },
-            confidence: Math.max(raw.noul, 1 - raw.noul), calibration: "provider-calibrated",
+            ...confidenceFields, calibration: "provider-calibrated",
           };
         }
       }

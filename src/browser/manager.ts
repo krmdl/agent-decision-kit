@@ -94,6 +94,14 @@ export class BrowserManager {
     const page = this.requirePage();
     const before = performance.now();
     const result = await page.evaluate(() => {
+      const editableText = Array.from(document.querySelectorAll<HTMLElement>("[contenteditable]:not([contenteditable='false'])"))
+        .map((element) => (element.innerText || element.textContent || "").replace(/\s+/g, " ").trim())
+        .filter(Boolean);
+      const redactEditableText = (value: string) => {
+        let redacted = value.replace(/\s+/g, " ").trim();
+        for (const text of editableText) redacted = redacted.split(text).join("[editable content]");
+        return redacted;
+      };
       const visible = (element: Element) => {
         const style = getComputedStyle(element);
         const rect = element.getBoundingClientRect();
@@ -101,12 +109,12 @@ export class BrowserManager {
       };
       const labelFor = (element: Element) => {
         const input = element as HTMLInputElement;
-        const labelledBy = (element.getAttribute("aria-labelledby") ?? "").split(/\s+/).filter(Boolean).map((id) => document.getElementById(id)?.textContent?.trim() ?? "").filter(Boolean).join(" ");
-        const aria = element.getAttribute("aria-label") || labelledBy || element.getAttribute("title") || "";
-        const id = element.id ? document.querySelector(`label[for="${CSS.escape(element.id)}"]`)?.textContent ?? "" : "";
-        const wrappingLabel = element.closest("label")?.textContent?.replace(/\s+/g, " ").trim() ?? "";
+        const labelledBy = (element.getAttribute("aria-labelledby") ?? "").split(/\s+/).filter(Boolean).map((id) => redactEditableText(document.getElementById(id)?.textContent ?? "")).filter(Boolean).join(" ");
+        const aria = redactEditableText(element.getAttribute("aria-label") || labelledBy || element.getAttribute("title") || "");
+        const id = element.id ? redactEditableText(document.querySelector(`label[for="${CSS.escape(element.id)}"]`)?.textContent ?? "") : "";
+        const wrappingLabel = redactEditableText(element.closest("label")?.textContent ?? "");
         const isSelect = element.tagName.toLowerCase() === "select";
-        const text = isSelect ? "" : (element.textContent ?? "").replace(/\s+/g, " ").trim();
+        const text = isSelect ? "" : redactEditableText(element.textContent ?? "");
         const placeholder = input.placeholder ?? "";
         const name = input.getAttribute("name") ?? "";
         const checked = ["checkbox", "radio"].includes(input.type) ? input.checked : ["checkbox", "radio", "switch", "menuitemcheckbox", "menuitemradio"].includes(element.getAttribute("role") ?? "") && ["true", "false"].includes(element.getAttribute("aria-checked") ?? "") ? element.getAttribute("aria-checked") === "true" : undefined;
@@ -176,13 +184,37 @@ export class BrowserManager {
           ...(readOnly === undefined ? {} : { readOnly }),
         };
       });
-      const heading = Array.from(document.querySelectorAll("h1,h2")).slice(0, 8).map((element) => element.textContent?.trim()).filter(Boolean);
-      const body = (document.body?.innerText ?? "").replace(/\s+/g, " ").trim().slice(0, 2_000);
-      return { title: document.title, url: location.href, headings: heading, textExcerpt: body, candidates };
+      const heading = Array.from(document.querySelectorAll("h1,h2")).slice(0, 8).map((element) => redactEditableText(element.textContent ?? "")).filter(Boolean);
+      const body = redactEditableText(document.body?.innerText ?? "").slice(0, 2_000);
+      const privateFormState = Array.from(document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | HTMLElement>("input,textarea,select,[contenteditable]:not([contenteditable='false'])"))
+        .map((element) => {
+          if (element instanceof HTMLInputElement) return ["input", element.type, element.value, element.checked];
+          if (element instanceof HTMLTextAreaElement) return ["textarea", element.value];
+          if (element instanceof HTMLSelectElement) return ["select", element.selectedIndex, element.value];
+          return ["contenteditable", element.innerText || element.textContent || ""];
+        });
+      const privateActionState = nodes.map((element) => {
+        const form = element instanceof HTMLButtonElement || element instanceof HTMLInputElement ? element.form : element.closest("form");
+        const disabled = element instanceof HTMLButtonElement || element instanceof HTMLInputElement || element instanceof HTMLSelectElement || element instanceof HTMLTextAreaElement
+          ? element.disabled
+          : element.getAttribute("aria-disabled") === "true";
+        return {
+          tag: element.tagName,
+          href: element instanceof HTMLAnchorElement ? element.href : "",
+          target: element.getAttribute("target") ?? "",
+          type: "type" in element ? (element as HTMLButtonElement).type : "",
+          disabled,
+          cursor: getComputedStyle(element).cursor,
+          form: form ? { action: form.action, method: form.method, target: form.target, enctype: form.enctype } : null,
+        };
+      });
+      return { title: document.title, url: location.href, headings: heading, textExcerpt: body, candidates, privateFormState, privateActionState };
     });
-    this.candidates = new Map(result.candidates.map((candidate) => [candidate.ref, candidate]));
-    this.lastInspectionFingerprint = snapshotFingerprint(result);
-    return { ...result, url: redactBrowserUrl(result.url), candidates: result.candidates.map(({ ref, role, label, kind, risk, checked, expanded, selected, readOnly }) => ({ ref, role, label, kind, risk, ...(checked === undefined ? {} : { checked }), ...(expanded === undefined ? {} : { expanded }), ...(selected === undefined ? {} : { selected }), ...(readOnly === undefined ? {} : { readOnly }) })), inspectMs: Math.round(performance.now() - before), candidateLimit: 80, note: "Bounded visible DOM/accessibility snapshot. Only when no semantic controls exist, it also scans clear CSS pointer-only text targets; custom targets have no semantic role and always require a separate approval. Native select options are limited to 12 visible labels; input values, passwords, cookies and storage are not included. URL credentials, query and hash are redacted." };
+    const { privateFormState, privateActionState, ...snapshot } = result;
+    this.candidates = new Map(snapshot.candidates.map((candidate) => [candidate.ref, candidate]));
+    const privateStateFingerprint = createHash("sha256").update(JSON.stringify({ privateFormState, privateActionState })).digest("hex");
+    this.lastInspectionFingerprint = snapshotFingerprint({ ...snapshot, privateStateFingerprint });
+    return { ...snapshot, url: redactBrowserUrl(snapshot.url), candidates: snapshot.candidates.map(({ ref, role, label, kind, risk, checked, expanded, selected, readOnly }) => ({ ref, role, label, kind, risk, ...(checked === undefined ? {} : { checked }), ...(expanded === undefined ? {} : { expanded }), ...(selected === undefined ? {} : { selected }), ...(readOnly === undefined ? {} : { readOnly }) })), inspectMs: Math.round(performance.now() - before), candidateLimit: 80, note: "Bounded visible DOM/accessibility snapshot. Only when no semantic controls exist, it also scans clear CSS pointer-only text targets; custom targets have no semantic role and always require a separate approval. Native select options are limited to 12 visible labels; input values, passwords, cookies and storage are not included. Editable field state is hashed locally only to invalidate stale approvals and is never returned. URL credentials, query and hash are redacted." };
   }
 
   async decideAndAct(task: string, provider: DecisionProvider) {
@@ -225,7 +257,7 @@ export class BrowserManager {
     if (selected.risk === "approval-required") {
       const token = randomUUID();
       this.pending.set(token, { kind: "dom", ref: selected.ref, createdAt: Date.now(), url: snapshot.url, fingerprint: this.lastInspectionFingerprint });
-      return { status: "awaiting-user-approval", approvalToken: token, proposedAction: selected, candidateCount: snapshot.candidates.length, provider: decision.provider, model: decision.model, decisionLatencyMs: Math.round(decision.latencyMs), confidence: decision.answers.action?.confidence, calibration: decision.answers.action?.calibration, note: "Call browser_confirm with this token and approve=true only after reviewing the proposed action. The separate tool call is the user confirmation." };
+      return { status: "awaiting-user-approval", approvalToken: token, proposedAction: selected, candidateCount: snapshot.candidates.length, provider: decision.provider, model: decision.model, decisionLatencyMs: Math.round(decision.latencyMs), confidence: decision.answers.action?.confidence, confidenceSource: decision.answers.action?.confidenceSource, calibration: decision.answers.action?.calibration, note: "Call browser_confirm with this token and approve=true only after reviewing the proposed action. The separate tool call is the user confirmation." };
     }
     const probabilities = decision.answers.action?.type === "choice" ? Object.values(decision.answers.action.probabilities ?? {}) : [];
     const sorted = [...probabilities].sort((left, right) => right - left);
@@ -233,7 +265,7 @@ export class BrowserManager {
       return { status: "ambiguous-selection", decision: decision.answers.action, candidateCount: snapshot.candidates.length, provider: decision.provider, model: decision.model, decisionLatencyMs: Math.round(decision.latencyMs), candidates: snapshot.candidates, note: "The uncalibrated semantic scores are too close to choose a browser action automatically. Call browser_action with the ref you want." };
     }
     const effect = await this.perform(selected);
-    return { status: "action-executed", action: selected, candidateCount: snapshot.candidates.length, provider: decision.provider, model: decision.model, decisionLatencyMs: Math.round(decision.latencyMs), confidence: decision.answers.action?.confidence, calibration: decision.answers.action?.calibration, effect };
+    return { status: "action-executed", action: selected, candidateCount: snapshot.candidates.length, provider: decision.provider, model: decision.model, decisionLatencyMs: Math.round(decision.latencyMs), confidence: decision.answers.action?.confidence, confidenceSource: decision.answers.action?.confidenceSource, calibration: decision.answers.action?.calibration, effect };
   }
 
   async confirm(token: string, approve: boolean) {
@@ -269,6 +301,7 @@ export class BrowserManager {
       model: rule,
       decisionLatencyMs: 0,
       confidence: null,
+      confidenceSource: "not-applicable-rule",
       calibration: "not-applicable-rule",
       selectionRule: rule,
       ...(this.includeCandidateSnapshot ? { candidateSnapshot: snapshot.candidates } : {}),
@@ -312,6 +345,7 @@ export class BrowserManager {
     if (!["text", "search", "email", "tel", "url", "number", "date", "datetime-local", "time", "month", "week", "textarea"].includes(candidate.kind)) throw new Error("This field type is not supported for text entry. Password, file, and hidden fields are excluded.");
     const locator = this.requirePage().locator(`[data-adk-ref="${candidate.ref}"]`).first();
     await locator.fill(text, { timeout: 5_000 });
+    await this.inspect();
     return { status: "filled", ref, characterCount: text.length, valueReturned: false, note: "Text was entered only into the page field; it was not submitted." };
   }
 
@@ -328,6 +362,7 @@ export class BrowserManager {
     const matches = labels.filter((label) => label === optionLabel);
     if (matches.length !== 1) throw new Error("Choose one exact, enabled option label visible in the current select control.");
     await locator.selectOption({ label: optionLabel }, { timeout: 5_000 });
+    await this.inspect();
     return { status: "selected", ref, optionLabel, submitted: false, valueReturned: false, note: "A visible native option was selected. The page was not submitted." };
   }
 
@@ -497,8 +532,8 @@ function diffExcerpt(before: string, after: string) {
   return { changed: true, excerpt };
 }
 
-function snapshotFingerprint(snapshot: { title: string; url: string; headings: string[]; textExcerpt: string; candidates: BrowserCandidate[] }) {
-    const stable = JSON.stringify({ title: snapshot.title, url: snapshot.url, headings: snapshot.headings, textExcerpt: snapshot.textExcerpt, candidates: snapshot.candidates.map(({ ref, role, label, kind, risk, checked, expanded, selected, readOnly }) => ({ ref, role, label, kind, risk, checked, expanded, selected, readOnly })) });
+function snapshotFingerprint(snapshot: { title: string; url: string; headings: string[]; textExcerpt: string; candidates: BrowserCandidate[]; privateStateFingerprint?: string }) {
+  const stable = JSON.stringify({ title: snapshot.title, url: snapshot.url, headings: snapshot.headings, textExcerpt: snapshot.textExcerpt, candidates: snapshot.candidates.map(({ ref, role, label, kind, risk, checked, expanded, selected, readOnly }) => ({ ref, role, label, kind, risk, checked, expanded, selected, readOnly })), privateStateFingerprint: snapshot.privateStateFingerprint ?? "" });
   return createHash("sha256").update(stable).digest("hex");
 }
 

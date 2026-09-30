@@ -7,11 +7,17 @@ type EmbeddingPipeline = (
   options: { pooling: "mean"; normalize: true },
 ) => Promise<{ tolist: () => number[][] }>;
 
-let sharedPipeline: Promise<EmbeddingPipeline> | undefined;
+const sharedPipelines = new Map<string, Promise<EmbeddingPipeline>>();
 
 async function getPipeline(model: string): Promise<EmbeddingPipeline> {
-  sharedPipeline ??= pipeline("feature-extraction", model, { dtype: "q8" }).then((value) => value as unknown as EmbeddingPipeline);
-  return sharedPipeline;
+  const existing = sharedPipelines.get(model);
+  if (existing) return existing;
+  const pending = pipeline("feature-extraction", model, { dtype: "q8" }).then((value) => value as unknown as EmbeddingPipeline);
+  sharedPipelines.set(model, pending);
+  void pending.catch(() => {
+    if (sharedPipelines.get(model) === pending) sharedPipelines.delete(model);
+  });
+  return pending;
 }
 
 function vectorize(output: { tolist: () => number[][] }): number[][] {
@@ -39,6 +45,13 @@ export class SemanticLocalProvider implements DecisionProvider {
 
   constructor(model = process.env.AGENT_DECISION_MODEL ?? "Xenova/all-MiniLM-L6-v2") {
     this.model = model;
+  }
+
+  async warmup() {
+    const start = performance.now();
+    const extractor = await getPipeline(this.model);
+    await extractor(["Agent Decision Kit local decision warm-up."], { pooling: "mean", normalize: true });
+    return { provider: this.id, model: this.model, latencyMs: Math.round(performance.now() - start) };
   }
 
   async decide(request: DecisionRequest): Promise<DecisionResult> {
@@ -78,13 +91,13 @@ export class SemanticLocalProvider implements DecisionProvider {
 
       if (item.type === "choice") {
         const choice = Object.entries(probabilities).sort((left, right) => right[1] - left[1])[0]?.[0] ?? item.original[0]!;
-        answers[item.name] = { type: "choice", choice, probabilities, confidence, calibration: "uncalibrated-estimate" };
+        answers[item.name] = { type: "choice", choice, probabilities, confidence, confidenceSource: "maximum-probability", calibration: "uncalibrated-estimate" };
       } else if (item.type === "score") {
         const score = item.original.reduce((total, _criterion, index) => total + index * (probabilities[String(index)] ?? 0), 0);
-        answers[item.name] = { type: "score", score, probabilities, confidence, calibration: "uncalibrated-estimate" };
+        answers[item.name] = { type: "score", score, probabilities, confidence, confidenceSource: "maximum-probability", calibration: "uncalibrated-estimate" };
       } else {
         const noul = probabilities.true ?? 0.5;
-        answers[item.name] = { type: "noul", noul, probabilities: { true: noul, false: 1 - noul }, confidence, calibration: "uncalibrated-estimate" };
+        answers[item.name] = { type: "noul", noul, probabilities: { true: noul, false: 1 - noul }, confidence, confidenceSource: "maximum-probability", calibration: "uncalibrated-estimate" };
       }
     }
 
@@ -95,5 +108,5 @@ export class SemanticLocalProvider implements DecisionProvider {
 }
 
 export function resetSemanticPipelineForTests(): void {
-  sharedPipeline = undefined;
+  sharedPipelines.clear();
 }

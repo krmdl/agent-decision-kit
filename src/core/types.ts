@@ -47,9 +47,11 @@ export type DecisionQuestion = z.infer<typeof DecisionQuestionSchema>;
 export type DecisionRequest = z.infer<typeof DecisionRequestSchema>;
 
 export type CalibrationStatus = "provider-calibrated" | "posthoc-calibrated" | "uncalibrated-estimate" | "unavailable";
+export type ConfidenceSource = "provider-reported" | "maximum-probability" | "unavailable" | "not-applicable-rule";
 
 export interface AnswerMetadata {
   confidence?: number;
+  confidenceSource: ConfidenceSource;
   calibration: CalibrationStatus;
   latencyMs?: number;
 }
@@ -85,6 +87,7 @@ export interface DecisionProvider {
   readonly id: string;
   readonly model: string;
   decide(request: DecisionRequest): Promise<DecisionResult>;
+  warmup?(): Promise<{ provider: string; model: string; latencyMs: number }>;
 }
 
 export function serializeState(state: DecisionRequest["state"]): string {

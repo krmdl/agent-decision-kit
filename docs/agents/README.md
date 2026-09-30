@@ -32,6 +32,6 @@ Replace `/absolute/path/to/agent-decision-kit` in the examples below with the ch
 
 ## Smoke test
 
-After adding the config, use the client’s MCP list/status command and ask it to call `model_route` on a simple prompt. For browser actions, start with `examples/browser-demo.html` on localhost. Agent-specific commands and prompts are described in each guide.
+After adding the config, use the client’s MCP list/status command and ask it to call `model_route` on a simple prompt. For a latency-sensitive session, call `provider_warmup` once before ambiguous semantic decisions; its first call may download model weights and its timing is not a performance guarantee. For browser actions, start with `examples/browser-demo.html` on localhost. Agent-specific commands and prompts are described in each guide.
 
 To attach to a tab in a separate Chrome profile, see the [local Chrome tab connection guide](../browser-chrome.md). It covers the loopback-only CDP endpoint and the required list-then-select calls.

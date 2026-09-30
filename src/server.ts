@@ -1,7 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { DecisionRequestSchema } from "./core/types.js";
+import { DecisionRequestSchema, type DecisionProvider } from "./core/types.js";
 import { createProvider } from "./providers/index.js";
 import { BrowserManager } from "./browser/manager.js";
 import { closeOcrWorker } from "./browser/ocr.js";
@@ -12,14 +12,22 @@ function asToolResult(value: unknown) {
   return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }], structuredContent: data };
 }
 
-export function createServer() {
+export function createServer(options: { provider?: DecisionProvider } = {}) {
   const server = new McpServer({ name: "agent-decision-kit", version: "0.1.0-alpha.1" });
   const browser = new BrowserManager(process.env.AGENT_DECISION_BROWSER_DIR ? { profileDir: process.env.AGENT_DECISION_BROWSER_DIR } : {});
-  const provider = createProvider();
+  const provider = options.provider ?? createProvider();
+
+  server.registerTool("provider_warmup", {
+    title: "Warm the local decision model",
+    description: "Optionally initialize and run one local embedding before latency-sensitive decisions. The first call may download model files and can be slow on CPU. Remote providers do not need or support this local warm-up.",
+    inputSchema: {},
+  }, async () => provider.warmup
+    ? asToolResult({ status: "ready", ...await provider.warmup(), note: "Warm-up ran in this MCP server process. It does not establish accuracy or a latency guarantee." })
+    : asToolResult({ status: "not-supported", provider: provider.id, model: provider.model, note: "This provider does not expose a local warm-up operation." }));
 
   server.registerTool("decide", {
     title: "Structured decision",
-    description: "Answer up to eight typed choice, score, or yes/no questions in one batch. Confidence calibration status is explicit.",
+    description: "Answer up to eight typed choice, score, or yes/no questions in one batch. Each answer identifies its confidence source and calibration status.",
     inputSchema: { request: z.unknown() },
   }, async ({ request }) => {
     try { return asToolResult(await provider.decide(DecisionRequestSchema.parse(request))); }

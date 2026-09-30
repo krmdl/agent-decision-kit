@@ -32,6 +32,19 @@ describe("local workflow helpers", () => {
     expect(result.outputChars).toBeLessThanOrEqual(80);
   });
 
+  it("preserves a retained string that crosses line boundaries", () => {
+    const exact = "ECONNREFUSED 127.0.0.1:5432\n    at connect (src/db.ts:18)";
+    const result = pruneContext(`header\n${exact}\nfooter\n`, 120, [exact]);
+    expect(result.retainedVerbatim).toBe(true);
+    expect(result.text).toContain(exact);
+    expect(result.outputChars).toBeLessThanOrEqual(120);
+  });
+
+  it("fails clearly when a retained string is missing or its source lines do not fit", () => {
+    expect(() => pruneContext("only available text\n", 100, ["missing path.ts:42"])).toThrow(/does not occur verbatim/);
+    expect(() => pruneContext("prefix RETAINED suffix\n", "RETAINED".length, ["RETAINED"])).toThrow(/exceed the context budget/);
+  });
+
   it("returns transparent model routing and catches a simple risky diff", () => {
     expect(routeModel("fix this typo", { available: ["fast", "reasoning"] }).route).toBe("fast");
     expect(routeModel("review the security architecture", { available: ["fast", "reasoning"] }).route).toBe("reasoning");
@@ -52,9 +65,9 @@ class FakeProvider implements DecisionProvider {
       if (question.type === "choice") {
         const labels = Object.keys(question.criteria);
         const probabilities = Object.fromEntries(labels.map((label) => [label, label === "value_1" ? 0.8 : 0.2 / (labels.length - 1)]));
-        answers[key] = { type: "choice", choice: labels[0]!, probabilities, confidence: 0.8, calibration: "uncalibrated-estimate" };
-      } else if (question.type === "noul") answers[key] = { type: "noul", noul: 0.7, probabilities: { true: 0.7, false: 0.3 }, confidence: 0.7, calibration: "uncalibrated-estimate" };
-      else answers[key] = { type: "score", score: 1, calibration: "uncalibrated-estimate" };
+        answers[key] = { type: "choice", choice: labels[0]!, probabilities, confidence: 0.8, confidenceSource: "maximum-probability", calibration: "uncalibrated-estimate" };
+      } else if (question.type === "noul") answers[key] = { type: "noul", noul: 0.7, probabilities: { true: 0.7, false: 0.3 }, confidence: 0.7, confidenceSource: "maximum-probability", calibration: "uncalibrated-estimate" };
+      else answers[key] = { type: "score", score: 1, confidenceSource: "unavailable", calibration: "uncalibrated-estimate" };
     }
     return { provider: this.id, model: this.model, latencyMs: 1, answers };
   }
