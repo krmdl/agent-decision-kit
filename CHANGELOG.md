@@ -3,6 +3,9 @@
 ## Unreleased
 
 - Resolve role-prefixed labels, ordinal radio/textbox instructions, and revealed menu-item targets locally; track visited disclosures so multi-section searches do not toggle tabs back and forth.
+- Select exact requested options in native lists before proposing submission, set explicit native slider values without returning them, and block submit proposals while task-requested text fields remain empty.
+- Stop repeated automatic approval loops when a confirmed pointer-only click leaves the visible page unchanged.
+- Return range-slider bounds and step without exposing its current form value; add an explicit `browser_set_range` MCP tool.
 - Include bounded CSS `cursor: pointer` targets alongside semantic browser controls; custom targets remain subject to the sensitive-action approval gate.
 - Click an explicitly requested textarea widget instead of only focusing it, and keep the synthetic MiniWoB form workflow aligned with explicit ordinals and its local submit approval gate.
 - Expose read-only browser fields in bounded snapshots and open their visible picker with `browser_action`; reject attempts to fill them directly.

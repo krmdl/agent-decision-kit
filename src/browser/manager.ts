@@ -6,7 +6,7 @@ import { chromium, type Browser, type BrowserContext, type Page } from "playwrig
 import { closeOcrWorker, findExactOcrTextMatches, recognizeScreenshotText, type OcrBox, type OcrLine } from "./ocr.js";
 import type { DecisionProvider } from "../core/types.js";
 
-export type BrowserCandidate = { ref: string; role: string; label: string; kind: string; risk: "low" | "approval-required"; checked?: boolean; expanded?: boolean; selected?: boolean; readOnly?: boolean };
+export type BrowserCandidate = { ref: string; role: string; label: string; kind: string; risk: "low" | "approval-required"; checked?: boolean; expanded?: boolean; selected?: boolean; readOnly?: boolean; optionLabels?: string[]; selectedOptionLabels?: string[]; min?: number; max?: number; step?: number };
 export type BrowserManagerOptions = { headless?: boolean; profileDir?: string; includeCandidateSnapshot?: boolean };
 
 type ViewportMetrics = { width: number; height: number; devicePixelRatio: number };
@@ -14,6 +14,8 @@ type ScreenshotPixels = { width: number; height: number };
 type VisualMatchSource = "automatic" | "sparse-text-fallback";
 type VisualSnapshot = { url: string; fingerprint: string; lines: OcrLine[]; matchSource: VisualMatchSource; viewport: ViewportMetrics; screenshotPixels: ScreenshotPixels; createdAt: number };
 type DisclosureSearchIntent = { task: string; url: string; createdAt: number; visitedCandidateKeys: string[] };
+type DeterministicBrowserMatch = { candidate: BrowserCandidate; rule: string; note: string; optionLabel?: string; rangeValue?: number };
+type InspectedBrowserCandidate = BrowserCandidate & { privateRangeValue?: number; privateValuePresent?: boolean };
 type PendingBrowserApproval =
   | { kind: "dom"; ref: string; createdAt: number; url: string; fingerprint: string }
   | { kind: "visual"; text: string; box: OcrBox; confidence: number; matchSource: VisualMatchSource; createdAt: number; url: string; fingerprint: string; viewport: ViewportMetrics; screenshotPixels: ScreenshotPixels };
@@ -27,6 +29,9 @@ export class BrowserManager {
   private page: Page | undefined;
   private candidates = new Map<string, BrowserCandidate>();
   private pending = new Map<string, PendingBrowserApproval>();
+  private privateFieldValuePresence = new Map<string, boolean>();
+  private privateRangeValues = new Map<string, number>();
+  private nonProgressingPointerActions = new Set<string>();
   private ownsContext = false;
   private lastInspectionFingerprint = "";
   private completedDisclosureIntent: { task: string; url: string; createdAt: number } | undefined;
@@ -138,7 +143,7 @@ export class BrowserManager {
         if (options.length) parts.push(`Options: ${options.join(", ")}`);
         return parts.join(" — ").slice(0, 240);
       };
-      const supportedInputTypes = new Set(["text", "search", "email", "tel", "url", "number", "date", "datetime-local", "time", "month", "week", "checkbox", "radio", "submit", "image", "button", "reset"]);
+      const supportedInputTypes = new Set(["text", "search", "email", "tel", "url", "number", "date", "datetime-local", "time", "month", "week", "range", "checkbox", "radio", "submit", "image", "button", "reset"]);
       const semanticRoles = "[role=button], [role=link], [role=tab], [role=checkbox], [role=radio], [role=switch], [role=menuitem], [role=menuitemcheckbox], [role=menuitemradio], [role=option]";
       const semanticSelector = `button, a[href], input:not([type=password]):not([type=hidden]):not([type=file]), textarea, select, ${semanticRoles}`;
       const all = Array.from(document.querySelectorAll(semanticSelector));
@@ -163,7 +168,7 @@ export class BrowserManager {
         .slice(0, 80 - semanticNodes.length) : [];
       const nodes = [...semanticNodes, ...customPointerNodes].slice(0, 80);
       const customPointerSet = new Set(customPointerNodes);
-      const candidates: BrowserCandidate[] = nodes.map((element, index) => {
+      const candidates: InspectedBrowserCandidate[] = nodes.map((element, index) => {
         const ref = `r${index + 1}`;
         element.setAttribute(referenceAttributeName, ref);
         const tag = element.tagName.toLowerCase();
@@ -180,6 +185,30 @@ export class BrowserManager {
         const expanded = element.getAttribute("aria-expanded");
         const selected = element.getAttribute("aria-selected");
         const readOnly = (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) && element.readOnly ? true : undefined;
+        const isSelect = element instanceof HTMLSelectElement;
+        const optionLabels = isSelect
+          ? Array.from(element.options).filter((option) => !option.disabled && !(option.parentElement?.tagName === "OPTGROUP" && (option.parentElement as HTMLOptGroupElement).disabled) && option.label.trim()).slice(0, 12).map((option) => option.label.trim())
+          : undefined;
+        const selectedOptionLabels = isSelect
+          ? Array.from(element.selectedOptions).filter((option) => !option.disabled && option.label.trim()).slice(0, 12).map((option) => option.label.trim())
+          : undefined;
+        const rangeBounds = element instanceof HTMLInputElement && element.type === "range"
+          ? (() => {
+            const parsedMin = Number(element.min);
+            const parsedMax = Number(element.max);
+            const parsedStep = Number(element.step);
+            return {
+              min: element.min === "" || !Number.isFinite(parsedMin) ? 0 : parsedMin,
+              max: element.max === "" || !Number.isFinite(parsedMax) ? 100 : parsedMax,
+              ...(element.step === "any" ? {} : { step: element.step === "" || !Number.isFinite(parsedStep) || parsedStep <= 0 ? 1 : parsedStep }),
+            };
+          })()
+          : undefined;
+        const privateRangeValue = element instanceof HTMLInputElement && element.type === "range" ? element.valueAsNumber : undefined;
+        const privateValuePresent = element instanceof HTMLInputElement && ["text", "search", "email", "tel", "url", "number", "date", "datetime-local", "time", "month"].includes(element.type)
+          ? element.value.length > 0
+          : element instanceof HTMLTextAreaElement ? element.value.length > 0
+            : element instanceof HTMLSelectElement ? Array.from(element.selectedOptions).some((option) => option.value.length > 0) : undefined;
         return {
           ref,
           role,
@@ -190,6 +219,11 @@ export class BrowserManager {
           ...(expanded === "true" || expanded === "false" ? { expanded: expanded === "true" } : {}),
           ...(selected === "true" || selected === "false" ? { selected: selected === "true" } : {}),
           ...(readOnly === undefined ? {} : { readOnly }),
+          ...(optionLabels === undefined ? {} : { optionLabels }),
+          ...(selectedOptionLabels === undefined ? {} : { selectedOptionLabels }),
+          ...(rangeBounds === undefined ? {} : rangeBounds),
+          ...(privateRangeValue === undefined ? {} : { privateRangeValue }),
+          ...(privateValuePresent === undefined ? {} : { privateValuePresent }),
         };
       });
       const heading = Array.from(document.querySelectorAll("h1,h2")).slice(0, 8).map((element) => redactEditableText(element.textContent ?? "")).filter(Boolean);
@@ -218,11 +252,19 @@ export class BrowserManager {
       });
       return { title: document.title, url: location.href, headings: heading, textExcerpt: body, candidates, privateFormState, privateActionState };
     }, this.referenceAttributeName);
-    const { privateFormState, privateActionState, ...snapshot } = result;
-    this.candidates = new Map(snapshot.candidates.map((candidate) => [candidate.ref, candidate]));
+    const { privateFormState, privateActionState, candidates: rawCandidates, ...snapshot } = result;
+    this.privateFieldValuePresence.clear();
+    this.privateRangeValues.clear();
+    const candidates = rawCandidates.map(({ privateRangeValue, privateValuePresent, ...candidate }) => {
+      if (privateRangeValue !== undefined) this.privateRangeValues.set(candidate.ref, privateRangeValue);
+      if (privateValuePresent !== undefined) this.privateFieldValuePresence.set(candidate.ref, privateValuePresent);
+      return candidate;
+    });
+    this.candidates = new Map(candidates.map((candidate) => [candidate.ref, candidate]));
     const privateStateFingerprint = createHash("sha256").update(JSON.stringify({ privateFormState, privateActionState })).digest("hex");
-    this.lastInspectionFingerprint = snapshotFingerprint({ ...snapshot, privateStateFingerprint });
-    return { ...snapshot, url: redactBrowserUrl(snapshot.url), candidates: snapshot.candidates.map(({ ref, role, label, kind, risk, checked, expanded, selected, readOnly }) => ({ ref, role, label, kind, risk, ...(checked === undefined ? {} : { checked }), ...(expanded === undefined ? {} : { expanded }), ...(selected === undefined ? {} : { selected }), ...(readOnly === undefined ? {} : { readOnly }) })), inspectMs: Math.round(performance.now() - before), candidateLimit: 80, note: "Bounded visible DOM/accessibility snapshot. Alongside semantic controls, it scans clear CSS pointer-only text targets within the same 80-candidate limit; custom targets have no semantic role and always require a separate approval. Native select options are limited to 12 visible labels; input values, passwords, cookies and storage are not included. Editable field state is hashed locally only to invalidate stale approvals and is never returned. URL credentials, query and hash are redacted." };
+    const safeSnapshot = { ...snapshot, candidates };
+    this.lastInspectionFingerprint = snapshotFingerprint({ ...safeSnapshot, privateStateFingerprint });
+    return { ...safeSnapshot, url: redactBrowserUrl(snapshot.url), candidates: candidates.map(({ ref, role, label, kind, risk, checked, expanded, selected, readOnly, optionLabels, selectedOptionLabels, min, max, step }) => ({ ref, role, label, kind, risk, ...(checked === undefined ? {} : { checked }), ...(expanded === undefined ? {} : { expanded }), ...(selected === undefined ? {} : { selected }), ...(readOnly === undefined ? {} : { readOnly }), ...(optionLabels === undefined ? {} : { optionLabels }), ...(selectedOptionLabels === undefined ? {} : { selectedOptionLabels }), ...(min === undefined ? {} : { min }), ...(max === undefined ? {} : { max }), ...(step === undefined ? {} : { step }) })), inspectMs: Math.round(performance.now() - before), candidateLimit: 80, note: "Bounded visible DOM/accessibility snapshot. Alongside semantic controls, it scans clear CSS pointer-only text targets within the same 80-candidate limit; custom targets have no semantic role and always require a separate approval. Native select options are limited to 12 enabled labels; editable values, passwords, cookies and storage are not returned. Editable values and action destinations are hashed locally only to invalidate stale approvals. URL credentials, query and hash are redacted." };
   }
 
   async decideAndAct(task: string, provider: DecisionProvider) {
@@ -270,23 +312,43 @@ export class BrowserManager {
       const submit = findUniqueSubmitCandidate(snapshot.candidates);
       if (submit) localMatch = { candidate: submit, rule: "expanded-section-then-submit", note: "The previous call expanded the requested section. This explicit next step still requires separate approval before submission." };
     }
-    if (!searchIsActive) localMatch ??= findDeterministicMatch(task, snapshot.candidates);
-    if (localMatch) return this.applyLocalMatch(localMatch.candidate, snapshot, localMatch.rule, localMatch.note, task);
+    if (!searchIsActive) {
+      const rangePlan = findExplicitRangePlan(task, snapshot.candidates, this.privateRangeValues);
+      if (rangePlan?.error) return { status: "no-safe-selection", candidateCount: snapshot.candidates.length, candidates: snapshot.candidates, note: rangePlan.error };
+      if (rangePlan?.allSet && !/\b(?:submit|send|publish|post)\b/i.test(task)) return { status: "target-values-already-set", candidateCount: snapshot.candidates.length, note: "Every explicitly named visible slider already has its requested value. No control was changed." };
+      if (rangePlan?.match) localMatch ??= rangePlan.match;
+      localMatch ??= findDeterministicMatch(task, snapshot.candidates, this.privateRangeValues);
+    }
+    const missingFields = findUnfilledTaskFields(task, snapshot.candidates, this.privateFieldValuePresence);
+    if (missingFields.length && (!localMatch || isSubmitCandidate(localMatch.candidate))) {
+      return { status: "prerequisite-fields-required", candidateCount: snapshot.candidates.length, requiredFields: missingFields, note: "The task asks for form entry before submission, and these visible fields are still empty. No submit action was sent to the decision provider or proposed. Fill or select the requested values, inspect again, then ask to submit; submission will still require separate approval." };
+    }
+    if (localMatch) {
+      if (isPointerTarget(localMatch.candidate) && this.nonProgressingPointerActions.has(pointerActionKey(this.lastInspectionFingerprint, localMatch.candidate))) {
+        return { status: "repeated-action-blocked", action: localMatch.candidate, note: "The previous approved click on this pointer-only target left the visible page state unchanged. The same automatic click is blocked to prevent an approval loop; inspect the page and choose a different action or explicitly use browser_action." };
+      }
+      return this.applyLocalMatch(localMatch.candidate, snapshot, localMatch.rule, localMatch.note, task, localMatch.optionLabel, localMatch.rangeValue);
+    }
     if (provider.id !== "semantic-local" && process.env.AGENT_ALLOW_REMOTE_BROWSER_CONTEXT !== "true") {
       return { status: "remote-provider-blocked-for-browser-privacy", provider: provider.id, candidates: snapshot.candidates, note: "Page labels and text are untrusted browser data. Set AGENT_ALLOW_REMOTE_BROWSER_CONTEXT=true only if you intend to send these bounded labels to the configured remote provider." };
     }
+    const availableCandidates = snapshot.candidates.filter((candidate) => !isPointerTarget(candidate) || !this.nonProgressingPointerActions.has(pointerActionKey(this.lastInspectionFingerprint, candidate)));
+    if (!availableCandidates.length) return { status: "repeated-action-blocked", candidateCount: snapshot.candidates.length, note: "The only visible pointer-only target was already approved once and left the page state unchanged. No repeated click was proposed." };
     const decisionContextFingerprint = this.lastInspectionFingerprint;
     const decision = await provider.decide({
-      state: { url: snapshot.url, title: snapshot.title, headings: snapshot.headings, textExcerpt: snapshot.textExcerpt, candidates: snapshot.candidates.map(({ ref, role, label, kind, risk, checked, expanded, selected, readOnly }) => ({ ref, role, label, kind, risk, ...(checked === undefined ? {} : { checked }), ...(expanded === undefined ? {} : { expanded }), ...(selected === undefined ? {} : { selected }), ...(readOnly === undefined ? {} : { readOnly }) })) },
-      questions: { action: { type: "choice", instructions: task, criteria: Object.fromEntries(snapshot.candidates.map(({ ref, role, label, kind }) => [ref, `${role} (${kind}): ${label}`])) } },
+      state: { url: snapshot.url, title: snapshot.title, headings: snapshot.headings, textExcerpt: snapshot.textExcerpt, candidates: availableCandidates.map(({ ref, role, label, kind, risk, checked, expanded, selected, readOnly, optionLabels, selectedOptionLabels, min, max, step }) => ({ ref, role, label, kind, risk, ...(checked === undefined ? {} : { checked }), ...(expanded === undefined ? {} : { expanded }), ...(selected === undefined ? {} : { selected }), ...(readOnly === undefined ? {} : { readOnly }), ...(optionLabels === undefined ? {} : { optionLabels }), ...(selectedOptionLabels === undefined ? {} : { selectedOptionLabels }), ...(min === undefined ? {} : { min }), ...(max === undefined ? {} : { max }), ...(step === undefined ? {} : { step }) })) },
+      questions: { action: { type: "choice", instructions: task, criteria: Object.fromEntries(availableCandidates.map(({ ref, role, label, kind }) => [ref, `${role} (${kind}): ${label}`])) } },
     });
     const refreshed = await this.inspect();
     if (this.lastInspectionFingerprint !== decisionContextFingerprint) {
       return { status: "page-changed-during-decision", candidateCount: refreshed.candidates.length, candidates: refreshed.candidates, note: "The page changed while the decision provider was working. No action was performed; inspect the current page and request a new decision." };
     }
     const selectedRef = decision.answers.action?.type === "choice" ? decision.answers.action.choice : "";
-    const selected = this.candidates.get(selectedRef);
-    if (!selected) return { status: "no-safe-selection", provider: decision.provider, model: decision.model, decisionLatencyMs: Math.round(decision.latencyMs), decision: decision.answers.action, candidateCount: snapshot.candidates.length, candidates: snapshot.candidates, note: "No available page action matched the task confidently enough to execute safely. The semantic provider's confidence is not calibrated." };
+    const selected = availableCandidates.find((candidate) => candidate.ref === selectedRef);
+    if (!selected) return { status: "no-safe-selection", provider: decision.provider, model: decision.model, decisionLatencyMs: Math.round(decision.latencyMs), decision: decision.answers.action, candidateCount: availableCandidates.length, candidates: availableCandidates, note: "No available page action matched the task confidently enough to execute safely. The semantic provider's confidence is not calibrated." };
+    if (isPointerTarget(selected) && this.nonProgressingPointerActions.has(pointerActionKey(this.lastInspectionFingerprint, selected))) {
+      return { status: "repeated-action-blocked", action: selected, provider: decision.provider, model: decision.model, note: "The previous approved click on this pointer-only target left the visible page state unchanged. The same automatic click is blocked to prevent an approval loop; inspect the page and choose a different action or explicitly use browser_action." };
+    }
     if (selected.risk === "approval-required") {
       const token = randomUUID();
       this.pending.set(token, { kind: "dom", ref: selected.ref, createdAt: Date.now(), url: snapshot.url, fingerprint: this.lastInspectionFingerprint });
@@ -324,10 +386,21 @@ export class BrowserManager {
     const snapshot = await this.inspect();
     const candidate = this.candidates.get(pending.ref);
     if (!candidate || snapshot.url !== pending.url || this.lastInspectionFingerprint !== pending.fingerprint) throw new Error("The page changed after the action was proposed. The approval was cancelled; inspect it and request the action again.");
-    return { status: "action-executed-after-approval", action: candidate, effect: await this.perform(candidate) };
+    const effect = await this.perform(candidate);
+    if (isPointerTarget(candidate)) {
+      const after = await this.inspect();
+      if (this.lastInspectionFingerprint === pending.fingerprint) {
+        this.nonProgressingPointerActions.add(pointerActionKey(pending.fingerprint, candidate));
+        if (this.nonProgressingPointerActions.size > 256) this.nonProgressingPointerActions.clear();
+      } else {
+        this.nonProgressingPointerActions.delete(pointerActionKey(pending.fingerprint, candidate));
+      }
+      return { status: "action-executed-after-approval", action: candidate, effect, visibleStateChanged: this.lastInspectionFingerprint !== pending.fingerprint, ...(after.url === pending.url ? {} : { note: "The click navigated the page." }) };
+    }
+    return { status: "action-executed-after-approval", action: candidate, effect };
   }
 
-  private async applyLocalMatch(candidate: BrowserCandidate, snapshot: { title: string; url: string; headings: string[]; textExcerpt: string; candidates: BrowserCandidate[] }, rule: string, note: string, task: string) {
+  private async applyLocalMatch(candidate: BrowserCandidate, snapshot: { title: string; url: string; headings: string[]; textExcerpt: string; candidates: BrowserCandidate[] }, rule: string, note: string, task: string, optionLabel?: string, rangeValue?: number) {
     const metadata = {
       candidateCount: snapshot.candidates.length,
       provider: "local-literal-match",
@@ -345,7 +418,11 @@ export class BrowserManager {
       return { status: "awaiting-user-approval", approvalToken: token, proposedAction: candidate, ...metadata, note };
     }
     const clickTextControl = rule === "explicit-any-textarea" && /\bclick\b/i.test(task);
-    const effect = await this.perform(candidate, clickTextControl);
+    const effect = optionLabel !== undefined
+      ? await this.selectOption(candidate.ref, optionLabel)
+      : rangeValue !== undefined
+        ? await this.setRange(candidate.ref, rangeValue)
+        : await this.perform(candidate, clickTextControl);
     if (["single-collapsed-control", "unique-expand-control"].includes(rule)) {
       this.completedDisclosureIntent = { task: normalizeLabel(task), url: pageIdentity(this.requirePage().url()), createdAt: Date.now() };
     }
@@ -400,12 +477,59 @@ export class BrowserManager {
     const candidate = this.candidates.get(ref);
     if (!candidate || !["select-one", "select-multiple"].includes(candidate.kind)) throw new Error("This ref is not a native select control.");
     const locator = this.candidateLocator(candidate.ref);
-    const labels = await locator.evaluate((element) => Array.from((element as HTMLSelectElement).options).filter((option) => !option.disabled && !(option.parentElement?.tagName === "OPTGROUP" && (option.parentElement as HTMLOptGroupElement).disabled)).map((option) => option.label.trim()).filter(Boolean));
-    const matches = labels.filter((label) => label === optionLabel);
+    const options = await locator.evaluate((element) => Array.from((element as HTMLSelectElement).options).filter((option) => !option.disabled && !(option.parentElement?.tagName === "OPTGROUP" && (option.parentElement as HTMLOptGroupElement).disabled)).map((option) => ({ label: option.label.trim(), value: option.value })).filter((option) => Boolean(option.label)));
+    const matches = options.filter((option) => option.label === optionLabel);
     if (matches.length !== 1) throw new Error("Choose one exact, enabled option label visible in the current select control.");
-    await locator.selectOption({ label: optionLabel }, { timeout: 5_000 });
+    if (candidate.kind === "select-multiple") {
+      const selectedValues = await locator.evaluate((element) => Array.from((element as HTMLSelectElement).selectedOptions).filter((option) => !option.disabled && !(option.parentElement?.tagName === "OPTGROUP" && (option.parentElement as HTMLOptGroupElement).disabled)).map((option) => option.value));
+      await locator.selectOption([...new Set([...selectedValues, matches[0]!.value])], { timeout: 5_000 });
+    } else {
+      await locator.selectOption({ label: optionLabel }, { timeout: 5_000 });
+    }
     await this.inspect();
     return { status: "selected", ref, optionLabel, submitted: false, valueReturned: false, note: "A visible native option was selected. The page was not submitted." };
+  }
+
+  async setRange(ref: string, value: number) {
+    if (!Number.isFinite(value)) throw new Error("Range value must be a finite number.");
+    const inspectedFingerprint = this.lastInspectionFingerprint;
+    if (!this.candidates.has(ref) || !inspectedFingerprint) throw new Error("Unknown or stale range ref. Call browser_inspect first.");
+    const snapshot = await this.inspect();
+    if (this.lastInspectionFingerprint !== inspectedFingerprint) throw new Error("The page changed after inspection. Inspect it again and select a current range ref.");
+    const candidate = this.candidates.get(ref);
+    if (!candidate || candidate.kind !== "range") throw new Error("This ref is not a visible native range slider.");
+    const locator = this.candidateLocator(candidate.ref);
+    const constraints = await locator.evaluate((element) => {
+      if (!(element instanceof HTMLInputElement) || element.type !== "range") throw new Error("This ref is not a native range input.");
+      const parsedMin = Number(element.min);
+      const parsedMax = Number(element.max);
+      const parsedStep = Number(element.step);
+      return {
+        min: element.min === "" || !Number.isFinite(parsedMin) ? 0 : parsedMin,
+        max: element.max === "" || !Number.isFinite(parsedMax) ? 100 : parsedMax,
+        step: element.step === "any" ? undefined : element.step === "" || !Number.isFinite(parsedStep) || parsedStep <= 0 ? 1 : parsedStep,
+        current: element.valueAsNumber,
+      };
+    });
+    if (value < constraints.min || value > constraints.max) throw new Error(`Range value must be between ${constraints.min} and ${constraints.max}.`);
+    if (constraints.step !== undefined) {
+      const offset = (value - constraints.min) / constraints.step;
+      if (Math.abs(offset - Math.round(offset)) > 1e-7) throw new Error(`Range value must align with the ${constraints.step} step from ${constraints.min}.`);
+    }
+    const equalRequestedValue = Math.abs(constraints.current - value) <= 1e-9;
+    if (!equalRequestedValue) {
+      await locator.evaluate((element, target) => {
+        if (!(element instanceof HTMLInputElement) || element.type !== "range") throw new Error("This ref is not a native range input.");
+        const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+        setter?.call(element, String(target));
+        element.dispatchEvent(new Event("input", { bubbles: true }));
+        element.dispatchEvent(new Event("change", { bubbles: true }));
+      }, value);
+      await this.inspect();
+      const appliedValue = this.privateRangeValues.get(ref);
+      if (appliedValue === undefined || Math.abs(appliedValue - value) > 1e-9) return { status: "range-value-not-applied", ref, valueReturned: false, submitted: false, note: "The page did not retain the requested slider value after its input events. Nothing was submitted." };
+    }
+    return { status: equalRequestedValue ? "already-set" : "set", ref, valueReturned: false, submitted: false, note: "The explicit value was applied to this native range control. Its value was not returned, and the page was not submitted." };
   }
 
   async visualInspect(question?: string) {
@@ -508,7 +632,7 @@ export class BrowserManager {
     if (this.context && this.ownsContext) await this.context.close().catch(() => undefined);
     if (this.browser) await this.browser.close().catch(() => undefined);
     await closeOcrWorker().catch(() => undefined);
-    this.context = undefined; this.browser = undefined; this.page = undefined; this.ownsContext = false; this.lastInspectionFingerprint = ""; this.candidates.clear(); this.pending.clear(); this.completedDisclosureIntent = undefined; this.disclosureSearchIntent = undefined; this.lastVisualSnapshot = undefined;
+    this.context = undefined; this.browser = undefined; this.page = undefined; this.ownsContext = false; this.lastInspectionFingerprint = ""; this.candidates.clear(); this.pending.clear(); this.privateFieldValuePresence.clear(); this.privateRangeValues.clear(); this.nonProgressingPointerActions.clear(); this.completedDisclosureIntent = undefined; this.disclosureSearchIntent = undefined; this.lastVisualSnapshot = undefined;
     return { closed: true };
   }
 
@@ -528,6 +652,10 @@ export class BrowserManager {
     if (["select-one", "select-multiple"].includes(candidate.kind)) {
       await locator.focus();
       return { focused: true, note: "Choose a visible option with browser_select_option; the page was not submitted." };
+    }
+    if (candidate.kind === "range") {
+      await locator.focus();
+      return { focused: true, valueReturned: false, note: "The range control was focused without changing its value. Use browser_set_range with an explicit numeric value; the page was not submitted." };
     }
     if (candidate.role === "textarea" || (candidate.role === "input" && ["text", "search", "email", "tel", "url", "number", "date", "datetime-local", "time", "month", "week"].includes(candidate.kind))) {
       if (clickTextControl) {
@@ -583,7 +711,7 @@ function diffExcerpt(before: string, after: string) {
 }
 
 function snapshotFingerprint(snapshot: { title: string; url: string; headings: string[]; textExcerpt: string; candidates: BrowserCandidate[]; privateStateFingerprint?: string }) {
-  const stable = JSON.stringify({ title: snapshot.title, url: snapshot.url, headings: snapshot.headings, textExcerpt: snapshot.textExcerpt, candidates: snapshot.candidates.map(({ ref, role, label, kind, risk, checked, expanded, selected, readOnly }) => ({ ref, role, label, kind, risk, checked, expanded, selected, readOnly })), privateStateFingerprint: snapshot.privateStateFingerprint ?? "" });
+  const stable = JSON.stringify({ title: snapshot.title, url: snapshot.url, headings: snapshot.headings, textExcerpt: snapshot.textExcerpt, candidates: snapshot.candidates.map(({ ref, role, label, kind, risk, checked, expanded, selected, readOnly, optionLabels, selectedOptionLabels, min, max, step }) => ({ ref, role, label, kind, risk, checked, expanded, selected, readOnly, optionLabels, selectedOptionLabels, min, max, step })), privateStateFingerprint: snapshot.privateStateFingerprint ?? "" });
   return createHash("sha256").update(stable).digest("hex");
 }
 
@@ -595,7 +723,7 @@ function sameScreenshotPixels(left: ScreenshotPixels, right: ScreenshotPixels) {
   return left.width === right.width && left.height === right.height;
 }
 
-function findDeterministicMatch(task: string, candidates: BrowserCandidate[]) {
+function findDeterministicMatch(task: string, candidates: BrowserCandidate[], rangeValues: Map<string, number>): DeterministicBrowserMatch | undefined {
   const normalized = normalizeLabel(task);
   const taskCandidates = findOrdinalTaskCandidate(task, candidates);
   if (taskCandidates) return taskCandidates;
@@ -607,6 +735,31 @@ function findDeterministicMatch(task: string, candidates: BrowserCandidate[]) {
     const tabs = candidates.filter((candidate) => candidate.role === "tab" || candidate.role === "link");
     const matches = tabs.filter((candidate) => labelParts(candidate).includes(target));
     if (matches.length === 1) return { candidate: matches[0]!, rule: "explicit-tab-number", note: "The task names one tab number that matches one visible tab label." };
+  }
+
+  const optionIntent = task.match(/\b(?:select|choose|pick)\s+(.+?)\s+(?:from|in)\s+(?:the\s+)?(?:scroll\s+)?(?:list|dropdown|select(?:\s+box)?|menu)\b/i)?.[1]
+    ?.trim()
+    .replace(/^(?:the\s+)?(?:option\s+)?["'“”]+|["'“”]+$/gu, "")
+    .replace(/\s+option$/i, "")
+    .trim();
+  if (optionIntent) {
+    const target = normalizeLabel(optionIntent);
+    const options = candidates.flatMap((candidate) => {
+      if (!["select-one", "select-multiple"].includes(candidate.kind)) return [];
+      return (candidate.optionLabels ?? []).filter((label) => normalizeLabel(label) === target).map((label) => ({ candidate, label }));
+    });
+    if (options.length === 1 && !options[0]!.candidate.selectedOptionLabels?.some((label) => normalizeLabel(label) === target)) {
+      return { candidate: options[0]!.candidate, optionLabel: options[0]!.label, rule: "explicit-native-select-option", note: "The task names one exact enabled option in a visible native select. Only that option is selected; form submission remains a separate approved step." };
+    }
+  }
+  const prefix = task.match(/\b(?:starts?\s+with|starting\s+with)\s+["“]([^"”\r\n]{1,80})["”]/i)?.[1];
+  if (prefix && /\b(?:an?|any|one)\s+(?:visible\s+)?(?:item|option|entry|tag|value)\b/i.test(task)) {
+    const normalizedPrefix = normalizeLabel(prefix);
+    const firstAllowedMatch = candidates.find((candidate) =>
+      ["pointer-target", "option", "button", "menuitem"].includes(candidate.role)
+      && labelParts(candidate).some((part) => part.startsWith(normalizedPrefix)),
+    );
+    if (firstAllowedMatch) return { candidate: firstAllowedMatch, rule: "first-visible-option-matching-explicit-prefix", note: `The task accepts any item beginning with the quoted prefix. The first visible matching option is selected; consequential custom targets still require approval.` };
   }
 
   const checkboxTargets = task.match(/\b(?:select|check|tick|choose)\s+(.*?)(?=\s+(?:and|then)\s+(?:click|press|tap)\b|[.!?]|$)/i)?.[1]
@@ -655,7 +808,7 @@ function findDeterministicMatch(task: string, candidates: BrowserCandidate[]) {
     if (normalized.includes("and click submit")) return undefined;
   }
 
-  if (/\b(?:click|press|tap|hit)\s+(?:the\s+)?submit\b/i.test(task)) {
+  if (/\b(?:(?:click|press|tap|hit)\s+(?:the\s+)?submit|submit(?:\s+when\s+done)?)\b/i.test(task)) {
     const submission = findUniqueSubmitCandidate(candidates);
     if (submission) return { candidate: submission, rule: "unique-explicit-submit-control", note: "The task explicitly requests the one visible submit control. Sensitive form submission still requires a separate approval call." };
   }
@@ -665,6 +818,70 @@ function findDeterministicMatch(task: string, candidates: BrowserCandidate[]) {
   const explicitLabel = findUniqueExplicitCommandLabel(task, candidates);
   if (explicitLabel) return { candidate: explicitLabel, rule: "unique-explicit-command-label", note: "The task names one exact visible control label. Only unique literal matches are performed locally; sensitive actions still require separate approval." };
   return undefined;
+}
+
+function findExplicitRangePlan(task: string, candidates: BrowserCandidate[], rangeValues: Map<string, number>) {
+  const match = task.match(/\b(?:set|adjust|move)\s+(?:the\s+)?sliders?\s+to\s+(?:the\s+)?(?:combination\s+)?\[([^\]]+)\]/i);
+  if (!match) return undefined;
+  const values = match[1]!.split(",").map((part) => Number(part.trim()));
+  const ranges = candidates.filter((candidate) => candidate.kind === "range");
+  if (!values.length || values.some((value) => !Number.isFinite(value))) return { error: "The slider target list contains a value that is not a finite number. No slider was changed." };
+  if (!ranges.length || ranges.length !== values.length) return { error: `The task names ${values.length} slider values, but ${ranges.length} visible native range controls are available. No slider or submit control was changed.` };
+  for (const [index, value] of values.entries()) {
+    const candidate = ranges[index]!;
+    const minimum = candidate.min ?? 0;
+    const maximum = candidate.max ?? 100;
+    const step = candidate.step;
+    if (value < minimum || value > maximum) return { error: `Slider ${index + 1} target is outside its visible range (${minimum} to ${maximum}). No slider was changed.` };
+    if (step !== undefined && Math.abs((value - minimum) / step - Math.round((value - minimum) / step)) > 1e-7) return { error: `Slider ${index + 1} target does not align with its visible step size (${step}). No slider was changed.` };
+  }
+  const nextIndex = ranges.findIndex((candidate, index) => {
+    const current = rangeValues.get(candidate.ref);
+    return current === undefined || Math.abs(current - values[index]!) > 1e-9;
+  });
+  if (nextIndex < 0) return { allSet: true as const };
+  return {
+    match: {
+      candidate: ranges[nextIndex]!,
+      rangeValue: values[nextIndex]!,
+      rule: "explicit-slider-values-in-order",
+      note: `The task gives one explicit value for each of ${ranges.length} visible native sliders. The next slider is set to its requested value; no field value is returned and nothing is submitted.`,
+    },
+  };
+}
+
+function findUnfilledTaskFields(task: string, candidates: BrowserCandidate[], valuePresence: Map<string, boolean>) {
+  const asksToSubmit = /\b(?:submit|send|publish|post)\b/i.test(task);
+  const textEntryIntent = /\b(?:enter|type|fill|write|paste|copy)\b/i.test(task);
+  const dateIntent = /\b(?:select|choose|set)\s+\d{1,2}\/\d{1,2}\/\d{4}\b/i.test(task);
+  const nativeSelectIntent = /\b(?:dropdown|select\s+box|native\s+select|scroll\s+list|listbox)\b/i.test(task);
+  if (!asksToSubmit || (!textEntryIntent && !dateIntent && !nativeSelectIntent)) return [];
+  const ordinal = task.match(/\b(?:into|in)\s+(?:the\s+)?(\d+)(?:st|nd|rd|th)\s+(?:(?:input\s+)?(?:text\s*box|textbox|text\s+field))\b/i)?.[1];
+  const editableText = textEntryIntent || dateIntent
+    ? candidates.filter((candidate) => candidate.role === "textarea" || (candidate.role === "input" && ["text", "search", "email", "tel", "url", "number", "date", "datetime-local", "time", "month"].includes(candidate.kind)))
+    : [];
+  const editableSelect = nativeSelectIntent
+    ? candidates.filter((candidate) => ["select-one", "select-multiple"].includes(candidate.kind))
+    : [];
+  const editable = [...editableText, ...editableSelect];
+  const targets = ordinal ? [editable[Number(ordinal) - 1]].filter((candidate): candidate is BrowserCandidate => Boolean(candidate)) : editable;
+  const explicitFields = /\b(?:each|every|all)\b|\binto the form\b|\b(?:textbox|text\s+field|input)\b/i.test(task) || /\b(?:copy|paste)\b/i.test(task) || dateIntent || nativeSelectIntent;
+  if (!explicitFields || !targets.length) return [];
+  return targets
+    .filter((candidate) => valuePresence.get(candidate.ref) !== true)
+    .map(({ ref, role, label, kind, readOnly }) => ({ ref, role, label, kind, ...(readOnly ? { readOnly: true } : {}) }));
+}
+
+function isSubmitCandidate(candidate: BrowserCandidate) {
+  return candidate.kind === "submit" || labelParts(candidate).some((part) => /\bsubmit\b/u.test(part));
+}
+
+function isPointerTarget(candidate: BrowserCandidate) {
+  return candidate.role === "pointer-target" || candidate.kind === "custom-pointer";
+}
+
+function pointerActionKey(fingerprint: string, candidate: BrowserCandidate) {
+  return `${fingerprint}:${normalizeLabel(candidate.label)}`;
 }
 
 function findUniqueQuotedLabel(task: string, candidates: BrowserCandidate[]) {

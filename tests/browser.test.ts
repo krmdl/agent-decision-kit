@@ -36,11 +36,19 @@ describe("Playwright browser safety flow", () => {
   let multiDisclosureHtml: Buffer;
   let textareaWidgetsHtml: Buffer;
   let ordinalButtonHtml: Buffer;
+  let sliderHtml: Buffer;
+  let silentPointerHtml: Buffer;
+  let autocompleteHtml: Buffer;
+  let multipleSelectHtml: Buffer;
 
   beforeAll(async () => {
     const html = await readFile(path.resolve("examples/browser-demo.html"));
     visualHtml = await readFile(path.resolve("examples/visual-only-demo.html"));
     pointerTextHtml = Buffer.from('<!doctype html><style>.faux-link { cursor: pointer; color: blue; text-decoration: underline }</style><span id="target" class="faux-link">adipiscing.</span><p id="status">Not clicked</p><script>document.querySelector("#target").addEventListener("click",()=>document.querySelector("#status").textContent="Clicked locally")</script>');
+    silentPointerHtml = Buffer.from('<!doctype html><style>.faux-link{cursor:pointer}</style><span class="faux-link">Open item</span>');
+    sliderHtml = Buffer.from('<!doctype html><form onsubmit="event.preventDefault();document.querySelector(\'#status\').textContent=\'Submitted\'"><label for="level">Level</label><input id="level" type="range" min="0" max="20" step="1" value="5"><button type="submit">Submit</button></form><p id="status">Not submitted</p>');
+    autocompleteHtml = Buffer.from('<!doctype html><style>.suggestion{cursor:pointer}</style><label>Tag <input id="tag" type="text"></label><div><span class="suggestion">Poland</span><span class="suggestion">Portugal</span></div>');
+    multipleSelectHtml = Buffer.from('<!doctype html><label for="tags">Tags</label><select id="tags" multiple><option value="alpha" selected>Alpha</option><option value="beta">Beta</option><option value="gamma">Gamma</option></select><p id="status">Not submitted</p>');
     mixedPointerHtml = Buffer.from('<!doctype html><style>.faux-link { cursor: pointer }</style><button>Section</button><span id="target" class="faux-link">Ultrices</span><p id="status">Not clicked</p><script>document.querySelector("#target").addEventListener("click",()=>document.querySelector("#status").textContent="Clicked locally")</script>');
     ambiguousLabelsHtml = Buffer.from('<!doctype html><button type="button">Continue</button><a href="#next">Continue</a><p id="status">No action</p>');
     checkboxHtml = Buffer.from('<!doctype html><label><input type="checkbox" name="updates"> Receive product updates</label>');
@@ -71,7 +79,7 @@ describe("Playwright browser safety flow", () => {
         return;
       }
       response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-      response.end(request.url === "/visual-only" ? visualHtml : request.url === "/pointer-text" ? pointerTextHtml : request.url === "/mixed-pointer" ? mixedPointerHtml : request.url === "/checkbox" ? checkboxHtml : request.url === "/submit" ? submitHtml : request.url === "/checkbox-task" ? checkboxTaskHtml : request.url === "/tabs" ? tabHtml : request.url === "/expand" ? expandHtml : request.url === "/native-fields" ? nativeFieldsHtml : request.url === "/ambiguous-labels" ? ambiguousLabelsHtml : request.url === "/editable" ? editableContentHtml : request.url === "/silent-form" ? silentFormHtml : request.url === "/decision-race" ? decisionRaceHtml : request.url === "/replacement-action" ? replacementActionHtml : request.url === "/dynamic-refs" ? dynamicRefsHtml : request.url === "/menu" ? menuHtml : request.url === "/ordinal-fields" ? ordinalFieldsHtml : request.url === "/textareas" ? textareaWidgetsHtml : request.url === "/ordinal-button" ? ordinalButtonHtml : request.url === "/multi-disclosure" ? multiDisclosureHtml : html);
+      response.end(request.url === "/visual-only" ? visualHtml : request.url === "/pointer-text" ? pointerTextHtml : request.url === "/silent-pointer" ? silentPointerHtml : request.url === "/mixed-pointer" ? mixedPointerHtml : request.url === "/checkbox" ? checkboxHtml : request.url === "/submit" ? submitHtml : request.url === "/checkbox-task" ? checkboxTaskHtml : request.url === "/tabs" ? tabHtml : request.url === "/expand" ? expandHtml : request.url === "/native-fields" ? nativeFieldsHtml : request.url === "/slider" ? sliderHtml : request.url === "/autocomplete" ? autocompleteHtml : request.url === "/multi-select" ? multipleSelectHtml : request.url === "/ambiguous-labels" ? ambiguousLabelsHtml : request.url === "/editable" ? editableContentHtml : request.url === "/silent-form" ? silentFormHtml : request.url === "/decision-race" ? decisionRaceHtml : request.url === "/replacement-action" ? replacementActionHtml : request.url === "/dynamic-refs" ? dynamicRefsHtml : request.url === "/menu" ? menuHtml : request.url === "/ordinal-fields" ? ordinalFieldsHtml : request.url === "/textareas" ? textareaWidgetsHtml : request.url === "/ordinal-button" ? ordinalButtonHtml : request.url === "/multi-disclosure" ? multiDisclosureHtml : html);
     });
     await new Promise<void>((resolve, reject) => {
       server.once("error", reject);
@@ -355,6 +363,24 @@ describe("Playwright browser safety flow", () => {
     expect((await browser.inspect()).textExcerpt).toContain("Not clicked");
   }, 45_000);
 
+  it("blocks a repeated approval loop when a pointer-only click makes no visible progress", async () => {
+    profile = await mkdtemp(path.join(os.tmpdir(), "adk-browser-pointer-loop-test-"));
+    browser = new BrowserManager({ headless: true, profileDir: path.join(profile, "chromium") });
+    await browser.launch(`${baseUrl}silent-pointer`);
+    const provider: DecisionProvider = {
+      id: "semantic-local",
+      model: "fixture-model",
+      decide: vi.fn(async () => ({ provider: "semantic-local", model: "fixture-model", latencyMs: 1, answers: { action: { type: "choice" as const, choice: "r1", probabilities: { r1: 1 }, confidence: 1, confidenceSource: "maximum-probability" as const, calibration: "uncalibrated-estimate" as const } } })),
+    };
+
+    const proposed = await browser.decideAndAct("Choose the relevant visible action.", provider);
+    expect(proposed.status).toBe("awaiting-user-approval");
+    const token = "approvalToken" in proposed ? proposed.approvalToken : "";
+    expect(await browser.confirm(token, true)).toMatchObject({ status: "action-executed-after-approval", visibleStateChanged: false });
+    expect(await browser.decideAndAct("Choose the relevant visible action.", provider)).toMatchObject({ status: "repeated-action-blocked" });
+    expect(provider.decide).toHaveBeenCalledTimes(1);
+  }, 45_000);
+
   it("clicks a visible checkbox without submitting its form", async () => {
     profile = await mkdtemp(path.join(os.tmpdir(), "adk-browser-checkbox-test-"));
     browser = new BrowserManager({ headless: true, profileDir: path.join(profile, "chromium") });
@@ -383,6 +409,75 @@ describe("Playwright browser safety flow", () => {
     expect(country?.label).not.toContain("Unavailable");
     expect(date?.label).toContain("Date");
     expect(JSON.stringify(snapshot)).not.toContain('value="cn"');
+  }, 45_000);
+
+  it("selects an exact requested native option before proposing the approval-gated submit", async () => {
+    profile = await mkdtemp(path.join(os.tmpdir(), "adk-browser-native-select-flow-test-"));
+    browser = new BrowserManager({ headless: true, profileDir: path.join(profile, "chromium") });
+    await browser.launch(`${baseUrl}native-fields`);
+    const provider: DecisionProvider = { id: "semantic-local", model: "unused-provider", decide: async () => { throw new Error("An exact visible option must be resolved locally"); } };
+
+    const selected = await browser.decideAndAct("Select Canada from the dropdown and click Submit.", provider);
+    expect(selected).toMatchObject({ status: "action-executed", selectionRule: "explicit-native-select-option", effect: { status: "selected", submitted: false, valueReturned: false } });
+    expect((await browser.inspect()).candidates.find((candidate) => candidate.kind === "select-one")?.selectedOptionLabels).toContain("Canada");
+    const submit = await browser.decideAndAct("Select Canada from the dropdown and click Submit.", provider);
+    expect(submit).toMatchObject({ status: "awaiting-user-approval", selectionRule: "unique-explicit-submit-control", proposedAction: { label: "Submit", risk: "approval-required" } });
+    const token = "approvalToken" in submit ? submit.approvalToken : "";
+    expect(await browser.confirm(token, false)).toMatchObject({ status: "cancelled" });
+  }, 45_000);
+
+  it("adds one exact multiselect option without clearing the existing selection", async () => {
+    profile = await mkdtemp(path.join(os.tmpdir(), "adk-browser-multiselect-test-"));
+    browser = new BrowserManager({ headless: true, profileDir: path.join(profile, "chromium") });
+    await browser.launch(`${baseUrl}multi-select`);
+    const control = (await browser.inspect()).candidates.find((candidate) => candidate.kind === "select-multiple");
+    const result = await browser.selectOption(control!.ref, "Beta");
+    expect(result).toMatchObject({ status: "selected", optionLabel: "Beta", submitted: false, valueReturned: false });
+    expect((await browser.inspect()).candidates.find((candidate) => candidate.kind === "select-multiple")?.selectedOptionLabels).toEqual(["Alpha", "Beta"]);
+    expect(JSON.stringify(result)).not.toContain("beta");
+  }, 45_000);
+
+  it("sets only explicit slider values and blocks submission until requested text fields are filled", async () => {
+    profile = await mkdtemp(path.join(os.tmpdir(), "adk-browser-range-test-"));
+    browser = new BrowserManager({ headless: true, profileDir: path.join(profile, "chromium") });
+    await browser.launch(`${baseUrl}slider`);
+    const provider: DecisionProvider = { id: "semantic-local", model: "unused-provider", decide: async () => { throw new Error("The explicit slider target must be resolved locally"); } };
+    const inspected = await browser.inspect();
+    const slider = inspected.candidates.find((candidate) => candidate.kind === "range");
+    expect(slider).toMatchObject({ min: 0, max: 20, step: 1 });
+    expect(JSON.stringify(slider)).not.toContain("value");
+    await expect(browser.setRange(slider!.ref, 21)).rejects.toThrow("between 0 and 20");
+
+    const set = await browser.decideAndAct("Set the slider to [16].", provider);
+    expect(set).toMatchObject({ status: "action-executed", selectionRule: "explicit-slider-values-in-order", effect: { status: "set", valueReturned: false, submitted: false } });
+    expect(JSON.stringify(set)).not.toContain("16");
+    const submission = await browser.decideAndAct("Set the slider to [16] and click Submit.", provider);
+    expect(submission).toMatchObject({ status: "awaiting-user-approval", proposedAction: { label: "Submit", risk: "approval-required" } });
+    const token = "approvalToken" in submission ? submission.approvalToken : "";
+    expect(await browser.confirm(token, false)).toMatchObject({ status: "cancelled" });
+
+    await browser.navigate(`${baseUrl}silent-form`);
+    const blockedProvider: DecisionProvider = { id: "semantic-local", model: "unused-provider", decide: async () => { throw new Error("An unfilled form must not reach the provider"); } };
+    const blocked = await browser.decideAndAct("Enter a note into the form and submit when done.", blockedProvider);
+    expect(blocked).toMatchObject({ status: "prerequisite-fields-required", requiredFields: [expect.objectContaining({ kind: "text" })] });
+    const fieldRef = "requiredFields" in blocked ? blocked.requiredFields[0]!.ref : "";
+    await browser.fill(fieldRef, "local synthetic note");
+    const approved = await browser.decideAndAct("Enter a note into the form and submit when done.", blockedProvider);
+    expect(approved).toMatchObject({ status: "awaiting-user-approval", proposedAction: { label: "Submit draft", risk: "approval-required" } });
+  }, 45_000);
+
+  it("chooses the first visible item when the task explicitly accepts any matching prefix", async () => {
+    profile = await mkdtemp(path.join(os.tmpdir(), "adk-browser-autocomplete-test-"));
+    browser = new BrowserManager({ headless: true, profileDir: path.join(profile, "chromium") });
+    await browser.launch(`${baseUrl}autocomplete`);
+    const provider: DecisionProvider = { id: "semantic-local", model: "unused-provider", decide: async () => { throw new Error("A permissive exact prefix must resolve locally"); } };
+    const input = (await browser.inspect()).candidates.find((candidate) => candidate.kind === "text");
+    await browser.fill(input!.ref, "Po");
+
+    const result = await browser.decideAndAct('Enter an item that starts with "Po".', provider);
+    expect(result).toMatchObject({ status: "awaiting-user-approval", selectionRule: "first-visible-option-matching-explicit-prefix", proposedAction: { label: "Poland", risk: "approval-required" } });
+    const token = "approvalToken" in result ? result.approvalToken : "";
+    expect(await browser.confirm(token, false)).toMatchObject({ status: "cancelled" });
   }, 45_000);
 
   it("selects one exact visible native option and fills a date without submitting", async () => {

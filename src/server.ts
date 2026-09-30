@@ -108,7 +108,7 @@ export function createServer(options: { provider?: DecisionProvider } = {}) {
 
   server.registerTool("browser_inspect", {
     title: "Inspect browser page",
-    description: "Return a bounded visible DOM/accessibility snapshot. Only when no semantic controls exist, also scan clear CSS pointer-only text targets. Custom targets have no semantic role and always require approval. Includes at most 12 enabled labels per native select and marks read-only picker fields, but never returns field values, passwords, cookies, or storage.",
+    description: "Return a bounded visible DOM/accessibility snapshot. Only when no semantic controls exist, also scan clear CSS pointer-only text targets. Custom targets have no semantic role and always require approval. Includes at most 12 enabled labels per native select, range-slider min/max/step, and read-only picker markers, but never returns current field values, passwords, cookies, or storage.",
     inputSchema: {},
   }, async () => asToolResult(await browser.inspect()));
 
@@ -135,6 +135,12 @@ export function createServer(options: { provider?: DecisionProvider } = {}) {
     description: "Select one exact, enabled option label from a visible native select control. It does not submit the page or return the option value.",
     inputSchema: { ref: z.string().regex(/^r\d+$/), optionLabel: z.string().min(1).max(500) },
   }, async ({ ref, optionLabel }) => asToolResult(await browser.selectOption(ref, optionLabel)));
+
+  server.registerTool("browser_set_range", {
+    title: "Set a visible range slider",
+    description: "Set one explicit numeric value on a visible native range slider ref from browser_inspect. The value must be within the slider's minimum, maximum, and step. The value is never returned, and the page is not submitted.",
+    inputSchema: { ref: z.string().regex(/^r\d+$/), value: z.number().finite() },
+  }, async ({ ref, value }) => asToolResult(await browser.setRange(ref, value)));
 
   server.registerTool("browser_confirm", {
     title: "Approve or cancel sensitive action",
