@@ -53,12 +53,12 @@
   "latencyMs": 1307,
   "environmentResetLatencyMs": 937,
   "agentActionLatencyMs": 370,
-  "reward": 1.0,
+  "reward": 1,
   "terminated": true,
   "decisionStatus": null,
   "decisionProvider": "semantic-local",
   "decisionModel": "not-reported",
-  "agentDecisionKitCommit": "675d520230d9829151adb44dd1de1e233a595bfd",
+  "agentDecisionKitCommit": "13042560f119845ae6c880c14a7ea5309bbf99dc",
   "browserGymVersion": "0.14.3",
   "browserGymPackageCommit": "0a785fbed075224ae81ca9c1fe924f66050696fe",
   "playwrightPythonVersion": "1.44.0",
@@ -85,5 +85,8 @@
   "timestampUtc": "2026-09-30T12:55:00.335517+00:00",
   "maxActions": 5,
   "note": "A curated MiniWoB integration smoke check, not a representative BrowserGym benchmark or a full autonomous agent. Multi-tool mode extracts only explicit task values and visible native options; field values are omitted from action traces. The optional OCR path attempts only the quoted link target and its coordinate click remains behind the standard one-use approval gate; synthetic approval is possible only for the exact local MiniWoB file URL.",
-  "visualOcrActionsEnabled": false
+  "visualOcrActionsEnabled": false,
+  "agentDecisionKitBaseCommit": "675d520230d9829151adb44dd1de1e233a595bfd",
+  "agentDecisionKitTreeWasDirtyAtRun": true,
+  "agentDecisionKitSourceTreeVerifiedAgainstCommit": true
 }
