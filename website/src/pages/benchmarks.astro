@@ -26,6 +26,7 @@ const rawRunUrl = "https://github.com/krmdl/agent-decision-kit/blob/main/benchma
         <p class="eyebrow">LATEST MULTI-TOOL INTEGRATION</p>
         <h2 id="latest-title">{successCount} of {episodeCount} tasks succeeded.</h2>
         <p>The bounded harness extracted explicit targets from synthetic task instructions, used <code>browser_copy_field</code> and <code>browser_set_checkboxes</code> for local form workflows, and exercised <code>browser_set_range</code> on keyboard-operated sliders. Each Submit action still received a separate local-only synthetic approval. Pointer-wrapper deduplication fixed a menu regression while the exact-sender email task remained successful. This measures tool integration, not an autonomous coding-agent score. The visual fallback described two pages without acting; three task goals remained unmet.</p>
+        <p class="comparison-note">Task success requires a raw MiniWoB reward of at least 1.0; positive partial rewards count as failures. This avoids BrowserGym 0.14.3's partial-reward-to-success conversion documented in <a href="https://github.com/ServiceNow/BrowserGym/issues/392">upstream issue 392</a>.</p>
       </div>
 
       <figure class="success-chart">

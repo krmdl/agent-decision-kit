@@ -37,6 +37,14 @@ def is_expected_local_task_url(current_url, base_url, task):
     return base_url.startswith("file://") and current_url == base_url + f"{task}.html"
 
 
+def has_full_task_reward(reward, task_info):
+    """Count only full task reward; BrowserGym's MiniWoB wrapper may binarize partial reward."""
+    raw_reward = task_info.get("RAW_REWARD_GLOBAL") if isinstance(task_info, dict) else None
+    if isinstance(raw_reward, (int, float)) and not isinstance(raw_reward, bool):
+        return raw_reward >= 1.0
+    return reward >= 1.0
+
+
 def explicit_slider_values(task):
     match = re.search(r"\b(?:set|adjust|move)\s+(?:the\s+)?sliders?\s+to\s+(?:the\s+)?(?:combination\s+)?\[([^\]]+)\]", task, re.IGNORECASE)
     if not match:
@@ -442,7 +450,7 @@ def main():
                         reward, terminated, _, task_info = env.unwrapped.task.validate(env.unwrapped.page, env.unwrapped.chat.messages)
                         break
                     reward, terminated, _, task_info = env.unwrapped.task.validate(env.unwrapped.page, env.unwrapped.chat.messages)
-                    if reward > 0 or terminated:
+                    if has_full_task_reward(reward, task_info) or terminated:
                         break
                     if operation == "set-range" and action_result.get("status") not in {"set", "already-set"}:
                         break
@@ -475,7 +483,7 @@ def main():
                         action_count += 1
                         tool_action_trace.append({"step": step_index + 1, "tool": "browser_action", "status": action_result.get("status"), "targetPage": current_search_page, "targetLabel": page_link["label"], "targetRole": "pagination-link"})
                         reward, terminated, _, task_info = env.unwrapped.task.validate(env.unwrapped.page, env.unwrapped.chat.messages)
-                        if reward > 0 or terminated:
+                        if has_full_task_reward(reward, task_info) or terminated:
                             break
                         continue
 
@@ -498,7 +506,7 @@ def main():
                         synthetic_approval_count += 1
                         tool_coverage.add("browser_confirm")
                     reward, terminated, _, task_info = env.unwrapped.task.validate(env.unwrapped.page, env.unwrapped.chat.messages)
-                    if reward > 0 or terminated:
+                    if has_full_task_reward(reward, task_info) or terminated:
                         break
                     continue
 
@@ -600,7 +608,7 @@ def main():
 
             action_count += 1
             reward, terminated, _, task_info = env.unwrapped.task.validate(env.unwrapped.page, env.unwrapped.chat.messages)
-            if reward > 0 or terminated:
+            if has_full_task_reward(reward, task_info) or terminated:
                 break
         action_latency_ms = round((time.perf_counter() - action_start) * 1000)
         episode_latency_ms = reset_latency_ms + action_latency_ms
@@ -619,9 +627,9 @@ def main():
             "toolCoverage": sorted(tool_coverage),
             "notExercisedTools": sorted({"browser_connect", "browser_decide_and_act", "browser_confirm", "browser_action", "browser_fill", "browser_copy_field", "browser_set_checkboxes", "browser_select_option", "browser_set_range", "browser_visual_inspect", "browser_visual_text", "browser_visual_action"} - tool_coverage),
             "toolActionTrace": tool_action_trace,
-            "success": bool(reward > 0),
+            "success": has_full_task_reward(reward, task_info),
             "timeout": False,
-            "failureReason": None if reward > 0 else (task_info.get("REWARD_REASON") or "task-goal-not-achieved"),
+            "failureReason": None if has_full_task_reward(reward, task_info) else (task_info.get("REWARD_REASON") or "task-goal-not-achieved"),
             "actions": action_count,
             "selectedAction": selected_action,
             "decisionConfidence": decision_confidence,
@@ -638,6 +646,8 @@ def main():
             "environmentResetLatencyMs": reset_latency_ms,
             "agentActionLatencyMs": action_latency_ms,
             "reward": reward,
+            "rawTaskReward": task_info.get("RAW_REWARD_GLOBAL"),
+            "successCriterion": "full task reward required (RAW_REWARD_GLOBAL >= 1.0; use wrapper reward only if raw reward is absent)",
             "terminated": bool(terminated),
             "decisionStatus": decision.get("status"),
             "decisionProvider": decision_provider,
