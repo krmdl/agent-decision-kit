@@ -51,6 +51,34 @@ class MultiToolPlanningTests(unittest.TestCase):
         self.assertEqual(planned[1], {"ref": "r1", "text": "CHAS"})
         self.assertEqual(planned[2], {"fieldKind": "text", "characterCount": 4})
 
+    def test_checks_the_explicit_radio_ordinal_before_filling_the_numbered_textbox(self):
+        radios = [
+            {"ref": "r1", "role": "input", "kind": "radio", "label": "Alpha", "checked": False},
+            {"ref": "r2", "role": "input", "kind": "radio", "label": "Beta", "checked": False},
+            {"ref": "r3", "role": "input", "kind": "radio", "label": "Gamma", "checked": False},
+        ]
+        textbox_one = {"ref": "r4", "role": "input", "kind": "text", "label": "Text one"}
+        textbox_two = {"ref": "r5", "role": "input", "kind": "text", "label": "Text two"}
+        candidates = radios + [textbox_one, textbox_two]
+        task = 'Check the 3rd radio button and enter the number "-3" into the 2nd textbox.'
+
+        radio_action = RUNNER.multi_tool_action(task, candidates, set())
+        self.assertEqual(radio_action[0], "act")
+        self.assertEqual(radio_action[1], {"ref": "r3"})
+        self.assertEqual(radio_action[2], {"fieldKind": "radio", "fieldOrdinal": 3})
+
+        completed = {RUNNER.field_key(radios[2])}
+        field_action = RUNNER.multi_tool_action(task, candidates, completed)
+        self.assertEqual(field_action[0], "fill")
+        self.assertEqual(field_action[1], {"ref": "r5", "text": "-3"})
+        self.assertEqual(field_action[2], {"fieldKind": "text", "characterCount": 2, "fieldOrdinal": 2})
+
+    def test_never_falls_back_to_a_different_field_when_the_requested_ordinal_is_missing(self):
+        candidates = [{"ref": "r1", "role": "input", "kind": "text", "label": "Only textbox"}]
+        task = 'Enter the number "-3" into the 2nd textbox.'
+
+        self.assertIsNone(RUNNER.multi_tool_action(task, candidates, set()))
+
     def test_converts_an_explicit_date_to_native_input_format(self):
         candidates = [{"ref": "r2", "role": "input", "kind": "date", "label": "Date"}]
         planned = RUNNER.multi_tool_action("Select 12/22/2016 as the date and hit submit.", candidates, set())

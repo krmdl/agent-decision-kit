@@ -39,6 +39,15 @@ def is_expected_local_task_url(current_url, base_url, task):
 
 def multi_tool_action(task, candidates, completed_fields, visible_text=""):
     """Extract only explicit MiniWoB task values for the tool integration smoke path."""
+    radio_match = re.search(r"\b(?:check|select|choose|tick)\s+(?:the\s+)?(\d+)(?:st|nd|rd|th)?\s+radio(?:\s+button)?\b", task, re.IGNORECASE)
+    if radio_match:
+        radios = [candidate for candidate in candidates if candidate.get("kind") == "radio" or candidate.get("role") in {"radio", "menuitemradio"}]
+        ordinal = int(radio_match.group(1))
+        if 1 <= ordinal <= len(radios):
+            candidate = radios[ordinal - 1]
+            if candidate.get("checked") is not True and field_key(candidate) not in completed_fields:
+                return "act", {"ref": candidate["ref"]}, {"fieldKind": "radio", "fieldOrdinal": ordinal}
+
     date_match = re.search(r"\b(\d{1,2}/\d{1,2}/\d{4})\b", task)
     if date_match:
         try:
@@ -82,6 +91,16 @@ def multi_tool_action(task, candidates, completed_fields, visible_text=""):
         if re.search(r"\b(?:all\s+)?upper\s+case\b|\buppercase\b", task, re.IGNORECASE):
             target = target.upper()
         text_kinds = {"text", "search", "email", "tel", "url", "number", "textarea"}
+        ordinal_match = re.search(r"\b(?:into|in)\s+(?:the\s+)?(\d+)(?:st|nd|rd|th)\s+(?:(?:input\s+)?(?:text\s*box|textbox|text\s+field))\b", task, re.IGNORECASE)
+        if ordinal_match:
+            fields = [item for item in candidates if item["kind"] in text_kinds and item.get("role") in {"input", "textbox", "textarea"} and not item.get("readOnly")]
+            ordinal = int(ordinal_match.group(1))
+            if not 1 <= ordinal <= len(fields):
+                return None
+            candidate = fields[ordinal - 1]
+            if field_key(candidate) in completed_fields:
+                return None
+            return "fill", {"ref": candidate["ref"], "text": target}, {"fieldKind": candidate["kind"], "characterCount": len(target), "fieldOrdinal": ordinal}
         candidate = next((item for item in candidates if item["kind"] in text_kinds and field_key(item) not in completed_fields), None)
         if candidate:
             return "fill", {"ref": candidate["ref"], "text": target}, {"fieldKind": candidate["kind"], "characterCount": len(target)}
