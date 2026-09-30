@@ -130,10 +130,35 @@ export class BrowserManager {
         const rect = element.getBoundingClientRect();
         return style.visibility !== "hidden" && style.display !== "none" && Number(style.opacity) > 0 && rect.width > 0 && rect.height > 0;
       };
+      const iconLabelFor = (element: Element) => {
+        const sources = [
+          getComputedStyle(element).content,
+          getComputedStyle(element, "::before").content,
+          getComputedStyle(element, "::after").content,
+          getComputedStyle(element).backgroundImage,
+        ];
+        for (const source of sources) {
+          const match = source.match(/url\((?:["']?)(.*?)(?:["']?)\)/i);
+          if (!match?.[1]) continue;
+          const path = match[1].split(/[?#]/, 1)[0] ?? "";
+          if (/^(?:data|blob):/i.test(path)) continue;
+          const filename = path.split("/").pop() ?? "";
+          if (!filename || filename.length > 100) continue;
+          const stem = filename
+            .replace(/\.[a-z\d]+$/i, "")
+            .replace(/[_-]+/g, " ")
+            .replace(/\b(?:icon|image|img)\b/gi, " ")
+            .replace(/\s+/g, " ")
+            .trim();
+          if (stem) return `${stem} icon`;
+        }
+        return "";
+      };
       const labelFor = (element: Element) => {
         const input = element as HTMLInputElement;
         const labelledBy = (element.getAttribute("aria-labelledby") ?? "").split(/\s+/).filter(Boolean).map((id) => redactEditableText(document.getElementById(id)?.textContent ?? "")).filter(Boolean).join(" ");
         const aria = redactEditableText(element.getAttribute("aria-label") || labelledBy || element.getAttribute("title") || "");
+        const imageAlt = redactEditableText(element.getAttribute("alt") ?? "");
         const id = element.id ? redactEditableText(document.querySelector(`label[for="${CSS.escape(element.id)}"]`)?.textContent ?? "") : "";
         const wrappingLabel = redactEditableText(element.closest("label")?.textContent ?? "");
         const isSelect = element.tagName.toLowerCase() === "select";
@@ -148,7 +173,9 @@ export class BrowserManager {
         const options = isSelect
           ? Array.from((element as HTMLSelectElement).options).filter((option) => !option.disabled && !(option.parentElement?.tagName === "OPTGROUP" && (option.parentElement as HTMLOptGroupElement).disabled) && option.label.trim()).slice(0, 12).map((option) => option.label.trim())
           : [];
-        const parts = [...new Set([aria, id, wrappingLabel, text, placeholder, name, toggleState, disclosureState].filter(Boolean))];
+        const textLabels = [aria, id, wrappingLabel, imageAlt, text, placeholder, name, toggleState, disclosureState].filter(Boolean);
+        const icon = textLabels.length ? "" : iconLabelFor(element);
+        const parts = [...new Set([...textLabels, icon].filter(Boolean))];
         const currentOption = isSelect ? (element as HTMLSelectElement).selectedOptions[0]?.label.trim() : "";
         if (currentOption) parts.push(`Currently selected: ${currentOption}`);
         if (options.length) parts.push(`Options: ${options.join(", ")}`);
@@ -167,13 +194,18 @@ export class BrowserManager {
         .filter((element) => {
           if (semanticSet.has(element) || element.closest(semanticSelector) || element.closest(`${semanticSelector}, [contenteditable]:not([contenteditable=\"false\"])`)) return false;
           if (!visible(element)) return false;
-          const label = (element.textContent ?? "").replace(/\s+/g, " ").trim();
+          const label = labelFor(element);
           if (!label || label.length > 240) return false;
           const style = getComputedStyle(element);
           if (style.cursor !== "pointer") return false;
-          // Ignore inherited cursor styles: only expose the element that declares
-          // a pointer target, not every text node below it.
-          if (element.parentElement && getComputedStyle(element.parentElement).cursor === "pointer") return false;
+          const pointerChildren = (parent: Element) => Array.from(parent.children)
+            .filter((child) => visible(child) && getComputedStyle(child).cursor === "pointer" && labelFor(child).length > 0);
+          // Split pointer containers when their separately labeled children are
+          // distinct controls. This keeps a row or toolbar from becoming one
+          // large target while avoiding candidates for every nested text node.
+          if (pointerChildren(element).length > 1) return false;
+          const parent = element.parentElement;
+          if (parent && getComputedStyle(parent).cursor === "pointer" && pointerChildren(parent).length < 2) return false;
           return true;
         })
         .slice(0, 80 - semanticNodes.length) : [];
@@ -303,7 +335,7 @@ export class BrowserManager {
     const privateStateFingerprint = createHash("sha256").update(JSON.stringify({ privateFormState, privateActionState, privateRangeState })).digest("hex");
     const safeSnapshot = { ...snapshot, candidates };
     this.lastInspectionFingerprint = snapshotFingerprint({ ...safeSnapshot, privateStateFingerprint });
-    return { ...safeSnapshot, url: redactBrowserUrl(snapshot.url), candidates: candidates.map(({ ref, role, label, kind, risk, checked, expanded, selected, readOnly, optionLabels, selectedOptionLabels, min, max, step }) => ({ ref, role, label, kind, risk, ...(checked === undefined ? {} : { checked }), ...(expanded === undefined ? {} : { expanded }), ...(selected === undefined ? {} : { selected }), ...(readOnly === undefined ? {} : { readOnly }), ...(optionLabels === undefined ? {} : { optionLabels }), ...(selectedOptionLabels === undefined ? {} : { selectedOptionLabels }), ...(min === undefined ? {} : { min }), ...(max === undefined ? {} : { max }), ...(step === undefined ? {} : { step }) })), inspectMs: Math.round(performance.now() - before), candidateLimit: 80, note: "Bounded visible DOM/accessibility snapshot. Alongside semantic controls, it scans keyboard-operated jQuery UI slider handles with a linked visible numeric readout and clear CSS pointer-only text targets within the same 80-candidate limit; custom targets have no semantic role and always require a separate approval. Native select options are limited to 12 enabled labels; editable values, passwords, cookies and storage are not returned. Editable values, slider readings and action destinations are hashed locally only to invalidate stale approvals. URL credentials, query and hash are redacted." };
+    return { ...safeSnapshot, url: redactBrowserUrl(snapshot.url), candidates: candidates.map(({ ref, role, label, kind, risk, checked, expanded, selected, readOnly, optionLabels, selectedOptionLabels, min, max, step }) => ({ ref, role, label, kind, risk, ...(checked === undefined ? {} : { checked }), ...(expanded === undefined ? {} : { expanded }), ...(selected === undefined ? {} : { selected }), ...(readOnly === undefined ? {} : { readOnly }), ...(optionLabels === undefined ? {} : { optionLabels }), ...(selectedOptionLabels === undefined ? {} : { selectedOptionLabels }), ...(min === undefined ? {} : { min }), ...(max === undefined ? {} : { max }), ...(step === undefined ? {} : { step }) })), inspectMs: Math.round(performance.now() - before), candidateLimit: 80, note: "Bounded visible DOM/accessibility snapshot. Alongside semantic controls, it scans keyboard-operated jQuery UI slider handles with a linked visible numeric readout and clear CSS pointer-only text or icon targets within the same 80-candidate limit. Distinct labeled child targets are exposed separately; CSS image filenames may provide a fallback label for icon-only controls. Custom targets have no semantic role and always require a separate approval. Native select options are limited to 12 enabled labels; editable values, passwords, cookies and storage are not returned. Editable values, slider readings and action destinations are hashed locally only to invalidate stale approvals. URL credentials, query and hash are redacted." };
   }
 
   async decideAndAct(task: string, provider: DecisionProvider) {

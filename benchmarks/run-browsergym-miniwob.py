@@ -49,6 +49,67 @@ def explicit_slider_values(task):
 
 def multi_tool_action(task, candidates, completed_fields, visible_text=""):
     """Extract only explicit MiniWoB task values for the tool integration smoke path."""
+    email_reply = re.search(
+        r'\bfind\s+the\s+email\s+by\s+(.+?)\s+and\s+reply\s+to\s+them\s+with\s+the\s+text\s+["“]([^"”\r\n]+)["”]',
+        task,
+        re.IGNORECASE,
+    )
+    if email_reply:
+        sender, reply_text = email_reply.groups()
+        sender_key = normalized(sender)
+        action_candidates = [candidate for candidate in candidates if candidate.get("role") in {"pointer-target", "link", "button"}]
+        reply_fields = [candidate for candidate in candidates if candidate.get("role") == "textarea" and candidate.get("kind") == "textarea"]
+        if len(reply_fields) == 1:
+            field = reply_fields[0]
+            if field_key(field) not in completed_fields:
+                return "fill", {"ref": field["ref"], "text": reply_text}, {"fieldKind": "email-reply-body", "characterCount": len(reply_text)}
+            send_controls = [candidate for candidate in action_candidates if "send" in normalized(candidate.get("label", "")).split()]
+            if len(send_controls) == 1 and field_key(send_controls[0]) not in completed_fields:
+                return "act", {"ref": send_controls[0]["ref"]}, {"fieldKind": "submit-after-email-reply"}
+            return None
+
+        sender_matches = [
+            candidate for candidate in action_candidates
+            if f" {sender_key} " in f" {normalized(candidate.get('label', ''))} "
+        ]
+        if len(sender_matches) == 1:
+            candidate = sender_matches[0]
+            if field_key(candidate) not in completed_fields:
+                return "act", {"ref": candidate["ref"]}, {"fieldKind": "email-recipient"}
+            return None
+        if sender_matches:
+            return None
+
+        search_fields = [
+            candidate for candidate in candidates
+            if candidate.get("role") == "input"
+            and candidate.get("kind") in {"search", "text"}
+            and "search" in normalized(candidate.get("label", "")).split()
+        ]
+        if len(search_fields) == 1:
+            field = search_fields[0]
+            if field_key(field) not in completed_fields:
+                return "fill", {"ref": field["ref"], "text": sender}, {"fieldKind": "email-search", "characterCount": len(sender)}
+            return None
+        if len(search_fields) > 1:
+            return None
+
+        reply_controls = [candidate for candidate in action_candidates if normalized(candidate.get("label", "")) == "reply"]
+        if len(reply_controls) == 1:
+            candidate = reply_controls[0]
+            if field_key(candidate) not in completed_fields:
+                return "act", {"ref": candidate["ref"]}, {"fieldKind": "open-email-reply"}
+            return None
+        search_controls = [
+            candidate for candidate in action_candidates
+            if "search" in normalized(candidate.get("label", "")).split()
+        ]
+        if len(search_controls) == 1:
+            candidate = search_controls[0]
+            if field_key(candidate) not in completed_fields:
+                return "act", {"ref": candidate["ref"]}, {"fieldKind": "open-email-search"}
+        return None
+
     slider_values = explicit_slider_values(task)
     if slider_values is not None:
         ranges = [candidate for candidate in candidates if candidate.get("kind") == "range"]
@@ -147,7 +208,7 @@ def multi_tool_action(task, candidates, completed_fields, visible_text=""):
     if target:
         if re.search(r"\b(?:all\s+)?upper\s+case\b|\buppercase\b", task, re.IGNORECASE):
             target = target.upper()
-        if not re.search(r"\b(?:type|enter|input|write|fill)\b", task, re.IGNORECASE):
+        if not re.search(r"\b(?:type|enter|input|write|fill|reply)\b", task, re.IGNORECASE):
             return None
         text_kinds = {"text", "search", "email", "tel", "url", "number", "textarea"}
         ordinal_match = re.search(r"\b(?:into|in)\s+(?:the\s+)?(\d+)(?:st|nd|rd|th)\s+(?:(?:input\s+)?(?:text\s*box|textbox|text\s+field))\b", task, re.IGNORECASE)
@@ -381,7 +442,7 @@ def main():
                         break
                     if operation == "set-range" and action_result.get("status") not in {"set", "already-set"}:
                         break
-                    if metadata.get("fieldKind") in {"submit-after-explicit-slider-entry", "submit-after-local-copy", "submit-after-explicit-checkbox-batch"}:
+                    if metadata.get("fieldKind") in {"submit-after-explicit-slider-entry", "submit-after-local-copy", "submit-after-explicit-checkbox-batch", "submit-after-email-reply"}:
                         break
                     continue
 

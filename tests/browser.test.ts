@@ -18,6 +18,7 @@ describe("Playwright browser safety flow", () => {
   let debugContext: BrowserContext | undefined;
   let visualHtml: Buffer;
   let pointerTextHtml: Buffer;
+  let iconPointerHtml: Buffer;
   let mixedPointerHtml: Buffer;
   let checkboxHtml: Buffer;
   let submitHtml: Buffer;
@@ -49,6 +50,7 @@ describe("Playwright browser safety flow", () => {
     const html = await readFile(path.resolve("examples/browser-demo.html"));
     visualHtml = await readFile(path.resolve("examples/visual-only-demo.html"));
     pointerTextHtml = Buffer.from('<!doctype html><style>.faux-link { cursor: pointer; color: blue; text-decoration: underline }</style><span id="target" class="faux-link">adipiscing.</span><p id="status">Not clicked</p><script>document.querySelector("#target").addEventListener("click",()=>document.querySelector("#status").textContent="Clicked locally")</script>');
+    iconPointerHtml = Buffer.from('<!doctype html><style>#controls{cursor:pointer}.icon{display:inline-block;width:18px;height:18px;content:url("/icons/reply-message.png")}#search{display:inline-block;width:18px;height:18px;cursor:pointer;background-image:url("/icons/search.png")}</style><div id="controls"><span id="reply"><span class="icon"></span><span>Reply</span></span><span id="forward">Forward</span></div><span id="search" aria-hidden="true"></span>');
     silentPointerHtml = Buffer.from('<!doctype html><style>.faux-link{cursor:pointer}</style><span class="faux-link">Open item</span>');
     silentInputHtml = Buffer.from('<!doctype html><label>Search <input type="text"></label>');
     sliderHtml = Buffer.from('<!doctype html><form onsubmit="event.preventDefault();document.querySelector(\'#status\').textContent=\'Submitted\'"><label for="level">Level</label><input id="level" type="range" min="0" max="20" step="1" value="5"><button type="submit">Submit</button></form><p id="status">Not submitted</p>');
@@ -87,7 +89,7 @@ describe("Playwright browser safety flow", () => {
         return;
       }
       response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-      response.end(request.url === "/visual-only" ? visualHtml : request.url === "/pointer-text" ? pointerTextHtml : request.url === "/silent-pointer" ? silentPointerHtml : request.url === "/silent-input" ? silentInputHtml : request.url === "/mixed-pointer" ? mixedPointerHtml : request.url === "/checkbox" ? checkboxHtml : request.url === "/submit" ? submitHtml : request.url === "/checkbox-task" ? checkboxTaskHtml : request.url === "/tabs" ? tabHtml : request.url === "/expand" ? expandHtml : request.url === "/native-fields" ? nativeFieldsHtml : request.url === "/copy-fields" ? copyFieldsHtml : request.url === "/slider" ? sliderHtml : request.url === "/aria-slider" ? ariaSliderHtml : request.url === "/jquery-ui-slider" ? jqueryUiSliderHtml : request.url === "/autocomplete" ? autocompleteHtml : request.url === "/multi-select" ? multipleSelectHtml : request.url === "/ambiguous-labels" ? ambiguousLabelsHtml : request.url === "/editable" ? editableContentHtml : request.url === "/silent-form" ? silentFormHtml : request.url === "/decision-race" ? decisionRaceHtml : request.url === "/replacement-action" ? replacementActionHtml : request.url === "/dynamic-refs" ? dynamicRefsHtml : request.url === "/menu" ? menuHtml : request.url === "/ordinal-fields" ? ordinalFieldsHtml : request.url === "/textareas" ? textareaWidgetsHtml : request.url === "/ordinal-button" ? ordinalButtonHtml : request.url === "/multi-disclosure" ? multiDisclosureHtml : html);
+      response.end(request.url === "/visual-only" ? visualHtml : request.url === "/pointer-text" ? pointerTextHtml : request.url === "/icon-pointer" ? iconPointerHtml : request.url === "/silent-pointer" ? silentPointerHtml : request.url === "/silent-input" ? silentInputHtml : request.url === "/mixed-pointer" ? mixedPointerHtml : request.url === "/checkbox" ? checkboxHtml : request.url === "/submit" ? submitHtml : request.url === "/checkbox-task" ? checkboxTaskHtml : request.url === "/tabs" ? tabHtml : request.url === "/expand" ? expandHtml : request.url === "/native-fields" ? nativeFieldsHtml : request.url === "/copy-fields" ? copyFieldsHtml : request.url === "/slider" ? sliderHtml : request.url === "/aria-slider" ? ariaSliderHtml : request.url === "/jquery-ui-slider" ? jqueryUiSliderHtml : request.url === "/autocomplete" ? autocompleteHtml : request.url === "/multi-select" ? multipleSelectHtml : request.url === "/ambiguous-labels" ? ambiguousLabelsHtml : request.url === "/editable" ? editableContentHtml : request.url === "/silent-form" ? silentFormHtml : request.url === "/decision-race" ? decisionRaceHtml : request.url === "/replacement-action" ? replacementActionHtml : request.url === "/dynamic-refs" ? dynamicRefsHtml : request.url === "/menu" ? menuHtml : request.url === "/ordinal-fields" ? ordinalFieldsHtml : request.url === "/textareas" ? textareaWidgetsHtml : request.url === "/ordinal-button" ? ordinalButtonHtml : request.url === "/multi-disclosure" ? multiDisclosureHtml : html);
     });
     await new Promise<void>((resolve, reject) => {
       server.once("error", reject);
@@ -344,6 +346,30 @@ describe("Playwright browser safety flow", () => {
     const approvalToken = "approvalToken" in approvedProposal ? approvedProposal.approvalToken : "";
     expect(await browser.confirm(approvalToken, true)).toMatchObject({ status: "action-executed-after-approval" });
     expect(await browser.inspect().then((result) => result.textExcerpt)).toContain("Clicked locally");
+    expect(provider.decide).not.toHaveBeenCalled();
+  }, 45_000);
+
+  it("labels icon-only actions and splits distinct nested pointer targets", async () => {
+    profile = await mkdtemp(path.join(os.tmpdir(), "adk-browser-icon-pointer-test-"));
+    browser = new BrowserManager({ headless: true, profileDir: path.join(profile, "chromium") });
+    await browser.launch(`${baseUrl}icon-pointer`);
+    const provider: DecisionProvider = {
+      id: "semantic-local",
+      model: "unused-test-provider",
+      decide: vi.fn(async () => { throw new Error("Exact nested labels must resolve without model inference"); }),
+    };
+
+    const snapshot = await browser.inspect();
+    expect(snapshot.candidates).toEqual(expect.arrayContaining([
+      expect.objectContaining({ role: "pointer-target", label: "Reply", risk: "approval-required" }),
+      expect.objectContaining({ role: "pointer-target", label: "Forward", risk: "approval-required" }),
+      expect.objectContaining({ role: "pointer-target", label: "reply message icon", risk: "approval-required" }),
+      expect.objectContaining({ role: "pointer-target", label: "search icon", risk: "approval-required" }),
+    ]));
+    expect(snapshot.candidates.some((candidate) => candidate.label === "Reply Forward")).toBe(false);
+
+    const proposed = await browser.decideAndAct('Click the "Reply" control.', provider);
+    expect(proposed).toMatchObject({ status: "awaiting-user-approval", proposedAction: { label: "Reply", risk: "approval-required" } });
     expect(provider.decide).not.toHaveBeenCalled();
   }, 45_000);
 

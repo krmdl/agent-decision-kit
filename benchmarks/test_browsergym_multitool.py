@@ -14,6 +14,47 @@ SUITE_SPEC.loader.exec_module(SUITE)
 
 
 class MultiToolPlanningTests(unittest.TestCase):
+    def test_replies_to_only_the_explicit_email_via_unique_search_and_confirmation_steps(self):
+        task = 'Find the email by Blisse and reply to them with the text "Vitae ornare lectus.".'
+        search_icon = {"ref": "r1", "role": "pointer-target", "kind": "custom-pointer", "label": "search icon", "risk": "approval-required"}
+        self.assertEqual(
+            RUNNER.multi_tool_action(task, [search_icon], set()),
+            ("act", {"ref": "r1"}, {"fieldKind": "open-email-search"}),
+        )
+
+        search_field = {"ref": "r2", "role": "input", "kind": "search", "label": "Search"}
+        self.assertEqual(
+            RUNNER.multi_tool_action(task, [search_field], set()),
+            ("fill", {"ref": "r2", "text": "Blisse"}, {"fieldKind": "email-search", "characterCount": 6}),
+        )
+
+        result = {"ref": "r3", "role": "pointer-target", "kind": "custom-pointer", "label": "Email sender — Blisse", "risk": "approval-required"}
+        self.assertEqual(
+            RUNNER.multi_tool_action(task, [search_field, result], {RUNNER.field_key(search_field)}),
+            ("act", {"ref": "r3"}, {"fieldKind": "email-recipient"}),
+        )
+
+        reply = {"ref": "r4", "role": "pointer-target", "kind": "custom-pointer", "label": "Reply", "risk": "approval-required"}
+        forward = {"ref": "r5", "role": "pointer-target", "kind": "custom-pointer", "label": "Forward", "risk": "approval-required"}
+        self.assertEqual(
+            RUNNER.multi_tool_action(task, [reply, forward], set()),
+            ("act", {"ref": "r4"}, {"fieldKind": "open-email-reply"}),
+        )
+
+        body = {"ref": "r6", "role": "textarea", "kind": "textarea", "label": "Reply body"}
+        send = {"ref": "r7", "role": "pointer-target", "kind": "custom-pointer", "label": "send reply icon", "risk": "approval-required"}
+        self.assertEqual(
+            RUNNER.multi_tool_action(task, [body, send], set()),
+            ("fill", {"ref": "r6", "text": "Vitae ornare lectus."}, {"fieldKind": "email-reply-body", "characterCount": 20}),
+        )
+        self.assertEqual(
+            RUNNER.multi_tool_action(task, [body, send], {RUNNER.field_key(body)}),
+            ("act", {"ref": "r7"}, {"fieldKind": "submit-after-email-reply"}),
+        )
+
+        duplicate_results = [result, dict(result, ref="r8", label="Blisse")]
+        self.assertIsNone(RUNNER.multi_tool_action(task, duplicate_results, set()))
+
     def test_batches_only_explicit_unique_native_checkbox_targets_then_submits_separately(self):
         task = "Select Alpha, Beta, Gamma and click Submit."
         checkboxes = [
