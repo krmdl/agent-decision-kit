@@ -30,6 +30,11 @@ describe("Playwright browser safety flow", () => {
   let decisionRaceHtml: Buffer;
   let replacementActionHtml: Buffer;
   let dynamicRefsHtml: Buffer;
+  let menuHtml: Buffer;
+  let ordinalFieldsHtml: Buffer;
+  let multiDisclosureHtml: Buffer;
+  let textareaWidgetsHtml: Buffer;
+  let ordinalButtonHtml: Buffer;
 
   beforeAll(async () => {
     const html = await readFile(path.resolve("examples/browser-demo.html"));
@@ -47,6 +52,11 @@ describe("Playwright browser safety flow", () => {
     decisionRaceHtml = Buffer.from('<!doctype html><button>Read guide</button><p>Waiting for a decision</p>');
     replacementActionHtml = Buffer.from('<!doctype html><button data-adk-ref="r1" onclick="document.querySelector(\'#status\').textContent=\'Dangerous action executed\'">Delete all data</button><p id="status">Not executed</p>');
     dynamicRefsHtml = Buffer.from('<!doctype html><button id="old">Old action</button><button id="new" hidden onclick="document.querySelector(\'#status\').textContent=\'New action clicked\'">New action</button><p id="status">Not clicked</p>');
+    menuHtml = Buffer.from('<!doctype html><button id="menu" aria-expanded="false">Menu</button><div id="items" role="menu" hidden><button role="menuitem" onclick="document.querySelector(\'#status\').textContent=\'Zoomed\'">Zoom In</button></div><p id="status">Menu closed</p><script>document.querySelector(\'#menu\').addEventListener(\'click\',e=>{const open=e.currentTarget.getAttribute(\'aria-expanded\')!==\'true\';e.currentTarget.setAttribute(\'aria-expanded\',String(open));document.querySelector(\'#items\').hidden=!open})</script>');
+    ordinalFieldsHtml = Buffer.from('<!doctype html><form><label><input type="radio" name="choice"> Alpha</label><label><input type="radio" name="choice"> Beta</label><label><input type="radio" name="choice"> Gamma</label><label>Text one <input type="text"></label><label>Text two <input type="text"></label></form>');
+    textareaWidgetsHtml = Buffer.from('<!doctype html><textarea aria-label="First notes"></textarea><textarea aria-label="Second notes"></textarea>');
+    ordinalButtonHtml = Buffer.from('<!doctype html><button>ONE</button><button>TWO</button>');
+    multiDisclosureHtml = Buffer.from('<!doctype html><button id="one" aria-expanded="false">Section one</button><div id="content-one" hidden><p>Nothing here</p></div><button id="two" aria-expanded="false">Section two</button><div id="content-two" hidden><a href="#target">Ultrices</a></div><script>for(const id of [\'one\',\'two\'])document.querySelector(`#${id}`).addEventListener(\'click\',e=>{const open=e.currentTarget.getAttribute(\'aria-expanded\')!==\'true\';e.currentTarget.setAttribute(\'aria-expanded\',String(open));document.querySelector(`#content-${id}`).hidden=!open})</script>');
     server = createServer((request, response) => {
       if (request.url === "/json/version") {
         if (cdpRedirect) {
@@ -59,7 +69,7 @@ describe("Playwright browser safety flow", () => {
         return;
       }
       response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-      response.end(request.url === "/visual-only" ? visualHtml : request.url === "/pointer-text" ? pointerTextHtml : request.url === "/checkbox" ? checkboxHtml : request.url === "/submit" ? submitHtml : request.url === "/checkbox-task" ? checkboxTaskHtml : request.url === "/tabs" ? tabHtml : request.url === "/expand" ? expandHtml : request.url === "/native-fields" ? nativeFieldsHtml : request.url === "/ambiguous-labels" ? ambiguousLabelsHtml : request.url === "/editable" ? editableContentHtml : request.url === "/silent-form" ? silentFormHtml : request.url === "/decision-race" ? decisionRaceHtml : request.url === "/replacement-action" ? replacementActionHtml : request.url === "/dynamic-refs" ? dynamicRefsHtml : html);
+      response.end(request.url === "/visual-only" ? visualHtml : request.url === "/pointer-text" ? pointerTextHtml : request.url === "/checkbox" ? checkboxHtml : request.url === "/submit" ? submitHtml : request.url === "/checkbox-task" ? checkboxTaskHtml : request.url === "/tabs" ? tabHtml : request.url === "/expand" ? expandHtml : request.url === "/native-fields" ? nativeFieldsHtml : request.url === "/ambiguous-labels" ? ambiguousLabelsHtml : request.url === "/editable" ? editableContentHtml : request.url === "/silent-form" ? silentFormHtml : request.url === "/decision-race" ? decisionRaceHtml : request.url === "/replacement-action" ? replacementActionHtml : request.url === "/dynamic-refs" ? dynamicRefsHtml : request.url === "/menu" ? menuHtml : request.url === "/ordinal-fields" ? ordinalFieldsHtml : request.url === "/textareas" ? textareaWidgetsHtml : request.url === "/ordinal-button" ? ordinalButtonHtml : request.url === "/multi-disclosure" ? multiDisclosureHtml : html);
     });
     await new Promise<void>((resolve, reject) => {
       server.once("error", reject);
@@ -428,6 +438,92 @@ describe("Playwright browser safety flow", () => {
     expect(result.selectionRule).toBe("unique-explicit-command-label");
     expect(result.action.label).toBe("Save local draft");
     expect(result.effect.textDelta.excerpt).toContain("Saved the local sample draft.");
+  }, 45_000);
+
+  it("matches a role-prefixed button label exactly", async () => {
+    profile = await mkdtemp(path.join(os.tmpdir(), "adk-browser-role-label-test-"));
+    browser = new BrowserManager({ headless: true, profileDir: path.join(profile, "chromium") });
+    await browser.launch(`${baseUrl}ordinal-button`);
+    const provider: DecisionProvider = {
+      id: "remote-test-provider",
+      model: "unused-test-provider",
+      decide: async () => { throw new Error("An explicit role-prefixed label should resolve locally"); },
+    };
+
+    const result = await browser.decideAndAct("Click button ONE.", provider);
+    expect(result).toMatchObject({ status: "action-executed", selectionRule: "unique-explicit-command-label", action: { label: "ONE" } });
+  }, 45_000);
+
+  it("uses the label of the next revealed menu item after opening a menu", async () => {
+    profile = await mkdtemp(path.join(os.tmpdir(), "adk-browser-menu-sequence-test-"));
+    browser = new BrowserManager({ headless: true, profileDir: path.join(profile, "chromium") });
+    await browser.launch(`${baseUrl}menu`);
+    const provider: DecisionProvider = {
+      id: "remote-test-provider",
+      model: "unused-test-provider",
+      decide: async () => { throw new Error("The menu steps have exact visible labels"); },
+    };
+    const task = 'Click the "Menu" button, and then find and click on the item labeled "Zoom In".';
+
+    const opened = await browser.decideAndAct(task, provider);
+    expect(opened).toMatchObject({ status: "action-executed", action: { role: "button" } });
+    expect(opened.action.label).toContain("Menu");
+    const selected = await browser.decideAndAct(task, provider);
+    expect(selected).toMatchObject({ status: "action-executed", action: { label: "Zoom In" } });
+    expect((await browser.inspect()).textExcerpt).toContain("Zoomed");
+  }, 45_000);
+
+  it("uses explicit radio and text-field ordinals without entering inferred text", async () => {
+    profile = await mkdtemp(path.join(os.tmpdir(), "adk-browser-ordinal-fields-test-"));
+    browser = new BrowserManager({ headless: true, profileDir: path.join(profile, "chromium") });
+    await browser.launch(`${baseUrl}ordinal-fields`);
+    const provider: DecisionProvider = {
+      id: "remote-test-provider",
+      model: "unused-test-provider",
+      decide: async () => { throw new Error("Explicit form-field ordinals should resolve locally"); },
+    };
+    const task = 'Check the 3rd radio button and enter the number "-3" into the 2nd textbox.';
+
+    const radio = await browser.decideAndAct(task, provider);
+    expect(radio).toMatchObject({ status: "action-executed", selectionRule: "explicit-radio-ordinal", action: { kind: "radio", checked: false } });
+    const focused = await browser.decideAndAct(task, provider);
+    expect(focused).toMatchObject({ status: "action-executed", selectionRule: "explicit-text-field-ordinal", action: { label: "Text two" } });
+    expect((await browser.inspect()).textExcerpt).not.toContain("-3");
+  }, 45_000);
+
+  it("focuses any requested visible textarea deterministically", async () => {
+    profile = await mkdtemp(path.join(os.tmpdir(), "adk-browser-any-textarea-test-"));
+    browser = new BrowserManager({ headless: true, profileDir: path.join(profile, "chromium") });
+    await browser.launch(`${baseUrl}textareas`);
+    const provider: DecisionProvider = {
+      id: "remote-test-provider",
+      model: "unused-test-provider",
+      decide: async () => { throw new Error("The task accepts any visible textarea"); },
+    };
+
+    const result = await browser.decideAndAct('Click on a "textarea" widget.', provider);
+    expect(result).toMatchObject({ status: "action-executed", selectionRule: "explicit-any-textarea", action: { label: "First notes" } });
+  }, 45_000);
+
+  it("opens multiple collapsed sections in DOM order when searching for an exact target", async () => {
+    profile = await mkdtemp(path.join(os.tmpdir(), "adk-browser-disclosure-search-test-"));
+    browser = new BrowserManager({ headless: true, profileDir: path.join(profile, "chromium") });
+    await browser.launch(`${baseUrl}multi-disclosure`);
+    const provider: DecisionProvider = {
+      id: "remote-test-provider",
+      model: "unused-test-provider",
+      decide: async () => { throw new Error("Visible disclosure controls and target labels resolve locally"); },
+    };
+    const task = 'Expand the sections below, to find and click on the link "Ultrices."';
+
+    const first = await browser.decideAndAct(task, provider);
+    expect(first).toMatchObject({ status: "action-executed", selectionRule: "ordered-disclosure-search", action: { role: "button" } });
+    expect(first.action.label).toContain("Section one");
+    const second = await browser.decideAndAct(task, provider);
+    expect(second).toMatchObject({ status: "action-executed", action: { role: "button" } });
+    expect(second.action.label).toContain("Section two");
+    const target = await browser.decideAndAct(task, provider);
+    expect(target).toMatchObject({ status: "action-executed", selectionRule: "unique-exact-quoted-label", action: { label: "Ultrices" } });
   }, 45_000);
 
   it("does not guess when the same explicit command label appears twice", async () => {

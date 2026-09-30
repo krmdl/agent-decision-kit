@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Resolve role-prefixed labels, ordinal radio/textbox instructions, revealed menu-item targets, and ordered searches through multiple collapsed sections with local browser rules when the target is explicit.
 - Expose read-only browser fields in bounded snapshots and open their visible picker with `browser_action`; reject attempts to fill them directly.
 - Match an explicit unique submit request locally while preserving the separate sensitive-action approval call.
 - Resolve unique exact control labels in simple click/tap/open requests locally, while leaving duplicates ambiguous and consequential actions behind approval.

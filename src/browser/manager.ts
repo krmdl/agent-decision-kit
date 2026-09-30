@@ -557,6 +557,10 @@ function sameScreenshotPixels(left: ScreenshotPixels, right: ScreenshotPixels) {
 
 function findDeterministicMatch(task: string, candidates: BrowserCandidate[]) {
   const normalized = normalizeLabel(task);
+  const taskCandidates = findOrdinalTaskCandidate(task, candidates);
+  if (taskCandidates) return taskCandidates;
+  const anyTextarea = findAnyTextareaRequest(task, candidates);
+  if (anyTextarea) return anyTextarea;
   const tabIndex = task.match(/\btab\s*#?\s*(\d+)\b/i)?.[1];
   if (tabIndex) {
     const target = `tab ${tabIndex}`;
@@ -586,7 +590,7 @@ function findDeterministicMatch(task: string, candidates: BrowserCandidate[]) {
     }
   }
 
-  if (/\b(?:expand|open|show|reveal)\b/i.test(task) && /\b(?:section|panel|details|content|more)\b/i.test(task)) {
+  if (/\b(?:expand|open|show|reveal)\b/i.test(task) && /\b(?:sections?|panels?|details|content|more)\b/i.test(task)) {
     const collapsed = candidates.filter((candidate) => candidate.expanded === false);
     const submitStep = /\b(?:click|press|tap)\s+(?:the\s+)?submit\b/i.test(task);
     const expandedControls = candidates.filter((candidate) => candidate.expanded === true && ["button", "tab"].includes(candidate.role));
@@ -595,7 +599,14 @@ function findDeterministicMatch(task: string, candidates: BrowserCandidate[]) {
     if (collapsed.length === 1) return { candidate: collapsed[0]!, rule: "single-collapsed-control", note: "One visible control is explicitly marked collapsed and matches the task's expand intent." };
     const named = candidates.filter((candidate) => candidate.expanded !== true && ["button", "tab"].includes(candidate.role) && labelParts(candidate).some((part) => /\b(?:section|panel|details|more|expand|show|open)\b/i.test(part)));
     if (named.length === 1) return { candidate: named[0]!, rule: "unique-expand-control", note: "One visible disclosure control matches the task's expand intent." };
-    if (collapsed.length > 1 || named.length > 1) return undefined;
+    if (collapsed.length > 1 || named.length > 1) {
+      const isDisclosureSearch = collapsed.length > 1
+        && /\b(?:find|look\s+for|locate|search\s+for)\b/i.test(task)
+        && /\bsections?\b/i.test(task)
+        && /"[^"\r\n]{1,100}"|“[^”\r\n]{1,100}”/u.test(task);
+      if (isDisclosureSearch) return { candidate: collapsed[0]!, rule: "ordered-disclosure-search", note: "The task asks to find a quoted target through multiple collapsed sections. The first visible collapsed disclosure is opened; inspect again to continue. No form submission or other consequential action is performed." };
+      return undefined;
+    }
     if (normalized.includes("and click submit")) return undefined;
   }
 
@@ -612,10 +623,16 @@ function findDeterministicMatch(task: string, candidates: BrowserCandidate[]) {
 }
 
 function findUniqueQuotedLabel(task: string, candidates: BrowserCandidate[]) {
+  const labeledTarget = task.match(/\b(?:item|button|link|tab|control)\s+(?:with\s+(?:the\s+)?label|labeled|labelled|named|called)\s+(?:"([^"\r\n]{1,100})"|“([^”\r\n]{1,100})”)/iu);
   const phrases = [...task.matchAll(/"([^"\r\n]{1,100})"|“([^”\r\n]{1,100})”/gu)]
     .map((match) => match[1] ?? match[2] ?? "")
     .map(normalizeLabel)
     .filter(Boolean);
+  if (labeledTarget) {
+    const phrase = normalizeLabel(labeledTarget[1] ?? labeledTarget[2] ?? "");
+    const matches = candidates.filter((candidate) => labelParts(candidate).includes(phrase));
+    if (matches.length === 1) return matches[0];
+  }
   if (!phrases.length) return undefined;
   const matches = candidates.filter((candidate) => phrases.some((phrase) => labelParts(candidate).includes(phrase)));
   return matches.length === 1 ? matches[0] : undefined;
@@ -627,6 +644,8 @@ function findUniqueExplicitCommandLabel(task: string, candidates: BrowserCandida
   const target = match[1]!
     .trim()
     .replace(/[.!?]+$/u, "")
+    .replace(/^(?:a|an|the)\s+(?:button|link|tab|menu\s+item|control)\s+/i, "")
+    .replace(/^(?:button|link|tab|menu\s+item|control)\s+/i, "")
     .replace(/\s+(?:button|link|tab|menu\s+item|control)$/i, "")
     .replace(/^["'“”]+|["'“”]+$/gu, "");
   const normalized = normalizeLabel(target);
@@ -636,6 +655,30 @@ function findUniqueExplicitCommandLabel(task: string, candidates: BrowserCandida
     || ["button", "submit"].includes(candidate.kind),
   ).filter((candidate) => labelParts(candidate).includes(normalized));
   return matches.length === 1 ? matches[0] : undefined;
+}
+
+function findOrdinalTaskCandidate(task: string, candidates: BrowserCandidate[]) {
+  const radio = task.match(/\b(?:check|select|choose|tick)\s+(?:the\s+)?(\d+)(?:st|nd|rd|th)?\s+radio(?:\s+button)?\b/i);
+  if (radio) {
+    const radios = candidates.filter((candidate) => candidate.kind === "radio" || candidate.role === "radio" || candidate.role === "menuitemradio");
+    const selected = radios[Number(radio[1]) - 1];
+    if (selected && selected.checked !== true) return { candidate: selected, rule: "explicit-radio-ordinal", note: "The task explicitly names one visible radio button by ordinal position. Only that radio is selected." };
+  }
+
+  const field = task.match(/\b(?:focus|click|enter|type|fill)\b[^.!?]{0,160}?\b(\d+)(?:st|nd|rd|th)\s+(?:(?:input\s+)?(?:text\s*box|textbox|text\s+field))\b/i);
+  if (!field) return undefined;
+  const fields = candidates.filter((candidate) =>
+    !candidate.readOnly
+    && (candidate.role === "textarea" || (candidate.role === "input" && ["text", "search", "email", "tel", "url", "number"].includes(candidate.kind))),
+  );
+  const target = fields[Number(field[1]) - 1];
+  return target ? { candidate: target, rule: "explicit-text-field-ordinal", note: "The task explicitly names one visible editable text field by ordinal position. This action only focuses the field; text is never inferred or entered by this click." } : undefined;
+}
+
+function findAnyTextareaRequest(task: string, candidates: BrowserCandidate[]) {
+  if (!/\b(?:click|focus|select)\b/i.test(task) || !/\b(?:a|any)\b/i.test(task) || !/\btextarea\b/i.test(task)) return undefined;
+  const target = candidates.find((candidate) => candidate.kind === "textarea" && candidate.role === "textarea" && !candidate.readOnly);
+  return target ? { candidate: target, rule: "explicit-any-textarea", note: "The task asks for any visible editable textarea. The first visible match is focused; no content is entered." } : undefined;
 }
 
 function labelParts(candidate: BrowserCandidate) {
