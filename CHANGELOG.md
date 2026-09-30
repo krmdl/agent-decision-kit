@@ -7,6 +7,7 @@
 - Stop repeated automatic approval loops when a confirmed pointer-only click leaves the visible page unchanged.
 - Stop repeated automatic browser actions when the inspected page state did not change; explicit `browser_action` calls remain available.
 - Return range-slider bounds and step without exposing its current form value; add an explicit `browser_set_range` MCP tool.
+- Include accessible ARIA sliders in browser inspection and set them with keyboard input while verifying the requested value without returning it.
 - Include bounded CSS `cursor: pointer` targets alongside semantic browser controls; custom targets remain subject to the sensitive-action approval gate.
 - Click an explicitly requested textarea widget instead of only focusing it, and keep the synthetic MiniWoB form workflow aligned with explicit ordinals and its local submit approval gate.
 - Expose read-only browser fields in bounded snapshots and open their visible picker with `browser_action`; reject attempts to fill them directly.

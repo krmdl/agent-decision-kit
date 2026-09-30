@@ -41,6 +41,7 @@ describe("Playwright browser safety flow", () => {
   let silentInputHtml: Buffer;
   let autocompleteHtml: Buffer;
   let multipleSelectHtml: Buffer;
+  let ariaSliderHtml: Buffer;
 
   beforeAll(async () => {
     const html = await readFile(path.resolve("examples/browser-demo.html"));
@@ -49,6 +50,7 @@ describe("Playwright browser safety flow", () => {
     silentPointerHtml = Buffer.from('<!doctype html><style>.faux-link{cursor:pointer}</style><span class="faux-link">Open item</span>');
     silentInputHtml = Buffer.from('<!doctype html><label>Search <input type="text"></label>');
     sliderHtml = Buffer.from('<!doctype html><form onsubmit="event.preventDefault();document.querySelector(\'#status\').textContent=\'Submitted\'"><label for="level">Level</label><input id="level" type="range" min="0" max="20" step="1" value="5"><button type="submit">Submit</button></form><p id="status">Not submitted</p>');
+    ariaSliderHtml = Buffer.from('<!doctype html><div id="level" role="slider" aria-label="Level" aria-valuemin="0" aria-valuemax="20" aria-valuenow="4" tabindex="0" style="width:120px;height:20px"></div><p id="value">4</p><script>document.querySelector("#level").addEventListener("keydown",event=>{const control=event.currentTarget;let value=Number(control.getAttribute("aria-valuenow"));if(event.key==="ArrowRight")value=Math.min(20,value+1);else if(event.key==="ArrowLeft")value=Math.max(0,value-1);else return;event.preventDefault();control.setAttribute("aria-valuenow",String(value));document.querySelector("#value").textContent=String(value)})</script>');
     autocompleteHtml = Buffer.from('<!doctype html><style>.suggestion{cursor:pointer}</style><label>Tag <input id="tag" type="text"></label><div><span class="suggestion">Poland</span><span class="suggestion">Portugal</span></div>');
     multipleSelectHtml = Buffer.from('<!doctype html><label for="tags">Tags</label><select id="tags" multiple><option value="alpha" selected>Alpha</option><option value="beta">Beta</option><option value="gamma">Gamma</option></select><p id="status">Not submitted</p>');
     mixedPointerHtml = Buffer.from('<!doctype html><style>.faux-link { cursor: pointer }</style><button>Section</button><span id="target" class="faux-link">Ultrices</span><p id="status">Not clicked</p><script>document.querySelector("#target").addEventListener("click",()=>document.querySelector("#status").textContent="Clicked locally")</script>');
@@ -81,7 +83,7 @@ describe("Playwright browser safety flow", () => {
         return;
       }
       response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-      response.end(request.url === "/visual-only" ? visualHtml : request.url === "/pointer-text" ? pointerTextHtml : request.url === "/silent-pointer" ? silentPointerHtml : request.url === "/silent-input" ? silentInputHtml : request.url === "/mixed-pointer" ? mixedPointerHtml : request.url === "/checkbox" ? checkboxHtml : request.url === "/submit" ? submitHtml : request.url === "/checkbox-task" ? checkboxTaskHtml : request.url === "/tabs" ? tabHtml : request.url === "/expand" ? expandHtml : request.url === "/native-fields" ? nativeFieldsHtml : request.url === "/slider" ? sliderHtml : request.url === "/autocomplete" ? autocompleteHtml : request.url === "/multi-select" ? multipleSelectHtml : request.url === "/ambiguous-labels" ? ambiguousLabelsHtml : request.url === "/editable" ? editableContentHtml : request.url === "/silent-form" ? silentFormHtml : request.url === "/decision-race" ? decisionRaceHtml : request.url === "/replacement-action" ? replacementActionHtml : request.url === "/dynamic-refs" ? dynamicRefsHtml : request.url === "/menu" ? menuHtml : request.url === "/ordinal-fields" ? ordinalFieldsHtml : request.url === "/textareas" ? textareaWidgetsHtml : request.url === "/ordinal-button" ? ordinalButtonHtml : request.url === "/multi-disclosure" ? multiDisclosureHtml : html);
+      response.end(request.url === "/visual-only" ? visualHtml : request.url === "/pointer-text" ? pointerTextHtml : request.url === "/silent-pointer" ? silentPointerHtml : request.url === "/silent-input" ? silentInputHtml : request.url === "/mixed-pointer" ? mixedPointerHtml : request.url === "/checkbox" ? checkboxHtml : request.url === "/submit" ? submitHtml : request.url === "/checkbox-task" ? checkboxTaskHtml : request.url === "/tabs" ? tabHtml : request.url === "/expand" ? expandHtml : request.url === "/native-fields" ? nativeFieldsHtml : request.url === "/slider" ? sliderHtml : request.url === "/aria-slider" ? ariaSliderHtml : request.url === "/autocomplete" ? autocompleteHtml : request.url === "/multi-select" ? multipleSelectHtml : request.url === "/ambiguous-labels" ? ambiguousLabelsHtml : request.url === "/editable" ? editableContentHtml : request.url === "/silent-form" ? silentFormHtml : request.url === "/decision-race" ? decisionRaceHtml : request.url === "/replacement-action" ? replacementActionHtml : request.url === "/dynamic-refs" ? dynamicRefsHtml : request.url === "/menu" ? menuHtml : request.url === "/ordinal-fields" ? ordinalFieldsHtml : request.url === "/textareas" ? textareaWidgetsHtml : request.url === "/ordinal-button" ? ordinalButtonHtml : request.url === "/multi-disclosure" ? multiDisclosureHtml : html);
     });
     await new Promise<void>((resolve, reject) => {
       server.once("error", reject);
@@ -482,6 +484,28 @@ describe("Playwright browser safety flow", () => {
     await browser.fill(fieldRef, "local synthetic note");
     const approved = await browser.decideAndAct("Enter a note into the form and submit when done.", blockedProvider);
     expect(approved).toMatchObject({ status: "awaiting-user-approval", proposedAction: { label: "Submit draft", risk: "approval-required" } });
+  }, 45_000);
+
+  it("sets accessible ARIA sliders with keyboard input while keeping the value out of tool results", async () => {
+    profile = await mkdtemp(path.join(os.tmpdir(), "adk-browser-aria-range-test-"));
+    browser = new BrowserManager({ headless: true, profileDir: path.join(profile, "chromium") });
+    await browser.launch(`${baseUrl}aria-slider`);
+    const inspected = await browser.inspect();
+    const slider = inspected.candidates.find((candidate) => candidate.role === "slider");
+    expect(slider).toMatchObject({ kind: "range", min: 0, max: 20 });
+    expect(JSON.stringify(slider)).not.toContain("aria-valuenow");
+
+    const set = await browser.setRange(slider!.ref, 16);
+    expect(set).toMatchObject({ status: "set", valueReturned: false, submitted: false });
+    expect(JSON.stringify(set)).not.toContain("16");
+    expect((await browser.inspect()).textExcerpt).toContain("16");
+    await expect(browser.setRange(slider!.ref, 21)).rejects.toThrow("between 0 and 20");
+
+    await browser.navigate(`${baseUrl}aria-slider`);
+    const provider: DecisionProvider = { id: "semantic-local", model: "unused-provider", decide: async () => { throw new Error("The explicit ARIA slider target must be resolved locally"); } };
+    const automatic = await browser.decideAndAct("Set the slider to [16].", provider);
+    expect(automatic).toMatchObject({ status: "action-executed", selectionRule: "explicit-slider-values-in-order", effect: { status: "set", valueReturned: false, submitted: false } });
+    expect(JSON.stringify(automatic)).not.toContain("16");
   }, 45_000);
 
   it("chooses the first visible item when the task explicitly accepts any matching prefix", async () => {
