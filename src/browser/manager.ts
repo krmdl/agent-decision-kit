@@ -31,7 +31,7 @@ export class BrowserManager {
   private pending = new Map<string, PendingBrowserApproval>();
   private privateFieldValuePresence = new Map<string, boolean>();
   private privateRangeValues = new Map<string, number>();
-  private nonProgressingPointerActions = new Set<string>();
+  private nonProgressingActions = new Set<string>();
   private ownsContext = false;
   private lastInspectionFingerprint = "";
   private completedDisclosureIntent: { task: string; url: string; createdAt: number } | undefined;
@@ -324,16 +324,16 @@ export class BrowserManager {
       return { status: "prerequisite-fields-required", candidateCount: snapshot.candidates.length, requiredFields: missingFields, note: "The task asks for form entry before submission, and these visible fields are still empty. No submit action was sent to the decision provider or proposed. Fill or select the requested values, inspect again, then ask to submit; submission will still require separate approval." };
     }
     if (localMatch) {
-      if (isPointerTarget(localMatch.candidate) && this.nonProgressingPointerActions.has(pointerActionKey(this.lastInspectionFingerprint, localMatch.candidate))) {
-        return { status: "repeated-action-blocked", action: localMatch.candidate, note: "The previous approved click on this pointer-only target left the visible page state unchanged. The same automatic click is blocked to prevent an approval loop; inspect the page and choose a different action or explicitly use browser_action." };
+      if (this.nonProgressingActions.has(nonProgressingActionKey(this.lastInspectionFingerprint, localMatch.candidate))) {
+        return { status: "repeated-action-blocked", action: localMatch.candidate, note: repeatedActionNote(localMatch.candidate) };
       }
       return this.applyLocalMatch(localMatch.candidate, snapshot, localMatch.rule, localMatch.note, task, localMatch.optionLabel, localMatch.rangeValue);
     }
     if (provider.id !== "semantic-local" && process.env.AGENT_ALLOW_REMOTE_BROWSER_CONTEXT !== "true") {
       return { status: "remote-provider-blocked-for-browser-privacy", provider: provider.id, candidates: snapshot.candidates, note: "Page labels and text are untrusted browser data. Set AGENT_ALLOW_REMOTE_BROWSER_CONTEXT=true only if you intend to send these bounded labels to the configured remote provider." };
     }
-    const availableCandidates = snapshot.candidates.filter((candidate) => !isPointerTarget(candidate) || !this.nonProgressingPointerActions.has(pointerActionKey(this.lastInspectionFingerprint, candidate)));
-    if (!availableCandidates.length) return { status: "repeated-action-blocked", candidateCount: snapshot.candidates.length, note: "The only visible pointer-only target was already approved once and left the page state unchanged. No repeated click was proposed." };
+    const availableCandidates = snapshot.candidates.filter((candidate) => !this.nonProgressingActions.has(nonProgressingActionKey(this.lastInspectionFingerprint, candidate)));
+    if (!availableCandidates.length) return { status: "repeated-action-blocked", candidateCount: snapshot.candidates.length, note: "Every visible action in this page state has already run once without changing the inspected state. No automatic action was repeated." };
     const decisionContextFingerprint = this.lastInspectionFingerprint;
     const decision = await provider.decide({
       state: { url: snapshot.url, title: snapshot.title, headings: snapshot.headings, textExcerpt: snapshot.textExcerpt, candidates: availableCandidates.map(({ ref, role, label, kind, risk, checked, expanded, selected, readOnly, optionLabels, selectedOptionLabels, min, max, step }) => ({ ref, role, label, kind, risk, ...(checked === undefined ? {} : { checked }), ...(expanded === undefined ? {} : { expanded }), ...(selected === undefined ? {} : { selected }), ...(readOnly === undefined ? {} : { readOnly }), ...(optionLabels === undefined ? {} : { optionLabels }), ...(selectedOptionLabels === undefined ? {} : { selectedOptionLabels }), ...(min === undefined ? {} : { min }), ...(max === undefined ? {} : { max }), ...(step === undefined ? {} : { step }) })) },
@@ -346,8 +346,8 @@ export class BrowserManager {
     const selectedRef = decision.answers.action?.type === "choice" ? decision.answers.action.choice : "";
     const selected = availableCandidates.find((candidate) => candidate.ref === selectedRef);
     if (!selected) return { status: "no-safe-selection", provider: decision.provider, model: decision.model, decisionLatencyMs: Math.round(decision.latencyMs), decision: decision.answers.action, candidateCount: availableCandidates.length, candidates: availableCandidates, note: "No available page action matched the task confidently enough to execute safely. The semantic provider's confidence is not calibrated." };
-    if (isPointerTarget(selected) && this.nonProgressingPointerActions.has(pointerActionKey(this.lastInspectionFingerprint, selected))) {
-      return { status: "repeated-action-blocked", action: selected, provider: decision.provider, model: decision.model, note: "The previous approved click on this pointer-only target left the visible page state unchanged. The same automatic click is blocked to prevent an approval loop; inspect the page and choose a different action or explicitly use browser_action." };
+    if (this.nonProgressingActions.has(nonProgressingActionKey(this.lastInspectionFingerprint, selected))) {
+      return { status: "repeated-action-blocked", action: selected, provider: decision.provider, model: decision.model, note: repeatedActionNote(selected) };
     }
     if (selected.risk === "approval-required") {
       const token = randomUUID();
@@ -359,8 +359,13 @@ export class BrowserManager {
     if (sorted.length > 1 && (sorted[0]! < 0.4 || sorted[0]! - sorted[1]! < 0.015)) {
       return { status: "ambiguous-selection", decision: decision.answers.action, candidateCount: snapshot.candidates.length, provider: decision.provider, model: decision.model, decisionLatencyMs: Math.round(decision.latencyMs), candidates: snapshot.candidates, note: "The uncalibrated semantic scores are too close to choose a browser action automatically. Call browser_action with the ref you want." };
     }
+    const beforeActionFingerprint = this.lastInspectionFingerprint;
     const effect = await this.perform(selected);
-    return { status: "action-executed", action: selected, candidateCount: snapshot.candidates.length, provider: decision.provider, model: decision.model, decisionLatencyMs: Math.round(decision.latencyMs), confidence: decision.answers.action?.confidence, confidenceSource: decision.answers.action?.confidenceSource, calibration: decision.answers.action?.calibration, effect };
+    await this.inspect();
+    const visibleStateChanged = this.lastInspectionFingerprint !== beforeActionFingerprint;
+    if (!visibleStateChanged) this.rememberNonProgressingAction(beforeActionFingerprint, selected);
+    else this.nonProgressingActions.delete(nonProgressingActionKey(beforeActionFingerprint, selected));
+    return { status: "action-executed", action: selected, candidateCount: snapshot.candidates.length, provider: decision.provider, model: decision.model, decisionLatencyMs: Math.round(decision.latencyMs), confidence: decision.answers.action?.confidence, confidenceSource: decision.answers.action?.confidenceSource, calibration: decision.answers.action?.calibration, effect, visibleStateChanged };
   }
 
   async confirm(token: string, approve: boolean) {
@@ -387,17 +392,17 @@ export class BrowserManager {
     const candidate = this.candidates.get(pending.ref);
     if (!candidate || snapshot.url !== pending.url || this.lastInspectionFingerprint !== pending.fingerprint) throw new Error("The page changed after the action was proposed. The approval was cancelled; inspect it and request the action again.");
     const effect = await this.perform(candidate);
-    if (isPointerTarget(candidate)) {
-      const after = await this.inspect();
-      if (this.lastInspectionFingerprint === pending.fingerprint) {
-        this.nonProgressingPointerActions.add(pointerActionKey(pending.fingerprint, candidate));
-        if (this.nonProgressingPointerActions.size > 256) this.nonProgressingPointerActions.clear();
-      } else {
-        this.nonProgressingPointerActions.delete(pointerActionKey(pending.fingerprint, candidate));
-      }
-      return { status: "action-executed-after-approval", action: candidate, effect, visibleStateChanged: this.lastInspectionFingerprint !== pending.fingerprint, ...(after.url === pending.url ? {} : { note: "The click navigated the page." }) };
-    }
-    return { status: "action-executed-after-approval", action: candidate, effect };
+    const after = await this.inspect();
+    const visibleStateChanged = this.lastInspectionFingerprint !== pending.fingerprint;
+    if (!visibleStateChanged) this.rememberNonProgressingAction(pending.fingerprint, candidate);
+    else this.nonProgressingActions.delete(nonProgressingActionKey(pending.fingerprint, candidate));
+    return {
+      status: "action-executed-after-approval",
+      action: candidate,
+      effect,
+      visibleStateChanged,
+      ...(!visibleStateChanged ? { note: repeatedActionNote(candidate) } : after.url !== pending.url ? { note: "The action navigated the page." } : {}),
+    };
   }
 
   private async applyLocalMatch(candidate: BrowserCandidate, snapshot: { title: string; url: string; headings: string[]; textExcerpt: string; candidates: BrowserCandidate[] }, rule: string, note: string, task: string, optionLabel?: string, rangeValue?: number) {
@@ -418,11 +423,16 @@ export class BrowserManager {
       return { status: "awaiting-user-approval", approvalToken: token, proposedAction: candidate, ...metadata, note };
     }
     const clickTextControl = rule === "explicit-any-textarea" && /\bclick\b/i.test(task);
+    const beforeActionFingerprint = this.lastInspectionFingerprint;
     const effect = optionLabel !== undefined
       ? await this.selectOption(candidate.ref, optionLabel)
       : rangeValue !== undefined
         ? await this.setRange(candidate.ref, rangeValue)
         : await this.perform(candidate, clickTextControl);
+    await this.inspect();
+    const visibleStateChanged = this.lastInspectionFingerprint !== beforeActionFingerprint;
+    if (!visibleStateChanged) this.rememberNonProgressingAction(beforeActionFingerprint, candidate);
+    else this.nonProgressingActions.delete(nonProgressingActionKey(beforeActionFingerprint, candidate));
     if (["single-collapsed-control", "unique-expand-control"].includes(rule)) {
       this.completedDisclosureIntent = { task: normalizeLabel(task), url: pageIdentity(this.requirePage().url()), createdAt: Date.now() };
     }
@@ -434,7 +444,15 @@ export class BrowserManager {
       if (!visitedCandidateKeys.includes(key)) visitedCandidateKeys.push(key);
       this.disclosureSearchIntent = { task: normalizeLabel(task), url, createdAt: Date.now(), visitedCandidateKeys };
     }
-    return { status: "action-executed", action: candidate, ...metadata, effect, note };
+    return { status: "action-executed", action: candidate, ...metadata, effect, note, visibleStateChanged };
+  }
+
+  private rememberNonProgressingAction(fingerprint: string, candidate: BrowserCandidate) {
+    this.nonProgressingActions.add(nonProgressingActionKey(fingerprint, candidate));
+    if (this.nonProgressingActions.size > 256) {
+      const oldest = this.nonProgressingActions.values().next().value;
+      if (oldest) this.nonProgressingActions.delete(oldest);
+    }
   }
 
   async act(ref: string) {
@@ -632,7 +650,7 @@ export class BrowserManager {
     if (this.context && this.ownsContext) await this.context.close().catch(() => undefined);
     if (this.browser) await this.browser.close().catch(() => undefined);
     await closeOcrWorker().catch(() => undefined);
-    this.context = undefined; this.browser = undefined; this.page = undefined; this.ownsContext = false; this.lastInspectionFingerprint = ""; this.candidates.clear(); this.pending.clear(); this.privateFieldValuePresence.clear(); this.privateRangeValues.clear(); this.nonProgressingPointerActions.clear(); this.completedDisclosureIntent = undefined; this.disclosureSearchIntent = undefined; this.lastVisualSnapshot = undefined;
+    this.context = undefined; this.browser = undefined; this.page = undefined; this.ownsContext = false; this.lastInspectionFingerprint = ""; this.candidates.clear(); this.pending.clear(); this.privateFieldValuePresence.clear(); this.privateRangeValues.clear(); this.nonProgressingActions.clear(); this.completedDisclosureIntent = undefined; this.disclosureSearchIntent = undefined; this.lastVisualSnapshot = undefined;
     return { closed: true };
   }
 
@@ -880,8 +898,14 @@ function isPointerTarget(candidate: BrowserCandidate) {
   return candidate.role === "pointer-target" || candidate.kind === "custom-pointer";
 }
 
-function pointerActionKey(fingerprint: string, candidate: BrowserCandidate) {
-  return `${fingerprint}:${normalizeLabel(candidate.label)}`;
+function nonProgressingActionKey(fingerprint: string, candidate: BrowserCandidate) {
+  return `${fingerprint}:${candidate.ref}:${candidate.role}:${candidate.kind}:${normalizeLabel(candidate.label)}`;
+}
+
+function repeatedActionNote(candidate: BrowserCandidate) {
+  return isPointerTarget(candidate)
+    ? "The previous approved click on this pointer-only target left the inspected page state unchanged. The automatic click is blocked to prevent an approval loop; inspect the page, choose another action, or explicitly call browser_action."
+    : "This automatic action already ran once while the inspected page state stayed unchanged. It is blocked to prevent a no-op loop; inspect the page, choose another action, or explicitly call browser_action.";
 }
 
 function findUniqueQuotedLabel(task: string, candidates: BrowserCandidate[]) {

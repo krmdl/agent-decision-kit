@@ -38,6 +38,7 @@ describe("Playwright browser safety flow", () => {
   let ordinalButtonHtml: Buffer;
   let sliderHtml: Buffer;
   let silentPointerHtml: Buffer;
+  let silentInputHtml: Buffer;
   let autocompleteHtml: Buffer;
   let multipleSelectHtml: Buffer;
 
@@ -46,6 +47,7 @@ describe("Playwright browser safety flow", () => {
     visualHtml = await readFile(path.resolve("examples/visual-only-demo.html"));
     pointerTextHtml = Buffer.from('<!doctype html><style>.faux-link { cursor: pointer; color: blue; text-decoration: underline }</style><span id="target" class="faux-link">adipiscing.</span><p id="status">Not clicked</p><script>document.querySelector("#target").addEventListener("click",()=>document.querySelector("#status").textContent="Clicked locally")</script>');
     silentPointerHtml = Buffer.from('<!doctype html><style>.faux-link{cursor:pointer}</style><span class="faux-link">Open item</span>');
+    silentInputHtml = Buffer.from('<!doctype html><label>Search <input type="text"></label>');
     sliderHtml = Buffer.from('<!doctype html><form onsubmit="event.preventDefault();document.querySelector(\'#status\').textContent=\'Submitted\'"><label for="level">Level</label><input id="level" type="range" min="0" max="20" step="1" value="5"><button type="submit">Submit</button></form><p id="status">Not submitted</p>');
     autocompleteHtml = Buffer.from('<!doctype html><style>.suggestion{cursor:pointer}</style><label>Tag <input id="tag" type="text"></label><div><span class="suggestion">Poland</span><span class="suggestion">Portugal</span></div>');
     multipleSelectHtml = Buffer.from('<!doctype html><label for="tags">Tags</label><select id="tags" multiple><option value="alpha" selected>Alpha</option><option value="beta">Beta</option><option value="gamma">Gamma</option></select><p id="status">Not submitted</p>');
@@ -79,7 +81,7 @@ describe("Playwright browser safety flow", () => {
         return;
       }
       response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-      response.end(request.url === "/visual-only" ? visualHtml : request.url === "/pointer-text" ? pointerTextHtml : request.url === "/silent-pointer" ? silentPointerHtml : request.url === "/mixed-pointer" ? mixedPointerHtml : request.url === "/checkbox" ? checkboxHtml : request.url === "/submit" ? submitHtml : request.url === "/checkbox-task" ? checkboxTaskHtml : request.url === "/tabs" ? tabHtml : request.url === "/expand" ? expandHtml : request.url === "/native-fields" ? nativeFieldsHtml : request.url === "/slider" ? sliderHtml : request.url === "/autocomplete" ? autocompleteHtml : request.url === "/multi-select" ? multipleSelectHtml : request.url === "/ambiguous-labels" ? ambiguousLabelsHtml : request.url === "/editable" ? editableContentHtml : request.url === "/silent-form" ? silentFormHtml : request.url === "/decision-race" ? decisionRaceHtml : request.url === "/replacement-action" ? replacementActionHtml : request.url === "/dynamic-refs" ? dynamicRefsHtml : request.url === "/menu" ? menuHtml : request.url === "/ordinal-fields" ? ordinalFieldsHtml : request.url === "/textareas" ? textareaWidgetsHtml : request.url === "/ordinal-button" ? ordinalButtonHtml : request.url === "/multi-disclosure" ? multiDisclosureHtml : html);
+      response.end(request.url === "/visual-only" ? visualHtml : request.url === "/pointer-text" ? pointerTextHtml : request.url === "/silent-pointer" ? silentPointerHtml : request.url === "/silent-input" ? silentInputHtml : request.url === "/mixed-pointer" ? mixedPointerHtml : request.url === "/checkbox" ? checkboxHtml : request.url === "/submit" ? submitHtml : request.url === "/checkbox-task" ? checkboxTaskHtml : request.url === "/tabs" ? tabHtml : request.url === "/expand" ? expandHtml : request.url === "/native-fields" ? nativeFieldsHtml : request.url === "/slider" ? sliderHtml : request.url === "/autocomplete" ? autocompleteHtml : request.url === "/multi-select" ? multipleSelectHtml : request.url === "/ambiguous-labels" ? ambiguousLabelsHtml : request.url === "/editable" ? editableContentHtml : request.url === "/silent-form" ? silentFormHtml : request.url === "/decision-race" ? decisionRaceHtml : request.url === "/replacement-action" ? replacementActionHtml : request.url === "/dynamic-refs" ? dynamicRefsHtml : request.url === "/menu" ? menuHtml : request.url === "/ordinal-fields" ? ordinalFieldsHtml : request.url === "/textareas" ? textareaWidgetsHtml : request.url === "/ordinal-button" ? ordinalButtonHtml : request.url === "/multi-disclosure" ? multiDisclosureHtml : html);
     });
     await new Promise<void>((resolve, reject) => {
       server.once("error", reject);
@@ -379,6 +381,22 @@ describe("Playwright browser safety flow", () => {
     expect(await browser.confirm(token, true)).toMatchObject({ status: "action-executed-after-approval", visibleStateChanged: false });
     expect(await browser.decideAndAct("Choose the relevant visible action.", provider)).toMatchObject({ status: "repeated-action-blocked" });
     expect(provider.decide).toHaveBeenCalledTimes(1);
+  }, 45_000);
+
+  it("blocks a repeated automatic no-op focus while keeping explicit browser_action available", async () => {
+    profile = await mkdtemp(path.join(os.tmpdir(), "adk-browser-noop-focus-test-"));
+    browser = new BrowserManager({ headless: true, profileDir: path.join(profile, "chromium") });
+    await browser.launch(`${baseUrl}silent-input`);
+    const provider: DecisionProvider = {
+      id: "semantic-local",
+      model: "fixture-model",
+      decide: vi.fn(async () => ({ provider: "semantic-local", model: "fixture-model", latencyMs: 1, answers: { action: { type: "choice" as const, choice: "r1", probabilities: { r1: 1 }, confidence: 1, confidenceSource: "maximum-probability" as const, calibration: "uncalibrated-estimate" as const } } })),
+    };
+
+    expect(await browser.decideAndAct("Focus the search field.", provider)).toMatchObject({ status: "action-executed", visibleStateChanged: false });
+    expect(await browser.decideAndAct("Focus the search field.", provider)).toMatchObject({ status: "repeated-action-blocked" });
+    expect(provider.decide).toHaveBeenCalledTimes(1);
+    expect(await browser.act("r1")).toMatchObject({ status: "action-executed", effect: { focused: true } });
   }, 45_000);
 
   it("clicks a visible checkbox without submitting its form", async () => {
