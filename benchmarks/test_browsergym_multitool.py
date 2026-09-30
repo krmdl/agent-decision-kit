@@ -52,8 +52,15 @@ class MultiToolPlanningTests(unittest.TestCase):
             ("act", {"ref": "r7"}, {"fieldKind": "submit-after-email-reply"}),
         )
 
-        duplicate_results = [result, dict(result, ref="r8", label="Blisse")]
-        self.assertIsNone(RUNNER.multi_tool_action(task, duplicate_results, set()))
+        row_and_sender = [
+            dict(result, label="Blisse Donec adipiscin.. Vulputate. Vive.."),
+            dict(result, ref="r8", label="Blisse"),
+        ]
+        self.assertEqual(
+            RUNNER.multi_tool_action(task, row_and_sender, set()),
+            ("act", {"ref": "r8"}, {"fieldKind": "email-recipient"}),
+        )
+        self.assertIsNone(RUNNER.multi_tool_action(task, [dict(result, ref="r8", label="Blisse"), dict(result, ref="r9", label="Blisse")], set()))
 
     def test_batches_only_explicit_unique_native_checkbox_targets_then_submits_separately(self):
         task = "Select Alpha, Beta, Gamma and click Submit."

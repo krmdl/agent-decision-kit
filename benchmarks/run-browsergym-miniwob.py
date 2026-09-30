@@ -68,7 +68,11 @@ def multi_tool_action(task, candidates, completed_fields, visible_text=""):
                 return "act", {"ref": send_controls[0]["ref"]}, {"fieldKind": "submit-after-email-reply"}
             return None
 
-        sender_matches = [
+        exact_sender_matches = [
+            candidate for candidate in action_candidates
+            if normalized(candidate.get("label", "")) == sender_key
+        ]
+        sender_matches = exact_sender_matches or [
             candidate for candidate in action_candidates
             if f" {sender_key} " in f" {normalized(candidate.get('label', ''))} "
         ]
