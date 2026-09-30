@@ -190,9 +190,17 @@ export class BrowserManager {
         return supportedInputTypes.has((element as HTMLInputElement).type || "text");
       });
       const semanticSet = new Set(semanticNodes);
+      const semanticAncestors = new Set<Element>();
+      for (const node of semanticNodes) {
+        let ancestor = node.parentElement;
+        while (ancestor && ancestor !== document.body) {
+          semanticAncestors.add(ancestor);
+          ancestor = ancestor.parentElement;
+        }
+      }
       const customPointerNodes = semanticNodes.length < 80 ? Array.from(document.querySelectorAll("body *"))
         .filter((element) => {
-          if (semanticSet.has(element) || element.closest(semanticSelector) || element.closest(`${semanticSelector}, [contenteditable]:not([contenteditable=\"false\"])`)) return false;
+          if (semanticSet.has(element) || semanticAncestors.has(element) || element.closest(semanticSelector) || element.closest(`${semanticSelector}, [contenteditable]:not([contenteditable=\"false\"])`)) return false;
           if (!visible(element)) return false;
           const label = labelFor(element);
           if (!label || label.length > 240) return false;
