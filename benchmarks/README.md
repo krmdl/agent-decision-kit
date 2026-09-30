@@ -123,6 +123,14 @@ MiniWoB is self-contained in a local checkout. WebArena and VisualWebArena are s
 
 The upstream WebArena setup asks for an OpenAI API key and warns that some fuzzy-match evaluators call GPT-4. The default Agent Decision Kit benchmark path is local and free, so it does not enable those paid evaluators. Any future run must record which evaluator was used and avoid a remote judge unless the operator deliberately configures one.
 
+After setting the documented variables, verify URL reachability without printing configured values:
+
+```sh
+python benchmarks/check_browsergym_services.py --suite all
+```
+
+Use `--suite webarena` or `--suite visualwebarena` to check one benchmark. The preflight sends read-only `HEAD` requests (and a one-byte ranged `GET` only when a server rejects `HEAD`), prints only variable names and HTTP statuses, and does not call any evaluator.
+
 Aggregate a JSON file with `benchmarks/aggregate-browsergym.py`:
 
 ```json
