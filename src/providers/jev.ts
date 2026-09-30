@@ -1,5 +1,5 @@
 import type { DecisionProvider, DecisionRequest, DecisionResult, DecisionAnswer } from "../core/types.js";
-import { maxProbability, validateProbabilities } from "../core/types.js";
+import { maxProbability } from "../core/types.js";
 
 export interface JevProviderOptions {
   apiKey?: string;
@@ -14,8 +14,39 @@ type JevRawAnswer = {
   score?: number;
   noul?: number;
   confidence?: unknown;
-  probabilities?: Record<string, number>;
+  probabilities?: unknown;
 };
+
+function jevProbabilities(raw: unknown, expectedKeys: string[], name: string): Record<string, number> {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    throw new Error(`Jev returned missing or invalid probabilities for '${name}'`);
+  }
+
+  const values = raw as Record<string, unknown>;
+  const keys = Object.keys(values);
+  if (keys.length !== expectedKeys.length || keys.some((key) => !expectedKeys.includes(key))) {
+    throw new Error(`Jev returned incomplete or unexpected probability keys for '${name}'`);
+  }
+
+  const probabilities: Record<string, number> = {};
+  let total = 0;
+  for (const key of expectedKeys) {
+    const value = values[key];
+    if (typeof value !== "number" || !Number.isFinite(value) || value < 0 || value > 1) {
+      throw new Error(`Jev returned an invalid probability for '${name}.${key}'`);
+    }
+    probabilities[key] = value;
+    total += value;
+  }
+
+  // The TypeSafe API describes these values as summing to approximately 1.
+  // Allow small serialization/rounding drift, but reject malformed distributions.
+  if (total <= 0 || Math.abs(total - 1) > 0.05) {
+    throw new Error(`Jev returned probabilities that do not sum approximately to 1 for '${name}'`);
+  }
+  for (const key of expectedKeys) probabilities[key] = probabilities[key]! / total;
+  return probabilities;
+}
 
 function confidenceMetadata(raw: unknown, fallback: number | undefined, name: string) {
   if (raw !== undefined && raw !== null) {
@@ -27,6 +58,11 @@ function confidenceMetadata(raw: unknown, fallback: number | undefined, name: st
   return fallback === undefined
     ? { confidenceSource: "unavailable" as const }
     : { confidence: fallback, confidenceSource: "maximum-probability" as const };
+}
+
+function requiredConfidenceMetadata(raw: unknown, name: string) {
+  if (raw === undefined || raw === null) throw new Error(`Jev omitted required confidence for '${name}'`);
+  return confidenceMetadata(raw, undefined, name);
 }
 
 export class JevProvider implements DecisionProvider {
@@ -67,26 +103,22 @@ export class JevProvider implements DecisionProvider {
         if (!raw || raw.type !== question.type) throw new Error(`Jev returned a missing or invalid answer for '${name}'`);
         const confidence = (fallback?: number) => confidenceMetadata(raw.confidence, fallback, name);
         if (question.type === "choice") {
-          if (!raw.choice || !(raw.choice in question.criteria)) throw new Error(`Jev returned an unknown choice for '${name}'`);
-          const probabilities = raw.probabilities
-            ? validateProbabilities(Object.fromEntries(Object.keys(question.criteria).map((key) => [key, Number(raw.probabilities?.[key] ?? 0)])))
-            : undefined;
-          const confidenceFields = confidence(probabilities ? maxProbability(probabilities) : undefined);
+          if (!raw.choice || !Object.hasOwn(question.criteria, raw.choice)) throw new Error(`Jev returned an unknown choice for '${name}'`);
+          const probabilities = jevProbabilities(raw.probabilities, Object.keys(question.criteria), name);
+          const confidenceFields = requiredConfidenceMetadata(raw.confidence, name);
           answers[name] = {
             type: "choice", choice: raw.choice,
-            ...(probabilities ? { probabilities } : {}),
+            probabilities,
             ...confidenceFields,
             calibration: "provider-calibrated",
           };
         } else if (question.type === "score") {
           if (typeof raw.score !== "number" || !Number.isFinite(raw.score) || raw.score < 0 || raw.score > question.criteria.length - 1) throw new Error(`Jev returned an invalid score for '${name}'`);
-          const probabilities = raw.probabilities
-            ? validateProbabilities(Object.fromEntries(question.criteria.map((_, index) => [String(index), Number(raw.probabilities?.[String(index)] ?? 0)])))
-            : undefined;
-          const confidenceFields = confidence(probabilities ? maxProbability(probabilities) : undefined);
+          const probabilities = jevProbabilities(raw.probabilities, question.criteria.map((_, index) => String(index)), name);
+          const confidenceFields = requiredConfidenceMetadata(raw.confidence, name);
           answers[name] = {
             type: "score", score: raw.score,
-            ...(probabilities ? { probabilities } : {}),
+            probabilities,
             ...confidenceFields,
             calibration: "provider-calibrated",
           };

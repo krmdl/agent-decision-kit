@@ -52,4 +52,24 @@ describe("optional Jev API adapter", () => {
     await expect(call({ type: "noul", noul: 0.8, confidence: 1.2 }, { type: "noul", instructions: "Is it true?" }))
       .rejects.toThrow(/invalid confidence/);
   });
+
+  it("rejects incomplete or malformed calibrated distributions", async () => {
+    const provider = new JevProvider({ apiKey: "fixture-key" });
+    const choice: DecisionRequest["questions"][string] = {
+      type: "choice", instructions: "Pick a tone", criteria: { calm: "Polite", angry: "Hostile" },
+    };
+    const call = (answer: Record<string, unknown>) => {
+      vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ answers: { result: answer } }), { status: 200 })));
+      return provider.decide({ state: "fixture", questions: { result: choice } });
+    };
+
+    await expect(call({ type: "choice", choice: "calm", confidence: 0.9, probabilities: { calm: 0.9 } }))
+      .rejects.toThrow(/incomplete or unexpected probability keys/);
+    await expect(call({ type: "choice", choice: "calm", confidence: 0.9, probabilities: { calm: 0.8, angry: 0.2, other: 0 } }))
+      .rejects.toThrow(/incomplete or unexpected probability keys/);
+    await expect(call({ type: "choice", choice: "calm", confidence: 0.9, probabilities: { calm: "0.9", angry: 0.1 } }))
+      .rejects.toThrow(/invalid probability/);
+    await expect(call({ type: "choice", choice: "calm", probabilities: { calm: 0.9, angry: 0.1 } }))
+      .rejects.toThrow(/omitted required confidence/);
+  });
 });

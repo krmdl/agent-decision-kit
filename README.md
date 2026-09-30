@@ -44,6 +44,8 @@ It uses ordinary code to constrain choices and execute actions. Its default deci
 
 `confidence` and probability values are estimates, not a promise that the selected action is correct. Each model answer identifies `confidenceSource` as `provider-reported`, `maximum-probability`, or `unavailable`, separately from its calibration label (`uncalibrated-estimate`, `posthoc-calibrated`, `provider-calibrated`, or `unavailable`). Deterministic browser matches report `not-applicable-rule` and do not invent probabilities. The default MiniLM embedding baseline is **uncalibrated** and is not a drop-in Jev replacement. No speed, accuracy, or parity claim is made before an independent evaluation.
 
+For Jev, `provider-calibrated` records TypeSafe's calibration claim; Agent Decision Kit has not independently measured Jev's calibration. The adapter checks the required Choice and Score confidence and probability fields against the [public API schema](https://api.typesafe.ai/openapi.json), including exact coverage of the requested options. It rejects malformed distributions rather than filling missing options with zero.
+
 ## Quick start
 
 Requirements: Node.js 20.19 or newer. The repository is in experimental alpha; the npm package is not published yet. Run from a local checkout:
