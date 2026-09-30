@@ -25,6 +25,8 @@ jobs:
           node-version: ${{ matrix.node }}
           cache: npm
       - run: npm ci
+        env:
+          ONNXRUNTIME_NODE_INSTALL: skip
       - run: npm audit --audit-level=high
       - if: runner.os == 'Linux'
         run: npx playwright install --with-deps chromium
