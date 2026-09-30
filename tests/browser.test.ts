@@ -18,6 +18,7 @@ describe("Playwright browser safety flow", () => {
   let debugContext: BrowserContext | undefined;
   let visualHtml: Buffer;
   let pointerTextHtml: Buffer;
+  let mixedPointerHtml: Buffer;
   let checkboxHtml: Buffer;
   let submitHtml: Buffer;
   let checkboxTaskHtml: Buffer;
@@ -40,6 +41,7 @@ describe("Playwright browser safety flow", () => {
     const html = await readFile(path.resolve("examples/browser-demo.html"));
     visualHtml = await readFile(path.resolve("examples/visual-only-demo.html"));
     pointerTextHtml = Buffer.from('<!doctype html><style>.faux-link { cursor: pointer; color: blue; text-decoration: underline }</style><span id="target" class="faux-link">adipiscing.</span><p id="status">Not clicked</p><script>document.querySelector("#target").addEventListener("click",()=>document.querySelector("#status").textContent="Clicked locally")</script>');
+    mixedPointerHtml = Buffer.from('<!doctype html><style>.faux-link { cursor: pointer }</style><button>Section</button><span id="target" class="faux-link">Ultrices</span><p id="status">Not clicked</p><script>document.querySelector("#target").addEventListener("click",()=>document.querySelector("#status").textContent="Clicked locally")</script>');
     ambiguousLabelsHtml = Buffer.from('<!doctype html><button type="button">Continue</button><a href="#next">Continue</a><p id="status">No action</p>');
     checkboxHtml = Buffer.from('<!doctype html><label><input type="checkbox" name="updates"> Receive product updates</label>');
     submitHtml = Buffer.from('<!doctype html><form onsubmit="event.preventDefault(); document.querySelector(\'#status\').textContent = \'Submitted locally\'"><input type="submit" value="Send test"></form><p id="status">Not sent</p>');
@@ -69,7 +71,7 @@ describe("Playwright browser safety flow", () => {
         return;
       }
       response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-      response.end(request.url === "/visual-only" ? visualHtml : request.url === "/pointer-text" ? pointerTextHtml : request.url === "/checkbox" ? checkboxHtml : request.url === "/submit" ? submitHtml : request.url === "/checkbox-task" ? checkboxTaskHtml : request.url === "/tabs" ? tabHtml : request.url === "/expand" ? expandHtml : request.url === "/native-fields" ? nativeFieldsHtml : request.url === "/ambiguous-labels" ? ambiguousLabelsHtml : request.url === "/editable" ? editableContentHtml : request.url === "/silent-form" ? silentFormHtml : request.url === "/decision-race" ? decisionRaceHtml : request.url === "/replacement-action" ? replacementActionHtml : request.url === "/dynamic-refs" ? dynamicRefsHtml : request.url === "/menu" ? menuHtml : request.url === "/ordinal-fields" ? ordinalFieldsHtml : request.url === "/textareas" ? textareaWidgetsHtml : request.url === "/ordinal-button" ? ordinalButtonHtml : request.url === "/multi-disclosure" ? multiDisclosureHtml : html);
+      response.end(request.url === "/visual-only" ? visualHtml : request.url === "/pointer-text" ? pointerTextHtml : request.url === "/mixed-pointer" ? mixedPointerHtml : request.url === "/checkbox" ? checkboxHtml : request.url === "/submit" ? submitHtml : request.url === "/checkbox-task" ? checkboxTaskHtml : request.url === "/tabs" ? tabHtml : request.url === "/expand" ? expandHtml : request.url === "/native-fields" ? nativeFieldsHtml : request.url === "/ambiguous-labels" ? ambiguousLabelsHtml : request.url === "/editable" ? editableContentHtml : request.url === "/silent-form" ? silentFormHtml : request.url === "/decision-race" ? decisionRaceHtml : request.url === "/replacement-action" ? replacementActionHtml : request.url === "/dynamic-refs" ? dynamicRefsHtml : request.url === "/menu" ? menuHtml : request.url === "/ordinal-fields" ? ordinalFieldsHtml : request.url === "/textareas" ? textareaWidgetsHtml : request.url === "/ordinal-button" ? ordinalButtonHtml : request.url === "/multi-disclosure" ? multiDisclosureHtml : html);
     });
     await new Promise<void>((resolve, reject) => {
       server.once("error", reject);
@@ -327,6 +329,30 @@ describe("Playwright browser safety flow", () => {
     expect(await browser.confirm(approvalToken, true)).toMatchObject({ status: "action-executed-after-approval" });
     expect(await browser.inspect().then((result) => result.textExcerpt)).toContain("Clicked locally");
     expect(provider.decide).not.toHaveBeenCalled();
+  }, 45_000);
+
+  it("includes pointer-only labels alongside semantic controls and keeps their approval gate", async () => {
+    profile = await mkdtemp(path.join(os.tmpdir(), "adk-browser-mixed-pointer-test-"));
+    browser = new BrowserManager({ headless: true, profileDir: path.join(profile, "chromium") });
+    await browser.launch(`${baseUrl}mixed-pointer`);
+    const provider: DecisionProvider = {
+      id: "remote-test-provider",
+      model: "unused-test-provider",
+      decide: async () => { throw new Error("The quoted pointer target is exact and should match locally"); },
+    };
+
+    const snapshot = await browser.inspect();
+    expect(snapshot.candidates).toHaveLength(2);
+    expect(snapshot.candidates).toEqual(expect.arrayContaining([
+      expect.objectContaining({ role: "button", label: "Section" }),
+      expect.objectContaining({ role: "pointer-target", label: "Ultrices", risk: "approval-required" }),
+    ]));
+
+    const proposed = await browser.decideAndAct('Click the link "Ultrices".', provider);
+    expect(proposed).toMatchObject({ status: "awaiting-user-approval", selectionRule: "unique-exact-quoted-label", proposedAction: { role: "pointer-target", label: "Ultrices", risk: "approval-required" } });
+    const token = "approvalToken" in proposed ? proposed.approvalToken : "";
+    expect(await browser.confirm(token, false)).toMatchObject({ status: "cancelled" });
+    expect((await browser.inspect()).textExcerpt).toContain("Not clicked");
   }, 45_000);
 
   it("clicks a visible checkbox without submitting its form", async () => {

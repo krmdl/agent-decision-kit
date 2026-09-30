@@ -147,7 +147,7 @@ export class BrowserManager {
         return supportedInputTypes.has((element as HTMLInputElement).type || "text");
       });
       const semanticSet = new Set(semanticNodes);
-      const customPointerNodes = semanticNodes.length === 0 ? Array.from(document.querySelectorAll("body *"))
+      const customPointerNodes = semanticNodes.length < 80 ? Array.from(document.querySelectorAll("body *"))
         .filter((element) => {
           if (semanticSet.has(element) || element.closest(semanticSelector) || element.closest(`${semanticSelector}, [contenteditable]:not([contenteditable=\"false\"])`)) return false;
           if (!visible(element)) return false;
@@ -160,7 +160,7 @@ export class BrowserManager {
           if (element.parentElement && getComputedStyle(element.parentElement).cursor === "pointer") return false;
           return true;
         })
-        .slice(0, 80) : [];
+        .slice(0, 80 - semanticNodes.length) : [];
       const nodes = [...semanticNodes, ...customPointerNodes].slice(0, 80);
       const customPointerSet = new Set(customPointerNodes);
       const candidates: BrowserCandidate[] = nodes.map((element, index) => {
@@ -222,7 +222,7 @@ export class BrowserManager {
     this.candidates = new Map(snapshot.candidates.map((candidate) => [candidate.ref, candidate]));
     const privateStateFingerprint = createHash("sha256").update(JSON.stringify({ privateFormState, privateActionState })).digest("hex");
     this.lastInspectionFingerprint = snapshotFingerprint({ ...snapshot, privateStateFingerprint });
-    return { ...snapshot, url: redactBrowserUrl(snapshot.url), candidates: snapshot.candidates.map(({ ref, role, label, kind, risk, checked, expanded, selected, readOnly }) => ({ ref, role, label, kind, risk, ...(checked === undefined ? {} : { checked }), ...(expanded === undefined ? {} : { expanded }), ...(selected === undefined ? {} : { selected }), ...(readOnly === undefined ? {} : { readOnly }) })), inspectMs: Math.round(performance.now() - before), candidateLimit: 80, note: "Bounded visible DOM/accessibility snapshot. Only when no semantic controls exist, it also scans clear CSS pointer-only text targets; custom targets have no semantic role and always require a separate approval. Native select options are limited to 12 visible labels; input values, passwords, cookies and storage are not included. Editable field state is hashed locally only to invalidate stale approvals and is never returned. URL credentials, query and hash are redacted." };
+    return { ...snapshot, url: redactBrowserUrl(snapshot.url), candidates: snapshot.candidates.map(({ ref, role, label, kind, risk, checked, expanded, selected, readOnly }) => ({ ref, role, label, kind, risk, ...(checked === undefined ? {} : { checked }), ...(expanded === undefined ? {} : { expanded }), ...(selected === undefined ? {} : { selected }), ...(readOnly === undefined ? {} : { readOnly }) })), inspectMs: Math.round(performance.now() - before), candidateLimit: 80, note: "Bounded visible DOM/accessibility snapshot. Alongside semantic controls, it scans clear CSS pointer-only text targets within the same 80-candidate limit; custom targets have no semantic role and always require a separate approval. Native select options are limited to 12 visible labels; input values, passwords, cookies and storage are not included. Editable field state is hashed locally only to invalidate stale approvals and is never returned. URL credentials, query and hash are redacted." };
   }
 
   async decideAndAct(task: string, provider: DecisionProvider) {
