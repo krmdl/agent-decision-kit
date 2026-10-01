@@ -1,7 +1,9 @@
 #!/usr/bin/env node
-import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
+import { execFileSync } from "node:child_process";
 import os from "node:os";
 import path from "node:path";
+import { gzipSync } from "node:zlib";
 import { env } from "@huggingface/transformers";
 import { createProvider } from "../dist/providers/index.js";
 import { summarizeConfidenceReliability } from "./decision-metrics.mjs";
@@ -20,6 +22,62 @@ async function modelCacheDirectoryExists(modelId) {
   }
 }
 
+async function collectOnnxExecutionProviderProfile(prefix, outputPath) {
+  const directory = path.dirname(prefix);
+  const filenamePrefix = `${path.basename(prefix)}_`;
+  const files = (await readdir(directory)).filter((name) => name.startsWith(filenamePrefix) && name.endsWith(".json")).sort();
+  if (files.length === 0) throw new Error(`ONNX Runtime profiling was enabled but no profile files were written for '${filenamePrefix}'`);
+
+  const nodeCounts = {};
+  let nodeEventCount = 0;
+  let uncompressedBytes = 0;
+  let compressedBytes = 0;
+  const compressedFiles = [];
+  const outputStem = path.basename(outputPath).replace(/\.json$/i, "");
+  for (const [index, filename] of files.entries()) {
+    const profilePath = path.join(directory, filename);
+    const profile = await readFile(profilePath);
+    const events = JSON.parse(profile.toString("utf8"));
+    for (const event of events) {
+      if (event.cat !== "Node" || typeof event.args?.provider !== "string") continue;
+      nodeCounts[event.args.provider] = (nodeCounts[event.args.provider] ?? 0) + 1;
+      nodeEventCount += 1;
+    }
+    const compressed = gzipSync(profile);
+    const compressedName = files.length === 1
+      ? `${outputStem}.onnx-profile.json.gz`
+      : `${outputStem}.onnx-profile-${index + 1}.json.gz`;
+    await writeFile(path.join(directory, compressedName), compressed);
+    await rm(profilePath);
+    compressedFiles.push(compressedName);
+    uncompressedBytes += profile.byteLength;
+    compressedBytes += compressed.byteLength;
+  }
+  if (nodeEventCount === 0) throw new Error("ONNX Runtime profile files contained no per-node execution provider events");
+  return {
+    source: "ONNX Runtime per-node profile",
+    profileFiles: compressedFiles,
+    nodeEventCount,
+    nodeCounts,
+    uncompressedBytes,
+    compressedBytes,
+    latencyNote: "Profiling may add overhead; use a separate unprofiled run for latency comparisons.",
+  };
+}
+
+function repositoryMetadata() {
+  try {
+    const commit = execFileSync("git", ["rev-parse", "HEAD"], { cwd: process.cwd(), encoding: "utf8" }).trim();
+    const trackedStatus = execFileSync("git", ["status", "--porcelain=v1", "--untracked-files=no"], {
+      cwd: process.cwd(),
+      encoding: "utf8",
+    }).trim();
+    return { agentDecisionKitCommit: commit, trackedWorkingTreeModified: trackedStatus.length > 0 };
+  } catch {
+    return { agentDecisionKitCommit: "not-reported", workingTreeModified: null };
+  }
+}
+
 const outputIndex = process.argv.indexOf("--output");
 const outputPath = outputIndex >= 0 ? process.argv[outputIndex + 1] : undefined;
 if (outputIndex >= 0 && (!outputPath || outputPath.startsWith("--"))) {
@@ -30,11 +88,23 @@ const fixturesPath = fixturesIndex >= 0 ? process.argv[fixturesIndex + 1] : "./f
 if (fixturesIndex >= 0 && (!fixturesPath || fixturesPath.startsWith("--"))) {
   throw new Error("--fixtures requires a JSONL file path");
 }
+const profileOnnx = process.argv.includes("--profile-onnx");
+let onnxProfilePrefix;
+if (profileOnnx) {
+  if (!outputPath) throw new Error("--profile-onnx requires --output so the profile can be saved beside its benchmark record");
+  const resolvedOutput = path.resolve(outputPath);
+  const outputDirectory = path.dirname(resolvedOutput);
+  await mkdir(outputDirectory, { recursive: true });
+  const outputStem = path.basename(resolvedOutput).replace(/\.json$/i, "");
+  onnxProfilePrefix = path.join(outputDirectory, `${outputStem}.onnx-profile-${process.pid}-${Date.now()}`);
+  process.env.AGENT_DECISION_ONNX_PROFILE_PREFIX = onnxProfilePrefix;
+}
 const fixtureSource = fixturesIndex >= 0 ? path.resolve(fixturesPath) : new URL("./fixtures/decision-cases.jsonl", import.meta.url);
 const cases = (await readFile(fixtureSource, "utf8"))
   .split(/\r?\n/).filter(Boolean).map((line) => JSON.parse(line));
 if (cases.length === 0) throw new Error("The decision fixture file must contain at least one JSONL record");
 const provider = createProvider();
+if (profileOnnx && provider.id !== "semantic-local") throw new Error("--profile-onnx is supported only with the semantic-local provider");
 const reportedAccelerator = process.env.AGENT_DECISION_BENCHMARK_ACCELERATOR?.trim() || null;
 const modelCacheDirectoryPresentBeforeRun = provider.id === "semantic-local"
   ? await modelCacheDirectoryExists(provider.model)
@@ -72,6 +142,12 @@ for (const item of cases) {
     brierScore: brier,
   });
 }
+let onnxExecutionProviderProfile;
+if (profileOnnx) {
+  if (typeof provider.endProfiling !== "function") throw new Error("The selected local provider does not expose an ONNX profiling session");
+  await provider.endProfiling();
+  onnxExecutionProviderProfile = await collectOnnxExecutionProviderProfile(onnxProfilePrefix, outputPath);
+}
 const firstCallMs = records[0]?.latencyMs ?? 0;
 const warmRecords = records.filter((item) => item.warmWithinProcess);
 const warmOrdered = warmRecords.map((item) => item.latencyMs).sort((a, b) => a - b);
@@ -81,6 +157,7 @@ const confidenceReliability = summarizeConfidenceReliability(records);
 const classificationRecords = records.filter((item) => item.questionType === "choice" || item.questionType === "noul");
 const scoreRecords = records.filter((item) => item.questionType === "score");
 const mean = (items, field) => items.length ? items.reduce((sum, item) => sum + item[field], 0) / items.length : null;
+const repository = repositoryMetadata();
 const byQuestionType = Object.fromEntries(["choice", "noul", "score"].map((type) => {
   const selected = records.filter((item) => item.questionType === type);
   return [type, {
@@ -101,6 +178,8 @@ const report = `${JSON.stringify({
   sampleCount: records.length,
   byQuestionType,
   runtime: {
+    timestampUtc: new Date().toISOString(),
+    ...repository,
     node: process.version,
     platform: process.platform,
     architecture: process.arch,
@@ -115,7 +194,11 @@ const report = `${JSON.stringify({
       ? "provider-specific; not inspected"
       : provider.device === "cpu"
         ? "CPU"
-        : `${provider.device} requested; actual per-node execution provider and fallback were not inspected`,
+        : onnxExecutionProviderProfile
+          ? `${provider.device} requested; per-node ONNX Runtime provider counts are reported below`
+          : `${provider.device} requested; actual per-node execution provider and fallback were not inspected`,
+    onnxProfilingEnabled: profileOnnx,
+    onnxExecutionProviderNodeCounts: onnxExecutionProviderProfile?.nodeCounts ?? null,
     modelCacheDirectoryPresentBeforeRun,
     modelCacheState: provider.id !== "semantic-local"
       ? "not applicable; provider does not use the Transformers.js model cache"
@@ -130,6 +213,7 @@ const report = `${JSON.stringify({
   scoreWithinHalfPointRate: scoreRecords.length ? scoreRecords.filter((item) => item.scoreWithinHalfPoint).length / scoreRecords.length : null,
   meanBrierScore: brierRecords.length ? brierRecords.reduce((sum, item) => sum + item.brierScore, 0) / brierRecords.length : null,
   confidenceReliability,
+  ...(onnxExecutionProviderProfile ? { onnxExecutionProviderProfile } : {}),
   latencyMs: {
     firstCallIncludingInitialization: firstCallMs,
     withinProcessSteadyState: { sampleCount: warmRecords.length, p50: percentile(0.5), p95: percentile(0.95) },

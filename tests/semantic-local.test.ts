@@ -1,13 +1,29 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const { mockPipeline } = vi.hoisted(() => ({ mockPipeline: vi.fn() }));
 vi.mock("@huggingface/transformers", () => ({ pipeline: mockPipeline }));
 
 import { SemanticLocalProvider, resetSemanticPipelineForTests } from "../src/providers/semantic-local.js";
 
-afterEach(() => {
+const decisionRequest = {
+  state: "A small synthetic state.",
+  questions: { answer: { type: "choice" as const, instructions: "Choose one", criteria: { first: "First", second: "Second" } } },
+};
+
+function mockExtractor(endProfiling = vi.fn()) {
+  const extractor = vi.fn(async () => ({ tolist: () => [[1, 0], [1, 0], [0, 1]] }));
+  Object.assign(extractor, { model: { sessions: { model: { endProfiling } } } });
+  return { extractor, endProfiling };
+}
+
+beforeEach(() => {
   resetSemanticPipelineForTests();
   mockPipeline.mockReset();
+});
+
+afterEach(() => {
+  resetSemanticPipelineForTests();
+  vi.unstubAllEnvs();
 });
 
 describe("SemanticLocalProvider score answers", () => {
@@ -114,5 +130,36 @@ describe("SemanticLocalProvider score answers", () => {
 
     expect(mockPipeline).toHaveBeenCalledTimes(1);
     expect(extractor).toHaveBeenNthCalledWith(1, ["Agent Decision Kit local decision warm-up."], { pooling: "mean", normalize: true });
+  });
+});
+
+describe("local decision ONNX profiling", () => {
+  it("keeps profiling disabled unless an explicit profile prefix is set", async () => {
+    const { extractor } = mockExtractor();
+    mockPipeline.mockResolvedValue(extractor);
+    const provider = new SemanticLocalProvider("fixture-model", "cpu");
+
+    await provider.decide(decisionRequest);
+    await provider.endProfiling();
+
+    expect(mockPipeline).toHaveBeenCalledWith("feature-extraction", "fixture-model", { dtype: "q8", device: "cpu" });
+  });
+
+  it("captures the configured ONNX Runtime profile and ends every model session", async () => {
+    const profilePrefix = "C:/temporary/adk-profile";
+    const { extractor, endProfiling } = mockExtractor();
+    vi.stubEnv("AGENT_DECISION_ONNX_PROFILE_PREFIX", profilePrefix);
+    mockPipeline.mockResolvedValue(extractor);
+    const provider = new SemanticLocalProvider("fixture-model", "dml");
+
+    await provider.decide(decisionRequest);
+    await provider.endProfiling();
+
+    expect(mockPipeline).toHaveBeenCalledWith("feature-extraction", "fixture-model", {
+      dtype: "q8",
+      device: "dml",
+      session_options: { enableProfiling: true, profileFilePrefix: profilePrefix },
+    });
+    expect(endProfiling).toHaveBeenCalledOnce();
   });
 });

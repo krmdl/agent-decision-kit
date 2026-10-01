@@ -6,6 +6,9 @@ type EmbeddingPipeline = (
   input: string | string[],
   options: { pooling: "mean"; normalize: true },
 ) => Promise<{ tolist: () => number[][] }>;
+type ProfiledEmbeddingPipeline = EmbeddingPipeline & {
+  model?: { sessions?: Record<string, { endProfiling?: () => void }> };
+};
 
 const sharedPipelines = new Map<string, Promise<EmbeddingPipeline>>();
 const supportedDevices = ["auto", "gpu", "cpu", "wasm", "webgpu", "cuda", "dml", "coreml"] as const satisfies readonly DeviceType[];
@@ -18,11 +21,15 @@ function resolveDevice(device: string): DeviceType {
   return normalized as DeviceType;
 }
 
-async function getPipeline(model: string, device: DeviceType): Promise<EmbeddingPipeline> {
-  const cacheKey = `${model}\u0000${device}`;
+async function getPipeline(model: string, device: DeviceType, profilePrefix?: string): Promise<ProfiledEmbeddingPipeline> {
+  const cacheKey = `${model}\u0000${device}\u0000${profilePrefix ?? ""}`;
   const existing = sharedPipelines.get(cacheKey);
-  if (existing) return existing;
-  const pending = pipeline("feature-extraction", model, { dtype: "q8", device }).then((value) => value as unknown as EmbeddingPipeline);
+  if (existing) return existing as Promise<ProfiledEmbeddingPipeline>;
+  const pending = pipeline("feature-extraction", model, {
+    dtype: "q8",
+    device,
+    ...(profilePrefix ? { session_options: { enableProfiling: true, profileFilePrefix: profilePrefix } } : {}),
+  }).then((value) => value as unknown as ProfiledEmbeddingPipeline);
   sharedPipelines.set(cacheKey, pending);
   void pending.catch(() => {
     if (sharedPipelines.get(cacheKey) === pending) sharedPipelines.delete(cacheKey);
@@ -53,22 +60,28 @@ export class SemanticLocalProvider implements DecisionProvider {
   readonly id = "semantic-local";
   readonly model: string;
   readonly device: DeviceType;
+  private readonly profilePrefix: string | undefined;
 
-  constructor(model = process.env.AGENT_DECISION_MODEL ?? "Xenova/all-MiniLM-L6-v2", device = process.env.AGENT_DECISION_DEVICE ?? "cpu") {
+  constructor(
+    model = process.env.AGENT_DECISION_MODEL ?? "Xenova/all-MiniLM-L6-v2",
+    device = process.env.AGENT_DECISION_DEVICE ?? "cpu",
+    profilePrefix = process.env.AGENT_DECISION_ONNX_PROFILE_PREFIX?.trim() || undefined,
+  ) {
     this.model = model;
     this.device = resolveDevice(device);
+    this.profilePrefix = profilePrefix;
   }
 
   async warmup() {
     const start = performance.now();
-    const extractor = await getPipeline(this.model, this.device);
+    const extractor = await getPipeline(this.model, this.device, this.profilePrefix);
     await extractor(["Agent Decision Kit local decision warm-up."], { pooling: "mean", normalize: true });
     return { provider: this.id, model: this.model, device: this.device, latencyMs: Math.round(performance.now() - start) };
   }
 
   async decide(request: DecisionRequest): Promise<DecisionResult> {
     const start = performance.now();
-    const extractor = await getPipeline(this.model, this.device);
+    const extractor = await getPipeline(this.model, this.device, this.profilePrefix);
     const state = serializeState(request.state).slice(0, 8_000);
     const questions = Object.entries(request.questions);
     const inputs: string[] = [];
@@ -116,6 +129,12 @@ export class SemanticLocalProvider implements DecisionProvider {
     const latencyMs = performance.now() - start;
     for (const answer of Object.values(answers)) answer.latencyMs = latencyMs;
     return { provider: this.id, model: this.model, latencyMs, answers };
+  }
+
+  async endProfiling() {
+    if (!this.profilePrefix) return;
+    const extractor = await getPipeline(this.model, this.device, this.profilePrefix);
+    for (const session of Object.values(extractor.model?.sessions ?? {})) session.endProfiling?.();
   }
 }
 

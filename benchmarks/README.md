@@ -38,7 +38,15 @@ docker run --rm --ipc=host \
 
 The cache mount keeps downloaded model files between local runs; on a cold cache, the first call includes model retrieval. Container dependency installation and execution are part of the reproduction, while the per-case latency numbers cover provider calls only.
 
-For the local Transformers.js provider, `AGENT_DECISION_DEVICE` selects the requested ONNX Runtime device (`cpu` by default; `auto`, `dml`, `cuda`, `coreml`, `webgpu`, `gpu`, or `wasm` are also accepted). The report records the requested device, not the execution provider selected for every ONNX node; ONNX Runtime can place unsupported nodes on CPU. Compare only runs on the same labeled cases and host. A GPU name or requested device alone does not prove acceleration.
+For the local Transformers.js provider, `AGENT_DECISION_DEVICE` selects the requested ONNX Runtime device (`cpu` by default; `auto`, `dml`, `cuda`, `coreml`, `webgpu`, `gpu`, or `wasm` are also accepted). A GPU name or requested device alone does not prove acceleration; ONNX Runtime can place unsupported nodes on CPU. To inspect actual per-node execution providers, use the opt-in profiler on a separate run:
+
+```sh
+AGENT_DECISION_DEVICE=dml node benchmarks/run-decisions.mjs \
+  --fixtures benchmarks/fixtures/decision-cases-independent.jsonl \
+  --output /tmp/decision-dml-profile.json --profile-onnx
+```
+
+`--profile-onnx` requires the semantic-local provider and an output path. The JSON report includes the observed ONNX provider counts; the adjacent `.onnx-profile.json.gz` file retains the compressed ONNX Runtime trace. The runner removes its raw, uncompressed trace after compression. Profiling may add latency overhead, so use a separate run without `--profile-onnx` for performance numbers. Compare only runs on the same labeled cases and host.
 
 `results/decision-cases-independent-ryzen5600h-cpu-smoke.json` and `results/decision-cases-independent-ryzen5600h-dml-smoke.json` compare the same 30 labeled examples on one Windows 10 laptop (Ryzen 5 5600H; operator-reported GeForce GTX 1650 with 4 GB VRAM; Node 22.14.0). The model-cache directory existed before each process, but individual files were not checked. CPU scored 7/10 Choice, 5/10 yes/no, and 1.042 Score MAE; first call was 198 ms and the 29 later calls had p50 10 ms / p95 17 ms. Choice/yes-no Brier scores were 0.403 / 0.506. A DirectML device was requested for the second run; it scored 7/10 Choice, 5/10 yes/no, and 1.038 Score MAE; first call was 435 ms and warm p50 90 ms / p95 132 ms. Choice/yes-no Brier scores were 0.399 / 0.505. The Choice/yes-no ECE over 20 answers was 0.061 on CPU and 0.065 on the DirectML request. On this small embedding workload, requesting DirectML was slower than CPU. This is one paired run on a project-specific fixture that is not held out; the DML request does not prove all ONNX nodes ran on the GPU, and neither result is a general speed, quality, or calibration claim. Reproduce both reports with the same fixture:
 

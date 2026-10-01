@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Add opt-in ONNX Runtime per-node provider profiling to decision benchmarks, with provider counts in the JSON report and compressed trace output kept beside it.
 - Classify browser value-entry controls using their accessible labels, so sensitive words in a select option do not block safe filtering while action controls remain approval-gated.
 - Recheck up to eight repeated digit glyphs with local single-character OCR and record the five-seed visual-only MiniWoB retry run.
 - Stop after a visible page heading exactly matches a requested all/every collection; return the matched destination and avoid reopening its navigation menu.
