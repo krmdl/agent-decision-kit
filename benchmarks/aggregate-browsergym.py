@@ -45,10 +45,14 @@ def summarize(records):
         reason = item.get("failureReason")
         if reason:
             failure_reasons[reason] = failure_reasons.get(reason, 0) + 1
-        status = item.get("decisionStatus", "unreported")
-        decision_statuses[status] = decision_statuses.get(status, 0) + 1
-        provider = item.get("decisionProvider", "unreported")
-        decision_providers[provider] = decision_providers.get(provider, 0) + 1
+        trace = item.get("trace", [])
+        decisions = trace if isinstance(trace, list) and trace else [item]
+        for decision in decisions:
+            status = decision.get("status", item.get("decisionStatus", "unreported"))
+            decision_statuses[status] = decision_statuses.get(status, 0) + 1
+            provider = decision.get("provider", item.get("decisionProvider", "unreported"))
+            if provider:
+                decision_providers[provider] = decision_providers.get(provider, 0) + 1
     return {
         "episodeCount": len(records),
         "successCount": sum(item["success"] for item in records),

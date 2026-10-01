@@ -1,0 +1,61 @@
+{
+  "benchmark": "webarena-verified",
+  "taskId": 677,
+  "intentTemplateId": 253,
+  "taskType": "navigate",
+  "taskPrompt": "Go to the list of orders that are processing",
+  "runnerMode": "bounded-repeated-browser-decide-and-act",
+  "seed": 7,
+  "maxActions": 12,
+  "success": false,
+  "reward": 0.0,
+  "terminated": true,
+  "actions": 0,
+  "loopDetected": false,
+  "trace": [
+    {
+      "step": 1,
+      "status": "ambiguous-selection",
+      "action": {},
+      "candidateCount": 31,
+      "provider": "semantic-local",
+      "model": "Xenova/all-MiniLM-L6-v2",
+      "selectionRule": null,
+      "decisionLatencyMs": 2101,
+      "elapsedMs": 2174,
+      "confidenceSource": null,
+      "calibration": null,
+      "taskTargetVisible": null
+    }
+  ],
+  "initialPage": {
+    "title": "Dashboard / Magento Admin",
+    "path": "/admin/admin/dashboard/"
+  },
+  "finalPage": {
+    "title": "Dashboard / Magento Admin",
+    "path": "/admin/admin/dashboard/"
+  },
+  "resetLatencyMs": 9722,
+  "decisionCallLatenciesMs": [
+    2174
+  ],
+  "latencyMs": 13737,
+  "browserGymVersion": "0.14.3",
+  "browserGymVerifiedVersion": "0.14.3",
+  "playwrightPythonVersion": "1.44.0",
+  "playwrightNodeVersion": "1.63.0",
+  "browserVersion": "HeadlessChrome/125.0.6422.26",
+  "pythonVersion": "3.12.13",
+  "nodeVersion": "v22.14.0",
+  "agentDecisionKitCommit": "ad6e1b37b5138d9e274ea533d442f5e13fffcda7",
+  "workingTreeModified": false,
+  "testedSourceFile": "src/browser/manager.ts",
+  "operatingSystem": "Windows-10-10.0.19045-SP0",
+  "cpu": "AMD64 Family 25 Model 80 Stepping 0, AuthenticAMD",
+  "accelerator": "CPU",
+  "containerImage": "am1n3e/webarena-verified-shopping_admin:latest",
+  "containerImageDigest": "sha256:d0531dd27ed98d0c459ff9e88118bf2ed8b660b0ed99c38837db46c065a5be13",
+  "timestampUtc": "2026-10-01T04:41:03.216489+00:00",
+  "note": "One read-only navigation integration smoke, not a representative WebArena score or a general quality/speed claim. Only navigation tasks are accepted; pending confirmations are never auto-approved. The harness omits evaluator internals and expected answers."
+}

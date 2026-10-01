@@ -108,17 +108,21 @@ class BrowserGymAggregationTests(unittest.TestCase):
             record_path.write_text(json.dumps({
                 "benchmark": "webarena-verified",
                 "taskId": 157,
-                "success": True,
+                "success": False,
                 "reward": 0.5,
                 "actions": 2,
                 "latencyMs": 123,
+                "trace": [{"status": "action-executed", "provider": "semantic-local"}],
             }), encoding="utf-8")
             result = subprocess.run([sys.executable, str(aggregator), str(record_path)], capture_output=True, text=True, check=False)
 
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(json.loads(result.stdout)["successCount"], 1)
-        self.assertEqual(json.loads(result.stdout)["partialRewardCount"], 1)
-        self.assertEqual(json.loads(result.stdout)["meanReward"], 0.5)
+        summary = json.loads(result.stdout)
+        self.assertEqual(summary["successCount"], 0)
+        self.assertEqual(summary["partialRewardCount"], 1)
+        self.assertEqual(summary["meanReward"], 0.5)
+        self.assertEqual(summary["decisionStatuses"], {"action-executed": 1})
+        self.assertEqual(summary["decisionProviders"], {"semantic-local": 1})
 
 
 if __name__ == "__main__":
