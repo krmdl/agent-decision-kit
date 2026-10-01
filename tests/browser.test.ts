@@ -28,6 +28,8 @@ describe("Playwright browser safety flow", () => {
   let nativeFieldsHtml: Buffer;
   let copyFieldsHtml: Buffer;
   let ambiguousLabelsHtml: Buffer;
+  let navigationLabelHtml: Buffer;
+  let duplicateNavigationLabelsHtml: Buffer;
   let editableContentHtml: Buffer;
   let silentFormHtml: Buffer;
   let decisionRaceHtml: Buffer;
@@ -62,6 +64,8 @@ describe("Playwright browser safety flow", () => {
     multipleSelectHtml = Buffer.from('<!doctype html><label for="tags">Tags</label><select id="tags" multiple><option value="alpha" selected>Alpha</option><option value="beta">Beta</option><option value="gamma">Gamma</option></select><p id="status">Not submitted</p>');
     mixedPointerHtml = Buffer.from('<!doctype html><style>.faux-link { cursor: pointer }</style><button>Section</button><span id="target" class="faux-link">Ultrices</span><p id="status">Not clicked</p><script>document.querySelector("#target").addEventListener("click",()=>document.querySelector("#status").textContent="Clicked locally")</script>');
     ambiguousLabelsHtml = Buffer.from('<!doctype html><button type="button">Continue</button><a href="#next">Continue</a><p id="status">No action</p>');
+    navigationLabelHtml = Buffer.from('<!doctype html><a href="#customers" onclick="document.querySelector(\'#status\').textContent=\'Customers opened\'">Customers</a><p id="status">Dashboard</p>');
+    duplicateNavigationLabelsHtml = Buffer.from('<!doctype html><a href="#customers-one" onclick="document.querySelector(\'#status\').textContent=\'First customers opened\'">Customers</a><a href="#customers-two" onclick="document.querySelector(\'#status\').textContent=\'Second customers opened\'">Customers</a><p id="status">Dashboard</p>');
     checkboxHtml = Buffer.from('<!doctype html><label><input type="checkbox" name="updates"> Receive product updates</label>');
     submitHtml = Buffer.from('<!doctype html><form onsubmit="event.preventDefault(); document.querySelector(\'#status\').textContent = \'Submitted locally\'"><input type="submit" value="Send test"></form><p id="status">Not sent</p>');
     checkboxTaskHtml = Buffer.from('<!doctype html><form id="sample" onsubmit="event.preventDefault(); document.querySelector(\'#status\').textContent = \'Submitted locally\'"><label><input type="checkbox" name="target"> Neb</label><label><input type="checkbox" name="other"> Other</label><button type="submit">Submit</button></form><p id="status">Not sent</p>');
@@ -95,7 +99,7 @@ describe("Playwright browser safety flow", () => {
         response.end(dragAndDropHtml);
         return;
       }
-      response.end(request.url === "/visual-only" ? visualHtml : request.url === "/pointer-text" ? pointerTextHtml : request.url === "/icon-pointer" ? iconPointerHtml : request.url === "/silent-pointer" ? silentPointerHtml : request.url === "/silent-input" ? silentInputHtml : request.url === "/mixed-pointer" ? mixedPointerHtml : request.url === "/checkbox" ? checkboxHtml : request.url === "/submit" ? submitHtml : request.url === "/checkbox-task" ? checkboxTaskHtml : request.url === "/tabs" ? tabHtml : request.url === "/expand" ? expandHtml : request.url === "/native-fields" ? nativeFieldsHtml : request.url === "/copy-fields" ? copyFieldsHtml : request.url === "/slider" ? sliderHtml : request.url === "/aria-slider" ? ariaSliderHtml : request.url === "/jquery-ui-slider" ? jqueryUiSliderHtml : request.url === "/autocomplete" ? autocompleteHtml : request.url === "/multi-select" ? multipleSelectHtml : request.url === "/ambiguous-labels" ? ambiguousLabelsHtml : request.url === "/editable" ? editableContentHtml : request.url === "/silent-form" ? silentFormHtml : request.url === "/decision-race" ? decisionRaceHtml : request.url === "/replacement-action" ? replacementActionHtml : request.url === "/dynamic-refs" ? dynamicRefsHtml : request.url === "/menu" ? menuHtml : request.url === "/ordinal-fields" ? ordinalFieldsHtml : request.url === "/textareas" ? textareaWidgetsHtml : request.url === "/ordinal-button" ? ordinalButtonHtml : request.url === "/multi-disclosure" ? multiDisclosureHtml : html);
+      response.end(request.url === "/visual-only" ? visualHtml : request.url === "/pointer-text" ? pointerTextHtml : request.url === "/icon-pointer" ? iconPointerHtml : request.url === "/silent-pointer" ? silentPointerHtml : request.url === "/silent-input" ? silentInputHtml : request.url === "/mixed-pointer" ? mixedPointerHtml : request.url === "/checkbox" ? checkboxHtml : request.url === "/submit" ? submitHtml : request.url === "/checkbox-task" ? checkboxTaskHtml : request.url === "/tabs" ? tabHtml : request.url === "/expand" ? expandHtml : request.url === "/native-fields" ? nativeFieldsHtml : request.url === "/copy-fields" ? copyFieldsHtml : request.url === "/slider" ? sliderHtml : request.url === "/aria-slider" ? ariaSliderHtml : request.url === "/jquery-ui-slider" ? jqueryUiSliderHtml : request.url === "/autocomplete" ? autocompleteHtml : request.url === "/multi-select" ? multipleSelectHtml : request.url === "/ambiguous-labels" ? ambiguousLabelsHtml : request.url === "/navigation-label" ? navigationLabelHtml : request.url === "/duplicate-navigation-labels" ? duplicateNavigationLabelsHtml : request.url === "/editable" ? editableContentHtml : request.url === "/silent-form" ? silentFormHtml : request.url === "/decision-race" ? decisionRaceHtml : request.url === "/replacement-action" ? replacementActionHtml : request.url === "/dynamic-refs" ? dynamicRefsHtml : request.url === "/menu" ? menuHtml : request.url === "/ordinal-fields" ? ordinalFieldsHtml : request.url === "/textareas" ? textareaWidgetsHtml : request.url === "/ordinal-button" ? ordinalButtonHtml : request.url === "/multi-disclosure" ? multiDisclosureHtml : html);
     });
     await new Promise<void>((resolve, reject) => {
       server.once("error", reject);
@@ -731,6 +735,74 @@ describe("Playwright browser safety flow", () => {
     expect(result.selectionRule).toBe("unique-explicit-command-label");
     expect(result.action.label).toBe("Save local draft");
     expect(result.effect.textDelta.excerpt).toContain("Saved the local sample draft.");
+  }, 45_000);
+
+  it("uses a unique visible label named in a navigation request without a model round trip", async () => {
+    profile = await mkdtemp(path.join(os.tmpdir(), "adk-browser-navigation-label-test-"));
+    browser = new BrowserManager({ headless: true, profileDir: path.join(profile, "chromium") });
+    await browser.launch(`${baseUrl}navigation-label`);
+    const provider: DecisionProvider = {
+      id: "remote-test-provider",
+      model: "unused-test-provider",
+      decide: async () => { throw new Error("A unique visible navigation label should resolve locally"); },
+    };
+
+    const result = await browser.decideAndAct("View the details of all customers", provider);
+    expect(result).toMatchObject({ status: "action-executed", selectionRule: "unique-mentioned-navigation-label", action: { label: "Customers" } });
+    expect(result.effect.textDelta.excerpt).toContain("Customers opened");
+  }, 45_000);
+
+  it("keeps duplicate navigation labels ambiguous", async () => {
+    profile = await mkdtemp(path.join(os.tmpdir(), "adk-browser-duplicate-navigation-label-test-"));
+    browser = new BrowserManager({ headless: true, profileDir: path.join(profile, "chromium") });
+    await browser.launch(`${baseUrl}duplicate-navigation-labels`);
+    const provider: DecisionProvider = {
+      id: "semantic-local",
+      model: "ambiguous-test-provider",
+      decide: async (request) => {
+        const refs = Object.keys(request.questions.action.criteria);
+        const probabilities = Object.fromEntries(refs.map((ref) => [ref, 1 / refs.length]));
+        return {
+          provider: "remote-test-provider",
+          model: "ambiguous-test-provider",
+          latencyMs: 1,
+          answers: {
+            action: {
+              type: "choice",
+              choice: refs[0]!,
+              probabilities,
+              confidence: 1 / refs.length,
+              confidenceSource: "maximum-probability",
+              calibration: "uncalibrated-estimate",
+            },
+          },
+        };
+      },
+    };
+
+    const result = await browser.decideAndAct("View the details of all customers", provider);
+    expect(result.status).toBe("ambiguous-selection");
+    expect((await browser.inspect()).textExcerpt).toContain("Dashboard");
+    expect((await browser.inspect()).textExcerpt).not.toContain("First customers opened");
+  }, 45_000);
+
+  it("stops automatic actions when the same task cycles between inspected page states", async () => {
+    profile = await mkdtemp(path.join(os.tmpdir(), "adk-browser-action-cycle-test-"));
+    browser = new BrowserManager({ headless: true, profileDir: path.join(profile, "chromium") });
+    await browser.launch(`${baseUrl}menu`);
+    const provider: DecisionProvider = {
+      id: "semantic-local",
+      model: "unused-test-provider",
+      decide: async () => { throw new Error("The unique visible menu label should resolve locally"); },
+    };
+
+    const first = await browser.decideAndAct("Open the Menu button", provider);
+    expect(first.status).toBe("action-executed");
+    const second = await browser.decideAndAct("Open the Menu button", provider);
+    expect(second).toMatchObject({ status: "action-loop-detected", loopDetected: true });
+    const third = await browser.decideAndAct("Open the Menu button", provider);
+    expect(third.status).toBe("action-loop-blocked");
+    expect((await browser.inspect()).textExcerpt).toContain("Menu closed");
   }, 45_000);
 
   it("matches a role-prefixed button label exactly", async () => {

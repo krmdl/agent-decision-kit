@@ -14,6 +14,7 @@ type ScreenshotPixels = { width: number; height: number };
 type VisualMatchSource = "automatic" | "sparse-text-fallback";
 type VisualSnapshot = { url: string; fingerprint: string; lines: OcrLine[]; matchSource: VisualMatchSource; viewport: ViewportMetrics; screenshotPixels: ScreenshotPixels; createdAt: number };
 type DisclosureSearchIntent = { task: string; url: string; createdAt: number; visitedCandidateKeys: string[] };
+type AutomaticActionTrajectory = { fingerprints: Set<string>; blockedFingerprint?: string };
 type DeterministicBrowserMatch = { candidate: BrowserCandidate; rule: string; note: string; optionLabel?: string; rangeValue?: number };
 type InspectedBrowserCandidate = BrowserCandidate & { privateRangeValue?: number; privateValuePresent?: boolean };
 type PendingBrowserApproval =
@@ -34,6 +35,7 @@ export class BrowserManager {
   private privateFieldValuePresence = new Map<string, boolean>();
   private privateRangeValues = new Map<string, number>();
   private nonProgressingActions = new Set<string>();
+  private automaticActionTrajectories = new Map<string, AutomaticActionTrajectory>();
   private ownsContext = false;
   private lastInspectionFingerprint = "";
   private completedDisclosureIntent: { task: string; url: string; createdAt: number } | undefined;
@@ -58,6 +60,7 @@ export class BrowserManager {
       this.context = await chromium.launchPersistentContext(this.profileDir, { headless: this.headless, viewport: { width: 1280, height: 800 } });
       this.ownsContext = true;
       this.page = this.context.pages()[0] ?? await this.context.newPage();
+      this.automaticActionTrajectories.clear();
     }
     if (url) await this.navigate(url);
     return this.describePage();
@@ -87,6 +90,7 @@ export class BrowserManager {
     this.ownsContext = false;
     this.lastVisualSnapshot = undefined;
     this.pending.clear();
+    this.automaticActionTrajectories.clear();
     return { connected: true, page: await this.describePage(), note: "Attached to the selected local Chrome tab. Browser cookies and storage are not returned by the tools. URL credentials, query, hash, and local file paths are redacted. The remaining page URL, title, headings, a bounded text excerpt, and visible action labels can be sent to the configured local decision model; remote providers remain blocked unless explicitly enabled." };
   }
 
@@ -97,6 +101,7 @@ export class BrowserManager {
     await page.goto(target.href, { waitUntil: "domcontentloaded", timeout: 30_000 });
     this.pending.clear();
     this.lastVisualSnapshot = undefined;
+    this.automaticActionTrajectories.clear();
     return this.describePage();
   }
 
@@ -376,6 +381,9 @@ export class BrowserManager {
         note: "No visible DOM actions were found. This fast response skips OCR and model loading; call browser_visual_text for a quick local OCR pass, or browser_visual_inspect for slower local visual question answering. OCR may miss text; neither tool performs actions.",
       };
     }
+    if (this.automaticActionLoopBlocked(task)) {
+      return { status: "action-loop-blocked", candidateCount: snapshot.candidates.length, note: "This task returned to a page state already reached by its automatic actions. No further automatic action will be repeated; inspect the page and choose a different control manually." };
+    }
     let localMatch: ReturnType<typeof findDeterministicMatch>;
     const searchIntent = this.disclosureSearchIntent;
     const searchIsActive = searchIntent
@@ -461,7 +469,8 @@ export class BrowserManager {
     const visibleStateChanged = this.lastInspectionFingerprint !== beforeActionFingerprint;
     if (!visibleStateChanged) this.rememberNonProgressingAction(beforeActionFingerprint, selected);
     else this.nonProgressingActions.delete(nonProgressingActionKey(beforeActionFingerprint, selected));
-    return { status: "action-executed", action: selected, candidateCount: snapshot.candidates.length, provider: decision.provider, model: decision.model, decisionLatencyMs: Math.round(decision.latencyMs), confidence: decision.answers.action?.confidence, confidenceSource: decision.answers.action?.confidenceSource, calibration: decision.answers.action?.calibration, effect, visibleStateChanged };
+    const loopDetected = visibleStateChanged && this.recordAutomaticActionTransition(task, beforeActionFingerprint, this.lastInspectionFingerprint);
+    return { status: loopDetected ? "action-loop-detected" : "action-executed", action: selected, candidateCount: snapshot.candidates.length, provider: decision.provider, model: decision.model, decisionLatencyMs: Math.round(decision.latencyMs), confidence: decision.answers.action?.confidence, confidenceSource: decision.answers.action?.confidenceSource, calibration: decision.answers.action?.calibration, effect, visibleStateChanged, ...(loopDetected ? { loopDetected: true, note: "The action returned to a page state already observed for this task. Further automatic decisions on this task and state are blocked; inspect the page and choose a different control manually." } : {}) };
   }
 
   async confirm(token: string, approve: boolean) {
@@ -547,6 +556,7 @@ export class BrowserManager {
     const visibleStateChanged = this.lastInspectionFingerprint !== beforeActionFingerprint;
     if (!visibleStateChanged) this.rememberNonProgressingAction(beforeActionFingerprint, candidate);
     else this.nonProgressingActions.delete(nonProgressingActionKey(beforeActionFingerprint, candidate));
+    const loopDetected = visibleStateChanged && this.recordAutomaticActionTransition(task, beforeActionFingerprint, this.lastInspectionFingerprint);
     if (["single-collapsed-control", "unique-expand-control"].includes(rule)) {
       this.completedDisclosureIntent = { task: normalizeLabel(task), url: pageIdentity(this.requirePage().url()), createdAt: Date.now() };
     }
@@ -558,7 +568,51 @@ export class BrowserManager {
       if (!visitedCandidateKeys.includes(key)) visitedCandidateKeys.push(key);
       this.disclosureSearchIntent = { task: normalizeLabel(task), url, createdAt: Date.now(), visitedCandidateKeys };
     }
-    return { status: "action-executed", action: candidate, ...metadata, effect, note, visibleStateChanged };
+    return { status: loopDetected ? "action-loop-detected" : "action-executed", action: candidate, ...metadata, effect, note: loopDetected ? "The action returned to a page state already observed for this task. Further automatic decisions on this task and state are blocked; inspect the page and choose a different control manually." : note, visibleStateChanged, ...(loopDetected ? { loopDetected: true } : {}) };
+  }
+
+  private automaticActionTrajectoryKey(task: string) {
+    const page = this.requirePage();
+    const url = new URL(page.url());
+    const site = url.origin === "null" ? `${url.protocol}//${url.pathname}` : url.origin;
+    return `${site}\0${normalizeLabel(task)}`;
+  }
+
+  private automaticActionLoopBlocked(task: string) {
+    const key = this.automaticActionTrajectoryKey(task);
+    const fingerprint = this.lastInspectionFingerprint;
+    const existing = this.automaticActionTrajectories.get(key);
+    if (existing?.blockedFingerprint === fingerprint) return true;
+    if (!existing || existing.blockedFingerprint) {
+      this.setAutomaticActionTrajectory(key, { fingerprints: new Set([fingerprint]) });
+    } else {
+      existing.fingerprints.add(fingerprint);
+      while (existing.fingerprints.size > 64) existing.fingerprints.delete(existing.fingerprints.values().next().value!);
+    }
+    return false;
+  }
+
+  private recordAutomaticActionTransition(task: string, before: string, after: string) {
+    if (before === after) return false;
+    const key = this.automaticActionTrajectoryKey(task);
+    let trajectory = this.automaticActionTrajectories.get(key);
+    if (!trajectory) {
+      trajectory = { fingerprints: new Set([before]) };
+      this.setAutomaticActionTrajectory(key, trajectory);
+    }
+    if (trajectory.fingerprints.has(after)) {
+      trajectory.blockedFingerprint = after;
+      return true;
+    }
+    trajectory.fingerprints.add(after);
+    while (trajectory.fingerprints.size > 64) trajectory.fingerprints.delete(trajectory.fingerprints.values().next().value!);
+    return false;
+  }
+
+  private setAutomaticActionTrajectory(key: string, value: AutomaticActionTrajectory) {
+    this.automaticActionTrajectories.delete(key);
+    this.automaticActionTrajectories.set(key, value);
+    while (this.automaticActionTrajectories.size > 64) this.automaticActionTrajectories.delete(this.automaticActionTrajectories.keys().next().value!);
   }
 
   private rememberNonProgressingAction(fingerprint: string, candidate: BrowserCandidate) {
@@ -926,7 +980,7 @@ export class BrowserManager {
     if (this.context && this.ownsContext) await this.context.close().catch(() => undefined);
     if (this.browser) await this.browser.close().catch(() => undefined);
     await closeOcrWorker().catch(() => undefined);
-    this.context = undefined; this.browser = undefined; this.page = undefined; this.ownsContext = false; this.lastInspectionFingerprint = ""; this.candidates.clear(); this.pending.clear(); this.privateFieldValuePresence.clear(); this.privateRangeValues.clear(); this.nonProgressingActions.clear(); this.completedDisclosureIntent = undefined; this.disclosureSearchIntent = undefined; this.lastVisualSnapshot = undefined;
+    this.context = undefined; this.browser = undefined; this.page = undefined; this.ownsContext = false; this.lastInspectionFingerprint = ""; this.candidates.clear(); this.pending.clear(); this.privateFieldValuePresence.clear(); this.privateRangeValues.clear(); this.nonProgressingActions.clear(); this.automaticActionTrajectories.clear(); this.completedDisclosureIntent = undefined; this.disclosureSearchIntent = undefined; this.lastVisualSnapshot = undefined;
     return { closed: true };
   }
 
@@ -1031,6 +1085,9 @@ function findDeterministicMatch(task: string, candidates: BrowserCandidate[], ra
     if (matches.length === 1) return { candidate: matches[0]!, rule: "explicit-tab-number", note: "The task names one tab number that matches one visible tab label." };
   }
 
+  const navigationLabel = findUniqueMentionedNavigationLabel(task, candidates);
+  if (navigationLabel) return navigationLabel;
+
   const optionIntent = task.match(/\b(?:select|choose|pick)\s+(.+?)\s+(?:from|in)\s+(?:the\s+)?(?:scroll\s+)?(?:list|dropdown|select(?:\s+box)?|menu)\b/i)?.[1]
     ?.trim()
     .replace(/^(?:the\s+)?(?:option\s+)?["'“”]+|["'“”]+$/gu, "")
@@ -1112,6 +1169,38 @@ function findDeterministicMatch(task: string, candidates: BrowserCandidate[], ra
   const explicitLabel = findUniqueExplicitCommandLabel(task, candidates);
   if (explicitLabel) return { candidate: explicitLabel, rule: "unique-explicit-command-label", note: "The task names one exact visible control label. Only unique literal matches are performed locally; sensitive actions still require separate approval." };
   return undefined;
+}
+
+function findUniqueMentionedNavigationLabel(task: string, candidates: BrowserCandidate[]) {
+  if (!/\b(?:go|navigate|view|show|open|visit|browse|display)\b/i.test(task)) return undefined;
+  const taskWords = new Set(normalizeLabel(task).split(/\s+/u));
+  const ignored = new Set(["go", "navigate", "view", "show", "open", "visit", "browse", "display", "the", "to", "on", "in", "of", "all", "list", "details", "detail", "page", "screen", "section"]);
+  const allowButton = /\bbutton\b/i.test(task);
+  const allowTab = /\btab\b/i.test(task);
+  const interactiveRoles = new Set(["link", "menuitem", ...(allowButton ? ["button"] : []), ...(allowTab ? ["tab"] : [])]);
+  const matches = candidates.flatMap((candidate) => {
+    if (!interactiveRoles.has(candidate.role)) return [];
+    const labels = labelParts(candidate).map((label) => {
+      const words = label.split(/\s+/u).filter((word) => word && !ignored.has(word));
+      return { label, words };
+    }).filter(({ label, words }) =>
+      words.length > 0
+      && words.every((word) => taskWords.has(word))
+      && label.split(/\s+/u).length <= taskWords.size,
+    );
+    if (!labels.length) return [];
+    const specificity = Math.max(...labels.map(({ label }) => label.split(/\s+/u).length));
+    return [{ candidate, specificity }];
+  });
+  if (!matches.length) return undefined;
+  const mostSpecific = Math.max(...matches.map(({ specificity }) => specificity));
+  const best = matches.filter(({ specificity }) => specificity === mostSpecific);
+  if (best.length !== 1) return undefined;
+  return {
+    candidate: best[0]!.candidate,
+    rule: "unique-mentioned-navigation-label",
+    note: "The navigation request names one unique visible interactive label. Only that exact label is selected; consequential actions still require the normal separate approval.",
+  };
 }
 
 function findExplicitRangePlan(task: string, candidates: BrowserCandidate[], rangeValues: Map<string, number>) {

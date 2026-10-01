@@ -165,9 +165,29 @@ Use a PowerShell-appropriate path for `--miniwob-root` on Windows. Use `--tasks`
 
 ### WebArena and VisualWebArena prerequisites
 
-MiniWoB is self-contained in a local checkout. WebArena and VisualWebArena are separate services; installing their BrowserGym packages does not provision the benchmark sites. BrowserGym's [WebArena guide](https://github.com/ServiceNow/BrowserGym/blob/main/browsergym/webarena/README.md) expects domain URLs in `WA_SHOPPING`, `WA_SHOPPING_ADMIN`, `WA_REDDIT`, `WA_GITLAB`, `WA_WIKIPEDIA`, `WA_MAP`, and `WA_HOMEPAGE`. Its [VisualWebArena guide](https://github.com/ServiceNow/BrowserGym/blob/main/browsergym/visualwebarena/README.md) expects `VWA_CLASSIFIEDS`, `VWA_SHOPPING`, `VWA_REDDIT`, `VWA_WIKIPEDIA`, and `VWA_HOMEPAGE`; optional reset URLs are documented there too. This repository currently has no configured domain URLs, so no WebArena or VisualWebArena task result is published.
+MiniWoB is self-contained in a local checkout. The original multi-site WebArena and VisualWebArena are separate services; installing their BrowserGym packages does not provision their sites. BrowserGym's [WebArena guide](https://github.com/ServiceNow/BrowserGym/blob/main/browsergym/webarena/README.md) expects domain URLs in `WA_SHOPPING`, `WA_SHOPPING_ADMIN`, `WA_REDDIT`, `WA_GITLAB`, `WA_WIKIPEDIA`, `WA_MAP`, and `WA_HOMEPAGE`. Its [VisualWebArena guide](https://github.com/ServiceNow/BrowserGym/blob/main/browsergym/visualwebarena/README.md) expects `VWA_CLASSIFIEDS`, `VWA_SHOPPING`, `VWA_REDDIT`, `VWA_WIKIPEDIA`, and `VWA_HOMEPAGE`; optional reset URLs are documented there too. Neither full suite has configured domains or a task result in this repository.
 
-Install the pinned BrowserGym wrappers in a dedicated Python environment; this does not start or download the website services:
+WebArena Verified is a separate, containerized single-site benchmark. The repository includes `run-browsergym-webarena-verified.py`, which accepts only `shopping_admin` tasks tagged `navigate`; it refuses retrieval and mutation tasks and never auto-approves actions. A smoke on task 157 (`View the details of all customers`) received partial reward 0.5, not full success. Agent Decision Kit reached a loop between the visible `Customers` and `All Customers` links; its automatic-action cycle guard stopped after five actions. The episode took 16.7 seconds including an 11.8-second BrowserGym reset; the five browser decisions took 0.30, 0.77, 0.27, 0.27, and 0.79 seconds. This one Windows CPU integration check is not a WebArena quality score or a speed comparison. It used BrowserGym and WebArena Verified 0.14.3, Python Playwright 1.44.0, Node Playwright 1.63.0, HeadlessChrome 125, and the shopping-admin image digest recorded in the raw JSON. The result is [`webarena-verified-shopping-admin-157-loop-guard.json`](results/webarena-verified-shopping-admin-157-loop-guard.json); it contains no evaluator internals or expected answers.
+
+To reproduce the same single-site smoke on a machine with Docker space for the image, Node.js, and Python 3.12:
+
+```sh
+npm run build
+python -m venv .venv-browsergym-hosted
+# Activate the environment, then:
+python -m pip install -r benchmarks/requirements-browsergym-hosted.txt
+python -m playwright install chromium
+python -c "import nltk; nltk.download('punkt_tab')"
+docker run --rm -d --name adk-webarena-verified --memory=4g --cpus=2 --shm-size=512m \
+  -p 127.0.0.1:8080:80 -p 127.0.0.1:8081:8877 \
+  am1n3e/webarena-verified_shopping_admin@sha256:d0531dd27ed98d0c459ff9e88118bf2ed8b660b0ed99c38837db46c065a5be13
+python benchmarks/run-browsergym-webarena-verified.py --task-id 157 \
+  --shopping-admin-url http://localhost:8080/admin \
+  --output benchmarks/results/webarena-verified-shopping-admin-157-loop-guard.json
+docker stop adk-webarena-verified
+```
+
+Install the pinned BrowserGym wrappers in a dedicated Python environment; this does not start or download the original WebArena or VisualWebArena website services:
 
 ```sh
 python -m venv .venv-browsergym-hosted

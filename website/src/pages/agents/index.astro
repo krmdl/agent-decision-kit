@@ -13,7 +13,7 @@ import { siteBase } from "../../utils/site.js";
         <div class="number">{agent.number}</div><h2>{agent.name}</h2><p>{agent.summary}</p><span>Open setup guide →</span>
       </a>)}
     </div>
-    <aside><b>Compatibility status</b><p>The generic MCP transport and tool schemas have an in-process smoke test. These pages were checked against linked client documentation; each vendor executable was not installed and tested in this checkout.</p></aside>
+    <aside><b>Compatibility status</b><p>CI parses each guide, starts the generated MCP server, and calls a tool through stdio. Additional isolated client checks are recorded in the compatibility table; no model-backed agent turn has been tested.</p></aside>
   </main>
 </BaseLayout>
 <style>

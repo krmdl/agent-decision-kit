@@ -161,14 +161,14 @@ const decisionRows = [
           <a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/miniwob-expanded-smoke-suite.json">Raw run ↗</a>
         </article>
       </div>
-      <p class="comparison-note">The latest and prior 26-task runs share a task set, seed, and action cap, but each is one CPU integration observation on a changing toolchain; neither establishes general browser quality or speed. Other counts use different task sets. No Jev parity comparison has been run. WebArena and VisualWebArena need their separately configured benchmark services; neither has a result in this repository.</p>
+      <p class="comparison-note">The latest and prior 26-task runs share a task set, seed, and action cap, but each is one CPU integration observation on a changing toolchain; neither establishes general browser quality or speed. Other counts use different task sets. No Jev parity comparison has been run. The original multi-site WebArena and VisualWebArena suites have no results; a separate single-site WebArena Verified smoke reached only partial reward 0.5, not full task success.</p>
       <a class="text-link" href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/README.md">Read the full protocol and reproduction commands →</a>
     </section>
 
     <section class="prerequisites" aria-labelledby="prerequisites-title">
       <p class="eyebrow">BROADER BROWSERGYM SETUPS</p>
       <h2 id="prerequisites-title">WebArena scores need running benchmark sites.</h2>
-      <p class="prerequisite-lead">Installing BrowserGym alone does not provide the WebArena or VisualWebArena sites. Their BrowserGym integrations need a set of configured domain URLs; none are configured in the recorded environment, so this page does not report results for those suites.</p>
+      <p class="prerequisite-lead">Installing BrowserGym alone does not provide the original WebArena or VisualWebArena sites. Their integrations need several configured domains; those full suites have no result here. A separate one-site WebArena Verified navigation smoke is recorded below as a partial integration check.</p>
       <div class="setup-grid">
         <article>
           <h3>WebArena</h3>
@@ -181,6 +181,12 @@ const decisionRows = [
           <p>Requires separate classifieds, shopping, Reddit, Wikipedia, and homepage URLs.</p>
           <code>VWA_CLASSIFIEDS · VWA_SHOPPING · VWA_REDDIT · VWA_WIKIPEDIA · VWA_HOMEPAGE</code>
           <a href="https://github.com/ServiceNow/BrowserGym/blob/main/browsergym/visualwebarena/README.md">BrowserGym VisualWebArena setup ↗</a>
+        </article>
+        <article>
+          <h3>WebArena Verified · one site</h3>
+          <p>One read-only navigation smoke received partial reward 0.5 and did not complete the task. The action loop guard stopped repeated menu toggles after five browser actions.</p>
+          <code>BrowserGym 0.14.3 · shopping_admin · 1 task · 0/1 full successes</code>
+          <a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/webarena-verified-shopping-admin-157-loop-guard.json">Raw partial result ↗</a>
         </article>
       </div>
       <p class="comparison-note">The upstream WebArena guide notes that some fuzzy-match evaluations call a hosted GPT-4 judge. The default Agent Decision Kit benchmark path stays local and does not enable paid judging. See the <a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/README.md#webarena-and-visualwebarena-prerequisites">prerequisites and evaluator policy</a>.</p>
