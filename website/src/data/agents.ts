@@ -95,7 +95,7 @@ export const agents = [
     number: "07", slug: "copilot-cli", name: "GitHub Copilot CLI", family: "GitHub CLI agent",
     title: "GitHub Copilot CLI MCP Setup",
     summary: "Use ~/.copilot/mcp-config.json or copilot mcp add, not VS Code's schema.",
-    description: "Register a local MCP server in GitHub Copilot CLI's own mcp-config.json and verify it with copilot mcp list.",
+    description: "Register a local MCP server in GitHub Copilot CLI's own mcp-config.json and inspect the saved entry with copilot mcp list.",
     official: "https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/add-mcp-servers", officialLabel: "GitHub Copilot CLI MCP guide",
     path: "~/.copilot/mcp-config.json or trusted repository .mcp.json",
     snippet: "copilot mcp add agent-decision-kit -- node /absolute/path/to/agent-decision-kit/dist/cli.js mcp\ncopilot mcp list",
