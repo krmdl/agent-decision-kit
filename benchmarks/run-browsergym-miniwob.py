@@ -597,6 +597,7 @@ def main():
                             "engine": ocr_result.get("engine"),
                             "contentMode": ocr_result.get("contentMode"),
                             "cropRetryCount": ocr_result.get("cropRetryCount", 0),
+                            "symbolRetryCount": ocr_result.get("symbolRetryCount", 0),
                             "title": ocr_result.get("title"),
                             "url": ocr_result.get("url"),
                             "viewport": ocr_result.get("viewport"),

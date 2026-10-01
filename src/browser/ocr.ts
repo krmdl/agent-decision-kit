@@ -8,7 +8,9 @@ export type OcrWord = { text: string; confidence: number; box: OcrBox };
 export type OcrLine = { text: string; confidence: number; box: OcrBox; words: OcrWord[] };
 export type OcrContentMode = "general" | "digits";
 type OcrSymbol = { text: string; confidence: number; bbox: OcrBox };
-type OcrBlock = { paragraphs?: Array<{ lines?: Array<{ text: string; confidence: number; bbox: OcrBox; words?: Array<{ text: string; confidence: number; bbox: OcrBox; symbols?: OcrSymbol[] }> }> }> };
+type OcrBlockWord = { text: string; confidence: number; bbox: OcrBox; symbols?: OcrSymbol[] };
+type OcrBlockLine = { text: string; confidence: number; bbox: OcrBox; words?: OcrBlockWord[] };
+type OcrBlock = { paragraphs?: Array<{ lines?: OcrBlockLine[] }> };
 type ScreenshotPixels = { width: number; height: number };
 type OcrWorker = Awaited<ReturnType<typeof createWorker>>;
 
@@ -144,6 +146,7 @@ export function recognizeScreenshotText(png: Buffer, maxLines = 40, segmentation
     const { data } = await worker.recognize(png, {}, { blocks: true });
     const blocks = [...(data.blocks ?? [])];
     let cropRetryCount = 0;
+    let symbolRetryCount = 0;
     if (contentMode === "digits" && screenshotPixels && screenshotPixels.width > 0 && screenshotPixels.height > 0) {
       const wideSymbols = findWideDigitSymbols(blocks).slice(0, 4);
       for (const symbol of wideSymbols) {
@@ -151,6 +154,33 @@ export function recognizeScreenshotText(png: Buffer, maxLines = 40, segmentation
           const retry = await worker.recognize(png, { rectangle }, { blocks: true });
           blocks.push(...(retry.data.blocks ?? []));
           cropRetryCount += 1;
+        }
+      }
+
+      const repeatedSymbols = findRepeatedDigitSymbols(blocks).slice(0, 8);
+      if (repeatedSymbols.length) {
+        await worker.setParameters({
+          tessedit_pageseg_mode: PSM.SINGLE_CHAR,
+          tessedit_char_whitelist: "0123456789",
+          classify_bln_numeric_mode: "1",
+        });
+        for (const repeated of repeatedSymbols) {
+          const rectangle = makeSymbolRectangle(repeated.symbol, screenshotPixels);
+          if (!rectangle) continue;
+          const retry = await worker.recognize(png, { rectangle }, { blocks: true });
+          symbolRetryCount += 1;
+          const recognized = collectDigitSymbols(retry.data.blocks ?? []);
+          if (recognized.length !== 1 || recognized[0]!.confidence < 40) continue;
+          repeated.symbol.text = recognized[0]!.text;
+          repeated.symbol.confidence = recognized[0]!.confidence;
+          if (repeated.word.symbols?.length === 1) {
+            repeated.word.text = repeated.symbol.text;
+            repeated.word.confidence = repeated.symbol.confidence;
+            if (repeated.line.words?.length === 1) {
+              repeated.line.text = repeated.symbol.text;
+              repeated.line.confidence = repeated.symbol.confidence;
+            }
+          }
         }
       }
     }
@@ -161,6 +191,7 @@ export function recognizeScreenshotText(png: Buffer, maxLines = 40, segmentation
       segmentationMode,
       contentMode,
       cropRetryCount,
+      symbolRetryCount,
       initializationMs,
       recognitionMs,
       latencyMs: Math.round(performance.now() - startedAt),
@@ -177,6 +208,45 @@ function isWideDigitSymbol(symbol: { text: string; bbox: OcrBox }) {
 
 function findWideDigitSymbols(blocks: readonly OcrBlock[]) {
   return blocks.flatMap((block) => (block.paragraphs ?? []).flatMap((paragraph) => (paragraph.lines ?? []).flatMap((line) => (line.words ?? []).flatMap((word) => (word.symbols ?? []).filter(isWideDigitSymbol)))));
+}
+
+function collectDigitSymbols(blocks: readonly OcrBlock[]) {
+  const symbols = blocks.flatMap((block) => (block.paragraphs ?? []).flatMap((paragraph) => (paragraph.lines ?? []).flatMap((line) => (line.words ?? []).flatMap((word) => word.symbols ?? []))));
+  return symbols.filter((symbol) => /^\d$/.test(symbol.text.trim()) && !isWideDigitSymbol(symbol));
+}
+
+function findRepeatedDigitSymbols(blocks: readonly OcrBlock[]) {
+  const unique = new Map<string, { symbol: OcrSymbol; word: OcrBlockWord; line: OcrBlockLine }>();
+  for (const block of blocks) {
+    for (const paragraph of block.paragraphs ?? []) {
+      for (const line of paragraph.lines ?? []) {
+        for (const word of line.words ?? []) {
+          for (const symbol of word.symbols ?? []) {
+            if (!/^\d$/.test(symbol.text.trim()) || isWideDigitSymbol(symbol)) continue;
+            const key = `${symbol.bbox.x0},${symbol.bbox.y0},${symbol.bbox.x1},${symbol.bbox.y1}`;
+            if (!unique.has(key)) unique.set(key, { symbol, word, line });
+          }
+        }
+      }
+    }
+  }
+  const distinctSymbols = [...unique.values()];
+  const counts = new Map<string, number>();
+  for (const repeated of distinctSymbols) counts.set(repeated.symbol.text.trim(), (counts.get(repeated.symbol.text.trim()) ?? 0) + 1);
+  return distinctSymbols.filter((repeated) => (counts.get(repeated.symbol.text.trim()) ?? 0) > 1);
+}
+
+function makeSymbolRectangle(symbol: OcrSymbol, screenshotPixels: ScreenshotPixels) {
+  const { x0, y0, x1, y1 } = symbol.bbox;
+  if (![x0, y0, x1, y1].every(Number.isFinite) || x0 < 0 || y0 < 0 || x1 <= x0 || y1 <= y0 || x1 > screenshotPixels.width || y1 > screenshotPixels.height) return undefined;
+  const height = y1 - y0;
+  const horizontalPadding = Math.max(4, Math.ceil(height * 0.35));
+  const verticalPadding = Math.max(4, Math.ceil(height * 0.25));
+  const left = Math.max(0, Math.floor(x0 - horizontalPadding));
+  const right = Math.min(screenshotPixels.width, Math.ceil(x1 + horizontalPadding));
+  const top = Math.max(0, Math.floor(y0 - verticalPadding));
+  const bottom = Math.min(screenshotPixels.height, Math.ceil(y1 + verticalPadding));
+  return { left, top, width: right - left, height: bottom - top };
 }
 
 function splitSymbolIntoRegions(symbol: OcrSymbol, screenshotPixels: ScreenshotPixels) {
