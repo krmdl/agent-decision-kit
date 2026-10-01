@@ -36,6 +36,7 @@ export class BrowserManager {
   private privateRangeValues = new Map<string, number>();
   private nonProgressingActions = new Set<string>();
   private automaticActionTrajectories = new Map<string, AutomaticActionTrajectory>();
+  private navigationActionsByTask = new Map<string, { labels: Set<string>; createdAt: number }>();
   private ownsContext = false;
   private lastInspectionFingerprint = "";
   private completedDisclosureIntent: { task: string; url: string; createdAt: number } | undefined;
@@ -61,6 +62,7 @@ export class BrowserManager {
       this.ownsContext = true;
       this.page = this.context.pages()[0] ?? await this.context.newPage();
       this.automaticActionTrajectories.clear();
+      this.navigationActionsByTask.clear();
     }
     if (url) await this.navigate(url);
     return this.describePage();
@@ -91,6 +93,7 @@ export class BrowserManager {
     this.lastVisualSnapshot = undefined;
     this.pending.clear();
     this.automaticActionTrajectories.clear();
+    this.navigationActionsByTask.clear();
     return { connected: true, page: await this.describePage(), note: "Attached to the selected local Chrome tab. Browser cookies and storage are not returned by the tools. URL credentials, query, hash, and local file paths are redacted. The remaining page URL, title, headings, a bounded text excerpt, and visible action labels can be sent to the configured local decision model; remote providers remain blocked unless explicitly enabled." };
   }
 
@@ -102,6 +105,7 @@ export class BrowserManager {
     this.pending.clear();
     this.lastVisualSnapshot = undefined;
     this.automaticActionTrajectories.clear();
+    this.navigationActionsByTask.clear();
     return this.describePage();
   }
 
@@ -432,10 +436,29 @@ export class BrowserManager {
       return { status: "prerequisite-fields-required", candidateCount: snapshot.candidates.length, requiredFields: missingFields, note: "The task asks for form entry before submission, and these visible fields are still empty. No submit action was sent to the decision provider or proposed. Fill or select the requested values, inspect again, then ask to submit; submission will still require separate approval." };
     }
     if (localMatch) {
+      if (localMatch.rule === "unique-mentioned-navigation-label") {
+        const taskKey = normalizeLabel(task);
+        const labelKey = normalizeLabel(labelParts(localMatch.candidate)[0] ?? localMatch.candidate.label);
+        const prior = this.navigationActionsByTask.get(taskKey);
+        if (prior && Date.now() - prior.createdAt <= 5 * 60_000 && prior.labels.has(labelKey)) {
+          return { status: "navigation-action-already-tried", action: localMatch.candidate, candidateCount: snapshot.candidates.length, note: "This navigation label was already selected for the same task, but the requested destination is still not visible. No menu was toggled again; inspect the current page and choose a different visible destination." };
+        }
+        if (prior && Date.now() - prior.createdAt > 5 * 60_000) this.navigationActionsByTask.delete(taskKey);
+      }
       if (this.nonProgressingActions.has(nonProgressingActionKey(this.lastInspectionFingerprint, localMatch.candidate))) {
         return { status: "repeated-action-blocked", action: localMatch.candidate, note: repeatedActionNote(localMatch.candidate) };
       }
-      return this.applyLocalMatch(localMatch.candidate, snapshot, localMatch.rule, localMatch.note, task, localMatch.optionLabel, localMatch.rangeValue);
+      const result = await this.applyLocalMatch(localMatch.candidate, snapshot, localMatch.rule, localMatch.note, task, localMatch.optionLabel, localMatch.rangeValue);
+      if (localMatch.rule === "unique-mentioned-navigation-label" && ["action-executed", "action-loop-detected"].includes(result.status)) {
+        const taskKey = normalizeLabel(task);
+        const labelKey = normalizeLabel(labelParts(localMatch.candidate)[0] ?? localMatch.candidate.label);
+        const prior = this.navigationActionsByTask.get(taskKey);
+        const labels = prior && Date.now() - prior.createdAt <= 5 * 60_000 ? prior.labels : new Set<string>();
+        labels.add(labelKey);
+        this.navigationActionsByTask.set(taskKey, { labels, createdAt: Date.now() });
+        while (this.navigationActionsByTask.size > 64) this.navigationActionsByTask.delete(this.navigationActionsByTask.keys().next().value!);
+      }
+      return result;
     }
     if (provider.id !== "semantic-local" && process.env.AGENT_ALLOW_REMOTE_BROWSER_CONTEXT !== "true") {
       return { status: "remote-provider-blocked-for-browser-privacy", provider: provider.id, candidates: snapshot.candidates, note: "Page labels and text are untrusted browser data. Set AGENT_ALLOW_REMOTE_BROWSER_CONTEXT=true only if you intend to send these bounded labels to the configured remote provider." };
@@ -986,7 +1009,7 @@ export class BrowserManager {
     if (this.context && this.ownsContext) await this.context.close().catch(() => undefined);
     if (this.browser) await this.browser.close().catch(() => undefined);
     await closeOcrWorker().catch(() => undefined);
-    this.context = undefined; this.browser = undefined; this.page = undefined; this.ownsContext = false; this.lastInspectionFingerprint = ""; this.candidates.clear(); this.pending.clear(); this.privateFieldValuePresence.clear(); this.privateRangeValues.clear(); this.nonProgressingActions.clear(); this.automaticActionTrajectories.clear(); this.completedDisclosureIntent = undefined; this.disclosureSearchIntent = undefined; this.lastVisualSnapshot = undefined;
+    this.context = undefined; this.browser = undefined; this.page = undefined; this.ownsContext = false; this.lastInspectionFingerprint = ""; this.candidates.clear(); this.pending.clear(); this.privateFieldValuePresence.clear(); this.privateRangeValues.clear(); this.nonProgressingActions.clear(); this.automaticActionTrajectories.clear(); this.navigationActionsByTask.clear(); this.completedDisclosureIntent = undefined; this.disclosureSearchIntent = undefined; this.lastVisualSnapshot = undefined;
     return { closed: true };
   }
 
@@ -1179,25 +1202,59 @@ function findDeterministicMatch(task: string, candidates: BrowserCandidate[], ra
 
 function findUniqueMentionedNavigationLabel(task: string, candidates: BrowserCandidate[]) {
   if (!/\b(?:go|navigate|view|show|open|visit|browse|display)\b/i.test(task)) return undefined;
-  const taskWords = new Set(normalizeLabel(task).split(/\s+/u));
-  const ignored = new Set(["go", "navigate", "view", "show", "open", "visit", "browse", "display", "the", "to", "on", "in", "of", "all", "list", "details", "detail", "page", "screen", "section"]);
+  const normalizedTask = normalizeLabel(task);
+  const command = normalizedTask.match(/\b(?:go|navigate|view|show|open|visit|browse|display)\b(?:\s+to)?\s+(.+)/u)?.[1] ?? normalizedTask;
+  const ignored = new Set(["a", "an", "and", "are", "at", "being", "details", "detail", "display", "for", "from", "go", "in", "information", "is", "list", "navigate", "of", "on", "open", "page", "screen", "section", "show", "the", "to", "view", "visit", "was", "were", "with"]);
+  const normalizedWords = (value: string) => value.split(/\s+/u).filter((word) => word && !ignored.has(word)).map(normalizeNavigationWord);
+  const collection = normalizedTask.match(/\b((?:all|every)\s+.+?)(?:\s+(?:in|on|from|for|at|with)\b|$)/u)?.[1];
+  let targetWords: string[] = [];
+  let reportSubject: string[] = [];
+  let reportIntent = false;
+  if (collection) {
+    targetWords = collection.split(/\s+/u).map(normalizeNavigationWord);
+  } else {
+    const report = command.match(/\b(.+?)\s+reports?\b/u);
+    if (report) {
+      reportIntent = true;
+      reportSubject = normalizedWords(report[1]!);
+      // "Sales" is the parent menu for a sales-order report, not the report target.
+      if (reportSubject.length > 1 && reportSubject[0] === "sale") reportSubject = reportSubject.slice(1);
+    } else {
+      const listOf = command.match(/\blist of\s+(.+)/u)?.[1];
+      if (listOf) {
+        const object = listOf.split(/\s+(?:that|which|who|are|is|was|were|being|for|with|on|from|during)\b/u, 1)[0] ?? "";
+        targetWords = normalizedWords(object);
+      } else {
+        const destination = command.split(/\s+(?:in|on|from|for|during|over|at|with)\b/u, 1)[0] ?? "";
+        targetWords = normalizedWords(destination);
+      }
+    }
+  }
   const allowButton = /\bbutton\b/i.test(task);
   const allowTab = /\btab\b/i.test(task);
   const interactiveRoles = new Set(["link", "menuitem", ...(allowButton ? ["button"] : []), ...(allowTab ? ["tab"] : [])]);
-  const matches = candidates.flatMap((candidate) => {
+  const specificity = (candidate: BrowserCandidate, target: string[]) => {
+    let best = 0;
+    for (const label of labelParts(candidate)) {
+      const words = normalizedWords(label);
+      if (!words.length || words.length > target.length) continue;
+      const suffix = target.slice(target.length - words.length);
+      if (words.every((word, index) => word === suffix[index])) best = Math.max(best, words.length);
+    }
+    return best;
+  };
+  let matches = candidates.flatMap((candidate) => {
     if (!interactiveRoles.has(candidate.role)) return [];
-    const labels = labelParts(candidate).map((label) => {
-      const words = label.split(/\s+/u).filter((word) => word && !ignored.has(word));
-      return { label, words };
-    }).filter(({ label, words }) =>
-      words.length > 0
-      && words.every((word) => taskWords.has(word))
-      && label.split(/\s+/u).length <= taskWords.size,
-    );
-    if (!labels.length) return [];
-    const specificity = Math.max(...labels.map(({ label }) => label.split(/\s+/u).length));
-    return [{ candidate, specificity }];
+    const score = specificity(candidate, reportIntent ? reportSubject : targetWords);
+    return score ? [{ candidate, specificity: score }] : [];
   });
+  if (reportIntent && !matches.length) {
+    matches = candidates.flatMap((candidate) => {
+      if (!interactiveRoles.has(candidate.role)) return [];
+      const score = Math.max(...labelParts(candidate).map((label) => normalizeNavigationWord(normalizeLabel(label))).filter(Boolean).map((word) => word === "report" ? 1 : 0), 0);
+      return score ? [{ candidate, specificity: score }] : [];
+    });
+  }
   if (!matches.length) return undefined;
   const mostSpecific = Math.max(...matches.map(({ specificity }) => specificity));
   const best = matches.filter(({ specificity }) => specificity === mostSpecific);
@@ -1207,6 +1264,12 @@ function findUniqueMentionedNavigationLabel(task: string, candidates: BrowserCan
     rule: "unique-mentioned-navigation-label",
     note: "The navigation request names one unique visible interactive label. Only that exact label is selected; consequential actions still require the normal separate approval.",
   };
+}
+
+function normalizeNavigationWord(word: string) {
+  if (word.length > 4 && word.endsWith("ies")) return `${word.slice(0, -3)}y`;
+  if (word.length > 3 && word.endsWith("s") && !word.endsWith("ss") && !word.endsWith("us")) return word.slice(0, -1);
+  return word;
 }
 
 function findVisibleAllCollectionHeading(task: string, headings: string[]) {

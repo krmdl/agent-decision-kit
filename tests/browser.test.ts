@@ -29,6 +29,8 @@ describe("Playwright browser safety flow", () => {
   let copyFieldsHtml: Buffer;
   let ambiguousLabelsHtml: Buffer;
   let navigationLabelHtml: Buffer;
+  let navigationTargetingHtml: Buffer;
+  let navigationOrdersHtml: Buffer;
   let navigationTargetHtml: Buffer;
   let navigationHiddenTargetHtml: Buffer;
   let duplicateNavigationLabelsHtml: Buffer;
@@ -67,6 +69,8 @@ describe("Playwright browser safety flow", () => {
     mixedPointerHtml = Buffer.from('<!doctype html><style>.faux-link { cursor: pointer }</style><button>Section</button><span id="target" class="faux-link">Ultrices</span><p id="status">Not clicked</p><script>document.querySelector("#target").addEventListener("click",()=>document.querySelector("#status").textContent="Clicked locally")</script>');
     ambiguousLabelsHtml = Buffer.from('<!doctype html><button type="button">Continue</button><a href="#next">Continue</a><p id="status">No action</p>');
     navigationLabelHtml = Buffer.from('<!doctype html><h1 id="heading">Dashboard</h1><a href="#customers" onclick="document.querySelector(\'#heading\').textContent=\'Customers\';document.querySelector(\'#status\').textContent=\'Customers opened\'">Customers</a><p id="status">Dashboard</p>');
+    navigationTargetingHtml = Buffer.from('<!doctype html><h1>Dashboard</h1><a href="#magento">Magento</a><a href="#sales">Sales</a><a href="#reports" onclick="document.querySelector(\'h1\').textContent=\'Reports menu opened\'">Reports</a>');
+    navigationOrdersHtml = Buffer.from('<!doctype html><h1>Dashboard</h1><a href="#sales">Sales</a><a href="#orders">Orders</a>');
     navigationTargetHtml = Buffer.from('<!doctype html><h1>Customers</h1><a href="#customers">Customers</a>');
     navigationHiddenTargetHtml = Buffer.from('<!doctype html><h1 style="display:none">Customers</h1><h1>Dashboard</h1><a href="#customers">Customers</a>');
     duplicateNavigationLabelsHtml = Buffer.from('<!doctype html><a href="#customers-one" onclick="document.querySelector(\'#status\').textContent=\'First customers opened\'">Customers</a><a href="#customers-two" onclick="document.querySelector(\'#status\').textContent=\'Second customers opened\'">Customers</a><p id="status">Dashboard</p>');
@@ -103,7 +107,7 @@ describe("Playwright browser safety flow", () => {
         response.end(dragAndDropHtml);
         return;
       }
-      response.end(request.url === "/visual-only" ? visualHtml : request.url === "/pointer-text" ? pointerTextHtml : request.url === "/icon-pointer" ? iconPointerHtml : request.url === "/silent-pointer" ? silentPointerHtml : request.url === "/silent-input" ? silentInputHtml : request.url === "/mixed-pointer" ? mixedPointerHtml : request.url === "/checkbox" ? checkboxHtml : request.url === "/submit" ? submitHtml : request.url === "/checkbox-task" ? checkboxTaskHtml : request.url === "/tabs" ? tabHtml : request.url === "/expand" ? expandHtml : request.url === "/native-fields" ? nativeFieldsHtml : request.url === "/copy-fields" ? copyFieldsHtml : request.url === "/slider" ? sliderHtml : request.url === "/aria-slider" ? ariaSliderHtml : request.url === "/jquery-ui-slider" ? jqueryUiSliderHtml : request.url === "/autocomplete" ? autocompleteHtml : request.url === "/multi-select" ? multipleSelectHtml : request.url === "/ambiguous-labels" ? ambiguousLabelsHtml : request.url === "/navigation-label" ? navigationLabelHtml : request.url === "/navigation-target" ? navigationTargetHtml : request.url === "/navigation-hidden-target" ? navigationHiddenTargetHtml : request.url === "/duplicate-navigation-labels" ? duplicateNavigationLabelsHtml : request.url === "/editable" ? editableContentHtml : request.url === "/silent-form" ? silentFormHtml : request.url === "/decision-race" ? decisionRaceHtml : request.url === "/replacement-action" ? replacementActionHtml : request.url === "/dynamic-refs" ? dynamicRefsHtml : request.url === "/menu" ? menuHtml : request.url === "/ordinal-fields" ? ordinalFieldsHtml : request.url === "/textareas" ? textareaWidgetsHtml : request.url === "/ordinal-button" ? ordinalButtonHtml : request.url === "/multi-disclosure" ? multiDisclosureHtml : html);
+      response.end(request.url === "/visual-only" ? visualHtml : request.url === "/pointer-text" ? pointerTextHtml : request.url === "/icon-pointer" ? iconPointerHtml : request.url === "/silent-pointer" ? silentPointerHtml : request.url === "/silent-input" ? silentInputHtml : request.url === "/mixed-pointer" ? mixedPointerHtml : request.url === "/checkbox" ? checkboxHtml : request.url === "/submit" ? submitHtml : request.url === "/checkbox-task" ? checkboxTaskHtml : request.url === "/tabs" ? tabHtml : request.url === "/expand" ? expandHtml : request.url === "/native-fields" ? nativeFieldsHtml : request.url === "/copy-fields" ? copyFieldsHtml : request.url === "/slider" ? sliderHtml : request.url === "/aria-slider" ? ariaSliderHtml : request.url === "/jquery-ui-slider" ? jqueryUiSliderHtml : request.url === "/autocomplete" ? autocompleteHtml : request.url === "/multi-select" ? multipleSelectHtml : request.url === "/ambiguous-labels" ? ambiguousLabelsHtml : request.url === "/navigation-label" ? navigationLabelHtml : request.url === "/navigation-targeting" ? navigationTargetingHtml : request.url === "/navigation-orders" ? navigationOrdersHtml : request.url === "/navigation-target" ? navigationTargetHtml : request.url === "/navigation-hidden-target" ? navigationHiddenTargetHtml : request.url === "/duplicate-navigation-labels" ? duplicateNavigationLabelsHtml : request.url === "/editable" ? editableContentHtml : request.url === "/silent-form" ? silentFormHtml : request.url === "/decision-race" ? decisionRaceHtml : request.url === "/replacement-action" ? replacementActionHtml : request.url === "/dynamic-refs" ? dynamicRefsHtml : request.url === "/menu" ? menuHtml : request.url === "/ordinal-fields" ? ordinalFieldsHtml : request.url === "/textareas" ? textareaWidgetsHtml : request.url === "/ordinal-button" ? ordinalButtonHtml : request.url === "/multi-disclosure" ? multiDisclosureHtml : html);
     });
     await new Promise<void>((resolve, reject) => {
       server.once("error", reject);
@@ -754,6 +758,55 @@ describe("Playwright browser safety flow", () => {
     const result = await browser.decideAndAct("View the details of all customers", provider);
     expect(result).toMatchObject({ status: "action-executed", selectionRule: "unique-mentioned-navigation-label", action: { label: "Customers" }, taskTargetVisible: "Customers" });
     expect(result.effect.textDelta.excerpt).toContain("Customers opened");
+  }, 45_000);
+
+  it("does not mistake a brand name for a requested settings destination", async () => {
+    profile = await mkdtemp(path.join(os.tmpdir(), "adk-browser-navigation-brand-guard-test-"));
+    browser = new BrowserManager({ headless: true, profileDir: path.join(profile, "chromium") });
+    await browser.launch(`${baseUrl}navigation-targeting`);
+    const provider: DecisionProvider = {
+      id: "remote-test-provider",
+      model: "unused-test-provider",
+      decide: async () => { throw new Error("The privacy guard must stop before a remote decision"); },
+    };
+
+    const result = await browser.decideAndAct("Go to the Magento Blank theme settings page", provider);
+
+    expect(result.status).toBe("remote-provider-blocked-for-browser-privacy");
+    expect((await browser.inspect()).url).not.toContain("#magento");
+  }, 45_000);
+
+  it("prefers the report destination over a mentioned parent menu", async () => {
+    profile = await mkdtemp(path.join(os.tmpdir(), "adk-browser-navigation-report-test-"));
+    browser = new BrowserManager({ headless: true, profileDir: path.join(profile, "chromium") });
+    await browser.launch(`${baseUrl}navigation-targeting`);
+    const provider: DecisionProvider = {
+      id: "remote-test-provider",
+      model: "unused-test-provider",
+      decide: async () => { throw new Error("The named Reports menu should resolve locally"); },
+    };
+
+    const result = await browser.decideAndAct("Show the sales order report for last month", provider);
+    const repeat = await browser.decideAndAct("Show the sales order report for last month", provider);
+
+    expect(result).toMatchObject({ status: "action-executed", selectionRule: "unique-mentioned-navigation-label", action: { label: "Reports" } });
+    expect(repeat.status).toBe("navigation-action-already-tried");
+    expect((await browser.inspect()).headings).toEqual(["Reports menu opened"]);
+  }, 45_000);
+
+  it("matches the requested list destination instead of its unrelated parent menu", async () => {
+    profile = await mkdtemp(path.join(os.tmpdir(), "adk-browser-navigation-list-target-test-"));
+    browser = new BrowserManager({ headless: true, profileDir: path.join(profile, "chromium") });
+    await browser.launch(`${baseUrl}navigation-orders`);
+    const provider: DecisionProvider = {
+      id: "remote-test-provider",
+      model: "unused-test-provider",
+      decide: async () => { throw new Error("The exact Orders link should resolve locally"); },
+    };
+
+    const result = await browser.decideAndAct("Go to the list of orders that are processing", provider);
+
+    expect(result).toMatchObject({ status: "action-executed", selectionRule: "unique-mentioned-navigation-label", action: { label: "Orders" } });
   }, 45_000);
 
   it("stops when the visible heading already names the requested all-items page", async () => {

@@ -1,4 +1,6 @@
 import json
+import subprocess
+import sys
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -96,6 +98,27 @@ class WebArenaReproductionDocsTests(unittest.TestCase):
         self.assertIn("--shopping-admin-url http://localhost:7780/admin", readme)
         self.assertIn("am1n3e/webarena-verified-shopping_admin@sha256:d0531dd27ed98d0c459ff9e88118bf2ed8b660b0ed99c38837db46c065a5be13", readme)
         self.assertIn("webarena-verified-shopping-admin-157-target-visible.json", readme)
+
+
+class BrowserGymAggregationTests(unittest.TestCase):
+    def test_aggregator_accepts_browsergym_records_with_task_id(self):
+        aggregator = Path(__file__).parent / "aggregate-browsergym.py"
+        with TemporaryDirectory() as temporary_directory:
+            record_path = Path(temporary_directory) / "episode.json"
+            record_path.write_text(json.dumps({
+                "benchmark": "webarena-verified",
+                "taskId": 157,
+                "success": True,
+                "reward": 0.5,
+                "actions": 2,
+                "latencyMs": 123,
+            }), encoding="utf-8")
+            result = subprocess.run([sys.executable, str(aggregator), str(record_path)], capture_output=True, text=True, check=False)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout)["successCount"], 1)
+        self.assertEqual(json.loads(result.stdout)["partialRewardCount"], 1)
+        self.assertEqual(json.loads(result.stdout)["meanReward"], 0.5)
 
 
 if __name__ == "__main__":

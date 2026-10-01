@@ -17,11 +17,13 @@ def percentile(values, quantile):
 def summarize(records):
     if not isinstance(records, list) or not records:
         raise ValueError("Input must contain at least one BrowserGym episode record")
-    required = {"benchmark", "task", "success", "actions", "latencyMs"}
+    required = {"benchmark", "success", "actions", "latencyMs"}
     for index, record in enumerate(records):
         missing = required - set(record)
         if missing:
             raise SystemExit(f"Record {index} is missing: {', '.join(sorted(missing))}")
+        if "task" not in record and "taskId" not in record:
+            raise SystemExit(f"Record {index} is missing both task and taskId")
         if not isinstance(record["success"], bool) or record["actions"] < 0 or record["latencyMs"] < 0:
             raise SystemExit(f"Record {index} has invalid success/actions/latencyMs fields")
     latencies = [item["latencyMs"] for item in records]
@@ -34,6 +36,7 @@ def summarize(records):
     ]
     decision_episode_latencies = [item["decisionLatencyMs"] for item in records if isinstance(item.get("decisionLatencyMs"), (int, float))]
     action_counts = [item["actions"] for item in records]
+    rewards = [item["reward"] for item in records if isinstance(item.get("reward"), (int, float)) and not isinstance(item.get("reward"), bool)]
     timeouts = [bool(item.get("timeout", False)) for item in records]
     failure_reasons = {}
     decision_statuses = {}
@@ -50,6 +53,8 @@ def summarize(records):
         "episodeCount": len(records),
         "successCount": sum(item["success"] for item in records),
         "taskSuccessRate": sum(item["success"] for item in records) / len(records),
+        "partialRewardCount": sum(0 < reward < 1 for reward in rewards),
+        "meanReward": statistics.mean(rewards) if rewards else None,
         "timeoutRate": sum(timeouts) / len(records),
         "failureReasons": failure_reasons,
         "decisionStatuses": decision_statuses,
