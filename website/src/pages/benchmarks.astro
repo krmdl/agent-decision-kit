@@ -11,6 +11,7 @@ import cpuDecisionRun from "../../../benchmarks/results/decision-cases-independe
 import dmlDecisionRun from "../../../benchmarks/results/decision-cases-independent-ryzen5600h-dml-smoke.json";
 import verifiedNavigationRun from "../../../benchmarks/results/webarena-verified-shopping-admin-ad6e1b3-summary.json";
 import verifiedNavigationBaseline from "../../../benchmarks/results/webarena-verified-shopping-admin-initial-18-task-baseline.json";
+import remoteVerifiedNavigationRun from "../../../benchmarks/results/webarena-verified-docker-b-18-summary.json";
 
 const episodeCount = latestRun.episodeCount;
 const successCount = latestRun.successCount;
@@ -24,6 +25,8 @@ const verifiedNavigationSuccesses = verifiedNavigationRun.successCount;
 const verifiedNavigationPartial = verifiedNavigationRun.partialRewardCount;
 const verifiedNavigationDecisionP95 = verifiedNavigationRun.decisionCallLatencyMs.p95;
 const verifiedNavigationBaselineMeanReward = verifiedNavigationBaseline.meanReward;
+const remoteVerifiedNavigationCount = remoteVerifiedNavigationRun.episodeCount;
+const remoteVerifiedNavigationDecisionP95 = remoteVerifiedNavigationRun.decisionCallLatencyMs.p95;
 const decisionRows = [
   { device: "CPU", report: cpuDecisionRun },
   { device: "DirectML requested", report: dmlDecisionRun },
@@ -48,7 +51,7 @@ const decisionRows = [
 });
 ---
 
-<BaseLayout title="Real Browser Automation Benchmarks | Agent Decision Kit" description="Reproducible Playwright and BrowserGym MiniWoB results for Agent Decision Kit, with task success, latency, environment details, and raw episodes." canonicalPath="benchmarks/">
+<BaseLayout title="Real Browser Automation Benchmarks | Agent Decision Kit" description="Reproducible BrowserGym MiniWoB and WebArena Verified results for Agent Decision Kit, with task success, latency, environment details, and raw episodes." canonicalPath="benchmarks/">
   <main class="page">
     <header class="intro">
       <p class="eyebrow">MEASURED RUNS · RAW EPISODES INCLUDED</p>
@@ -222,6 +225,9 @@ const decisionRows = [
           <a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/webarena-verified-shopping-admin-initial-18-task-baseline.json">Initial 18-task baseline ↗</a>
           <a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/webarena-verified-shopping-admin-ad6e1b3-157.json">Raw full-reward task ↗</a>
           <a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/webarena-verified-shopping-admin-157-loop-guard.json">Earlier partial result ↗</a>
+          <p><strong>Remote Docker repeat:</strong> the same {remoteVerifiedNavigationCount} tasks ran with the browser runner on Windows 10 and the pinned single-site benchmark in a loopback-only Linux Docker container reached over an SSH tunnel. It returned {remoteVerifiedNavigationRun.successCount} full, {remoteVerifiedNavigationRun.partialRewardCount} partial, and {remoteVerifiedNavigationCount - remoteVerifiedNavigationRun.successCount - remoteVerifiedNavigationRun.partialRewardCount} zero rewards, matching the earlier run's distribution. This verifies the cross-host service path; it does not broaden task coverage or show a quality gain.</p>
+          <code>End-to-end p50 / p95 {((remoteVerifiedNavigationRun.latencyMs.p50 / 1000).toFixed(3))} / {((remoteVerifiedNavigationRun.latencyMs.p95 / 1000).toFixed(3))} s · decision/action-call p95 {remoteVerifiedNavigationDecisionP95} ms · n={remoteVerifiedNavigationRun.decisionCallLatencyMs.sampleCount}</code>
+          <a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/webarena-verified-docker-b-18-summary.json">Cross-host aggregate with raw episodes ↗</a>
         </article>
       </div>
       <p class="comparison-note">The upstream WebArena guide notes that some fuzzy-match evaluations call a hosted GPT-4 judge. The default Agent Decision Kit benchmark path stays local and does not enable paid judging. See the <a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/README.md#webarena-and-visualwebarena-prerequisites">prerequisites and evaluator policy</a>.</p>

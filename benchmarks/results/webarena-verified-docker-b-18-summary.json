@@ -1,0 +1,1608 @@
+{
+  "episodeCount": 18,
+  "successCount": 1,
+  "taskSuccessRate": 0.05555555555555555,
+  "partialRewardCount": 8,
+  "meanReward": 0.2777777777777778,
+  "timeoutRate": 0.0,
+  "failureReasons": {},
+  "decisionStatuses": {
+    "action-executed": 20,
+    "ambiguous-selection": 7,
+    "navigation-action-already-tried": 10
+  },
+  "decisionProviders": {
+    "local-literal-match": 20,
+    "semantic-local": 7
+  },
+  "syntheticApprovalCount": 0,
+  "latencyMs": {
+    "p50": 13484,
+    "p95": 14763
+  },
+  "agentActionLatencyMs": {
+    "sampleCount": 0,
+    "p50": null,
+    "p95": null
+  },
+  "decisionCallLatencyMs": {
+    "sampleCount": 37,
+    "p50": 321,
+    "p95": 2190
+  },
+  "decisionLatencyPerEpisodeMs": {
+    "sampleCount": 0,
+    "p50": null,
+    "p95": null
+  },
+  "actions": {
+    "mean": 1.1111111111111112,
+    "p50": 1,
+    "p95": 2
+  },
+  "rawRecords": [
+    {
+      "benchmark": "webarena-verified",
+      "taskId": 157,
+      "intentTemplateId": 255,
+      "taskType": "navigate",
+      "taskPrompt": "View the details of all customers",
+      "runnerMode": "bounded-repeated-browser-decide-and-act",
+      "seed": 7,
+      "maxActions": 12,
+      "success": true,
+      "reward": 1.0,
+      "terminated": true,
+      "actions": 2,
+      "loopDetected": false,
+      "trace": [
+        {
+          "step": 1,
+          "status": "action-executed",
+          "action": {
+            "role": "link",
+            "label": "Customers",
+            "kind": "a",
+            "risk": "low"
+          },
+          "candidateCount": 31,
+          "provider": "local-literal-match",
+          "model": "unique-mentioned-navigation-label",
+          "selectionRule": "unique-mentioned-navigation-label",
+          "decisionLatencyMs": 0,
+          "elapsedMs": 315,
+          "confidenceSource": "not-applicable-rule",
+          "calibration": "not-applicable-rule",
+          "taskTargetVisible": null
+        },
+        {
+          "step": 2,
+          "status": "action-executed",
+          "action": {
+            "role": "link",
+            "label": "All Customers",
+            "kind": "a",
+            "risk": "low"
+          },
+          "candidateCount": 36,
+          "provider": "local-literal-match",
+          "model": "unique-mentioned-navigation-label",
+          "selectionRule": "unique-mentioned-navigation-label",
+          "decisionLatencyMs": 0,
+          "elapsedMs": 789,
+          "confidenceSource": "not-applicable-rule",
+          "calibration": "not-applicable-rule",
+          "taskTargetVisible": "Customers"
+        }
+      ],
+      "initialPage": {
+        "title": "Dashboard / Magento Admin",
+        "path": "/admin/admin/dashboard/"
+      },
+      "finalPage": {
+        "title": "Customers / Customers / Magento Admin",
+        "path": "/admin/customer/index/"
+      },
+      "resetLatencyMs": 11113,
+      "decisionCallLatenciesMs": [
+        315,
+        789
+      ],
+      "latencyMs": 13708,
+      "browserGymVersion": "0.14.3",
+      "browserGymVerifiedVersion": "0.14.3",
+      "playwrightPythonVersion": "1.44.0",
+      "playwrightNodeVersion": "1.63.0",
+      "browserVersion": "HeadlessChrome/125.0.6422.26",
+      "pythonVersion": "3.12.13",
+      "nodeVersion": "v22.14.0",
+      "agentDecisionKitCommit": "7360b216b3c610a363a3646d5cf435aae7d414bd",
+      "workingTreeModified": false,
+      "testedSourceFile": "src/browser/manager.ts",
+      "operatingSystem": "Windows-10-10.0.19045-SP0",
+      "cpu": "AMD64 Family 25 Model 80 Stepping 0, AuthenticAMD",
+      "accelerator": "CPU",
+      "containerImage": "am1n3e/webarena-verified-shopping_admin:latest",
+      "containerImageDigest": "sha256:d0531dd27ed98d0c459ff9e88118bf2ed8b660b0ed99c38837db46c065a5be13",
+      "timestampUtc": "2026-10-01T12:04:40.572118+03:00",
+      "note": "One read-only navigation integration smoke, not a representative WebArena score or a general quality/speed claim. Only navigation tasks are accepted; pending confirmations are never auto-approved. The harness omits evaluator internals and expected answers."
+    },
+    {
+      "benchmark": "webarena-verified",
+      "taskId": 374,
+      "intentTemplateId": 266,
+      "taskType": "navigate",
+      "taskPrompt": "Go to the Magento Blank theme settings page",
+      "runnerMode": "bounded-repeated-browser-decide-and-act",
+      "seed": 7,
+      "maxActions": 12,
+      "success": false,
+      "reward": 0.0,
+      "terminated": true,
+      "actions": 0,
+      "loopDetected": false,
+      "trace": [
+        {
+          "step": 1,
+          "status": "ambiguous-selection",
+          "action": {},
+          "candidateCount": 31,
+          "provider": "semantic-local",
+          "model": "Xenova/all-MiniLM-L6-v2",
+          "selectionRule": null,
+          "decisionLatencyMs": 2061,
+          "elapsedMs": 2134,
+          "confidenceSource": null,
+          "calibration": null,
+          "taskTargetVisible": null
+        }
+      ],
+      "initialPage": {
+        "title": "Dashboard / Magento Admin",
+        "path": "/admin/admin/dashboard/"
+      },
+      "finalPage": {
+        "title": "Dashboard / Magento Admin",
+        "path": "/admin/admin/dashboard/"
+      },
+      "resetLatencyMs": 10717,
+      "decisionCallLatenciesMs": [
+        2134
+      ],
+      "latencyMs": 14278,
+      "browserGymVersion": "0.14.3",
+      "browserGymVerifiedVersion": "0.14.3",
+      "playwrightPythonVersion": "1.44.0",
+      "playwrightNodeVersion": "1.63.0",
+      "browserVersion": "HeadlessChrome/125.0.6422.26",
+      "pythonVersion": "3.12.13",
+      "nodeVersion": "v22.14.0",
+      "agentDecisionKitCommit": "7360b216b3c610a363a3646d5cf435aae7d414bd",
+      "workingTreeModified": false,
+      "testedSourceFile": "src/browser/manager.ts",
+      "operatingSystem": "Windows-10-10.0.19045-SP0",
+      "cpu": "AMD64 Family 25 Model 80 Stepping 0, AuthenticAMD",
+      "accelerator": "CPU",
+      "containerImage": "am1n3e/webarena-verified-shopping_admin:latest",
+      "containerImageDigest": "sha256:d0531dd27ed98d0c459ff9e88118bf2ed8b660b0ed99c38837db46c065a5be13",
+      "timestampUtc": "2026-10-01T12:04:59.63017+03:00",
+      "note": "One read-only navigation integration smoke, not a representative WebArena score or a general quality/speed claim. Only navigation tasks are accepted; pending confirmations are never auto-approved. The harness omits evaluator internals and expected answers."
+    },
+    {
+      "benchmark": "webarena-verified",
+      "taskId": 375,
+      "intentTemplateId": 266,
+      "taskType": "navigate",
+      "taskPrompt": "Go to the Magento Luma theme settings page",
+      "runnerMode": "bounded-repeated-browser-decide-and-act",
+      "seed": 7,
+      "maxActions": 12,
+      "success": false,
+      "reward": 0.0,
+      "terminated": true,
+      "actions": 0,
+      "loopDetected": false,
+      "trace": [
+        {
+          "step": 1,
+          "status": "ambiguous-selection",
+          "action": {},
+          "candidateCount": 31,
+          "provider": "semantic-local",
+          "model": "Xenova/all-MiniLM-L6-v2",
+          "selectionRule": null,
+          "decisionLatencyMs": 2120,
+          "elapsedMs": 2190,
+          "confidenceSource": null,
+          "calibration": null,
+          "taskTargetVisible": null
+        }
+      ],
+      "initialPage": {
+        "title": "Dashboard / Magento Admin",
+        "path": "/admin/admin/dashboard/"
+      },
+      "finalPage": {
+        "title": "Dashboard / Magento Admin",
+        "path": "/admin/admin/dashboard/"
+      },
+      "resetLatencyMs": 10885,
+      "decisionCallLatenciesMs": [
+        2190
+      ],
+      "latencyMs": 14763,
+      "browserGymVersion": "0.14.3",
+      "browserGymVerifiedVersion": "0.14.3",
+      "playwrightPythonVersion": "1.44.0",
+      "playwrightNodeVersion": "1.63.0",
+      "browserVersion": "HeadlessChrome/125.0.6422.26",
+      "pythonVersion": "3.12.13",
+      "nodeVersion": "v22.14.0",
+      "agentDecisionKitCommit": "7360b216b3c610a363a3646d5cf435aae7d414bd",
+      "workingTreeModified": false,
+      "testedSourceFile": "src/browser/manager.ts",
+      "operatingSystem": "Windows-10-10.0.19045-SP0",
+      "cpu": "AMD64 Family 25 Model 80 Stepping 0, AuthenticAMD",
+      "accelerator": "CPU",
+      "containerImage": "am1n3e/webarena-verified-shopping_admin:latest",
+      "containerImageDigest": "sha256:d0531dd27ed98d0c459ff9e88118bf2ed8b660b0ed99c38837db46c065a5be13",
+      "timestampUtc": "2026-10-01T12:05:19.606727+03:00",
+      "note": "One read-only navigation integration smoke, not a representative WebArena score or a general quality/speed claim. Only navigation tasks are accepted; pending confirmations are never auto-approved. The harness omits evaluator internals and expected answers."
+    },
+    {
+      "benchmark": "webarena-verified",
+      "taskId": 676,
+      "intentTemplateId": 253,
+      "taskType": "navigate",
+      "taskPrompt": "Go to the list of orders that are suspected of being fraudulent",
+      "runnerMode": "bounded-repeated-browser-decide-and-act",
+      "seed": 7,
+      "maxActions": 12,
+      "success": false,
+      "reward": 0.0,
+      "terminated": true,
+      "actions": 0,
+      "loopDetected": false,
+      "trace": [
+        {
+          "step": 1,
+          "status": "ambiguous-selection",
+          "action": {},
+          "candidateCount": 31,
+          "provider": "semantic-local",
+          "model": "Xenova/all-MiniLM-L6-v2",
+          "selectionRule": null,
+          "decisionLatencyMs": 2106,
+          "elapsedMs": 2175,
+          "confidenceSource": null,
+          "calibration": null,
+          "taskTargetVisible": null
+        }
+      ],
+      "initialPage": {
+        "title": "Dashboard / Magento Admin",
+        "path": "/admin/admin/dashboard/"
+      },
+      "finalPage": {
+        "title": "Dashboard / Magento Admin",
+        "path": "/admin/admin/dashboard/"
+      },
+      "resetLatencyMs": 10595,
+      "decisionCallLatenciesMs": [
+        2175
+      ],
+      "latencyMs": 14204,
+      "browserGymVersion": "0.14.3",
+      "browserGymVerifiedVersion": "0.14.3",
+      "playwrightPythonVersion": "1.44.0",
+      "playwrightNodeVersion": "1.63.0",
+      "browserVersion": "HeadlessChrome/125.0.6422.26",
+      "pythonVersion": "3.12.13",
+      "nodeVersion": "v22.14.0",
+      "agentDecisionKitCommit": "7360b216b3c610a363a3646d5cf435aae7d414bd",
+      "workingTreeModified": false,
+      "testedSourceFile": "src/browser/manager.ts",
+      "operatingSystem": "Windows-10-10.0.19045-SP0",
+      "cpu": "AMD64 Family 25 Model 80 Stepping 0, AuthenticAMD",
+      "accelerator": "CPU",
+      "containerImage": "am1n3e/webarena-verified-shopping_admin:latest",
+      "containerImageDigest": "sha256:d0531dd27ed98d0c459ff9e88118bf2ed8b660b0ed99c38837db46c065a5be13",
+      "timestampUtc": "2026-10-01T12:05:38.706462+03:00",
+      "note": "One read-only navigation integration smoke, not a representative WebArena score or a general quality/speed claim. Only navigation tasks are accepted; pending confirmations are never auto-approved. The harness omits evaluator internals and expected answers."
+    },
+    {
+      "benchmark": "webarena-verified",
+      "taskId": 677,
+      "intentTemplateId": 253,
+      "taskType": "navigate",
+      "taskPrompt": "Go to the list of orders that are processing",
+      "runnerMode": "bounded-repeated-browser-decide-and-act",
+      "seed": 7,
+      "maxActions": 12,
+      "success": false,
+      "reward": 0.0,
+      "terminated": true,
+      "actions": 0,
+      "loopDetected": false,
+      "trace": [
+        {
+          "step": 1,
+          "status": "ambiguous-selection",
+          "action": {},
+          "candidateCount": 31,
+          "provider": "semantic-local",
+          "model": "Xenova/all-MiniLM-L6-v2",
+          "selectionRule": null,
+          "decisionLatencyMs": 2278,
+          "elapsedMs": 2351,
+          "confidenceSource": null,
+          "calibration": null,
+          "taskTargetVisible": null
+        }
+      ],
+      "initialPage": {
+        "title": "Dashboard / Magento Admin",
+        "path": "/admin/admin/dashboard/"
+      },
+      "finalPage": {
+        "title": "Dashboard / Magento Admin",
+        "path": "/admin/admin/dashboard/"
+      },
+      "resetLatencyMs": 10984,
+      "decisionCallLatenciesMs": [
+        2351
+      ],
+      "latencyMs": 14761,
+      "browserGymVersion": "0.14.3",
+      "browserGymVerifiedVersion": "0.14.3",
+      "playwrightPythonVersion": "1.44.0",
+      "playwrightNodeVersion": "1.63.0",
+      "browserVersion": "HeadlessChrome/125.0.6422.26",
+      "pythonVersion": "3.12.13",
+      "nodeVersion": "v22.14.0",
+      "agentDecisionKitCommit": "7360b216b3c610a363a3646d5cf435aae7d414bd",
+      "workingTreeModified": false,
+      "testedSourceFile": "src/browser/manager.ts",
+      "operatingSystem": "Windows-10-10.0.19045-SP0",
+      "cpu": "AMD64 Family 25 Model 80 Stepping 0, AuthenticAMD",
+      "accelerator": "CPU",
+      "containerImage": "am1n3e/webarena-verified-shopping_admin:latest",
+      "containerImageDigest": "sha256:d0531dd27ed98d0c459ff9e88118bf2ed8b660b0ed99c38837db46c065a5be13",
+      "timestampUtc": "2026-10-01T12:05:58.922171+03:00",
+      "note": "One read-only navigation integration smoke, not a representative WebArena score or a general quality/speed claim. Only navigation tasks are accepted; pending confirmations are never auto-approved. The harness omits evaluator internals and expected answers."
+    },
+    {
+      "benchmark": "webarena-verified",
+      "taskId": 678,
+      "intentTemplateId": 253,
+      "taskType": "navigate",
+      "taskPrompt": "Go to the list of orders that are canceled",
+      "runnerMode": "bounded-repeated-browser-decide-and-act",
+      "seed": 7,
+      "maxActions": 12,
+      "success": false,
+      "reward": 0.0,
+      "terminated": true,
+      "actions": 0,
+      "loopDetected": false,
+      "trace": [
+        {
+          "step": 1,
+          "status": "ambiguous-selection",
+          "action": {},
+          "candidateCount": 31,
+          "provider": "semantic-local",
+          "model": "Xenova/all-MiniLM-L6-v2",
+          "selectionRule": null,
+          "decisionLatencyMs": 2080,
+          "elapsedMs": 2151,
+          "confidenceSource": null,
+          "calibration": null,
+          "taskTargetVisible": null
+        }
+      ],
+      "initialPage": {
+        "title": "Dashboard / Magento Admin",
+        "path": "/admin/admin/dashboard/"
+      },
+      "finalPage": {
+        "title": "Dashboard / Magento Admin",
+        "path": "/admin/admin/dashboard/"
+      },
+      "resetLatencyMs": 10644,
+      "decisionCallLatenciesMs": [
+        2151
+      ],
+      "latencyMs": 14238,
+      "browserGymVersion": "0.14.3",
+      "browserGymVerifiedVersion": "0.14.3",
+      "playwrightPythonVersion": "1.44.0",
+      "playwrightNodeVersion": "1.63.0",
+      "browserVersion": "HeadlessChrome/125.0.6422.26",
+      "pythonVersion": "3.12.13",
+      "nodeVersion": "v22.14.0",
+      "agentDecisionKitCommit": "7360b216b3c610a363a3646d5cf435aae7d414bd",
+      "workingTreeModified": false,
+      "testedSourceFile": "src/browser/manager.ts",
+      "operatingSystem": "Windows-10-10.0.19045-SP0",
+      "cpu": "AMD64 Family 25 Model 80 Stepping 0, AuthenticAMD",
+      "accelerator": "CPU",
+      "containerImage": "am1n3e/webarena-verified-shopping_admin:latest",
+      "containerImageDigest": "sha256:d0531dd27ed98d0c459ff9e88118bf2ed8b660b0ed99c38837db46c065a5be13",
+      "timestampUtc": "2026-10-01T12:06:17.993636+03:00",
+      "note": "One read-only navigation integration smoke, not a representative WebArena score or a general quality/speed claim. Only navigation tasks are accepted; pending confirmations are never auto-approved. The harness omits evaluator internals and expected answers."
+    },
+    {
+      "benchmark": "webarena-verified",
+      "taskId": 679,
+      "intentTemplateId": 253,
+      "taskType": "navigate",
+      "taskPrompt": "Go to the list of orders that are completed",
+      "runnerMode": "bounded-repeated-browser-decide-and-act",
+      "seed": 7,
+      "maxActions": 12,
+      "success": false,
+      "reward": 0.0,
+      "terminated": true,
+      "actions": 0,
+      "loopDetected": false,
+      "trace": [
+        {
+          "step": 1,
+          "status": "ambiguous-selection",
+          "action": {},
+          "candidateCount": 31,
+          "provider": "semantic-local",
+          "model": "Xenova/all-MiniLM-L6-v2",
+          "selectionRule": null,
+          "decisionLatencyMs": 2100,
+          "elapsedMs": 2168,
+          "confidenceSource": null,
+          "calibration": null,
+          "taskTargetVisible": null
+        }
+      ],
+      "initialPage": {
+        "title": "Dashboard / Magento Admin",
+        "path": "/admin/admin/dashboard/"
+      },
+      "finalPage": {
+        "title": "Dashboard / Magento Admin",
+        "path": "/admin/admin/dashboard/"
+      },
+      "resetLatencyMs": 10571,
+      "decisionCallLatenciesMs": [
+        2168
+      ],
+      "latencyMs": 14185,
+      "browserGymVersion": "0.14.3",
+      "browserGymVerifiedVersion": "0.14.3",
+      "playwrightPythonVersion": "1.44.0",
+      "playwrightNodeVersion": "1.63.0",
+      "browserVersion": "HeadlessChrome/125.0.6422.26",
+      "pythonVersion": "3.12.13",
+      "nodeVersion": "v22.14.0",
+      "agentDecisionKitCommit": "7360b216b3c610a363a3646d5cf435aae7d414bd",
+      "workingTreeModified": false,
+      "testedSourceFile": "src/browser/manager.ts",
+      "operatingSystem": "Windows-10-10.0.19045-SP0",
+      "cpu": "AMD64 Family 25 Model 80 Stepping 0, AuthenticAMD",
+      "accelerator": "CPU",
+      "containerImage": "am1n3e/webarena-verified-shopping_admin:latest",
+      "containerImageDigest": "sha256:d0531dd27ed98d0c459ff9e88118bf2ed8b660b0ed99c38837db46c065a5be13",
+      "timestampUtc": "2026-10-01T12:06:37.391001+03:00",
+      "note": "One read-only navigation integration smoke, not a representative WebArena score or a general quality/speed claim. Only navigation tasks are accepted; pending confirmations are never auto-approved. The harness omits evaluator internals and expected answers."
+    },
+    {
+      "benchmark": "webarena-verified",
+      "taskId": 680,
+      "intentTemplateId": 253,
+      "taskType": "navigate",
+      "taskPrompt": "Go to the list of orders that are on hold",
+      "runnerMode": "bounded-repeated-browser-decide-and-act",
+      "seed": 7,
+      "maxActions": 12,
+      "success": false,
+      "reward": 0.0,
+      "terminated": true,
+      "actions": 0,
+      "loopDetected": false,
+      "trace": [
+        {
+          "step": 1,
+          "status": "ambiguous-selection",
+          "action": {},
+          "candidateCount": 31,
+          "provider": "semantic-local",
+          "model": "Xenova/all-MiniLM-L6-v2",
+          "selectionRule": null,
+          "decisionLatencyMs": 2060,
+          "elapsedMs": 2132,
+          "confidenceSource": null,
+          "calibration": null,
+          "taskTargetVisible": null
+        }
+      ],
+      "initialPage": {
+        "title": "Dashboard / Magento Admin",
+        "path": "/admin/admin/dashboard/"
+      },
+      "finalPage": {
+        "title": "Dashboard / Magento Admin",
+        "path": "/admin/admin/dashboard/"
+      },
+      "resetLatencyMs": 10784,
+      "decisionCallLatenciesMs": [
+        2132
+      ],
+      "latencyMs": 14345,
+      "browserGymVersion": "0.14.3",
+      "browserGymVerifiedVersion": "0.14.3",
+      "playwrightPythonVersion": "1.44.0",
+      "playwrightNodeVersion": "1.63.0",
+      "browserVersion": "HeadlessChrome/125.0.6422.26",
+      "pythonVersion": "3.12.13",
+      "nodeVersion": "v22.14.0",
+      "agentDecisionKitCommit": "7360b216b3c610a363a3646d5cf435aae7d414bd",
+      "workingTreeModified": false,
+      "testedSourceFile": "src/browser/manager.ts",
+      "operatingSystem": "Windows-10-10.0.19045-SP0",
+      "cpu": "AMD64 Family 25 Model 80 Stepping 0, AuthenticAMD",
+      "accelerator": "CPU",
+      "containerImage": "am1n3e/webarena-verified-shopping_admin:latest",
+      "containerImageDigest": "sha256:d0531dd27ed98d0c459ff9e88118bf2ed8b660b0ed99c38837db46c065a5be13",
+      "timestampUtc": "2026-10-01T12:06:56.46971+03:00",
+      "note": "One read-only navigation integration smoke, not a representative WebArena score or a general quality/speed claim. Only navigation tasks are accepted; pending confirmations are never auto-approved. The harness omits evaluator internals and expected answers."
+    },
+    {
+      "benchmark": "webarena-verified",
+      "taskId": 704,
+      "intentTemplateId": 268,
+      "taskType": "navigate",
+      "taskPrompt": "Show the sales order report for for last months (today is March 15, 2023).",
+      "runnerMode": "bounded-repeated-browser-decide-and-act",
+      "seed": 7,
+      "maxActions": 12,
+      "success": false,
+      "reward": 0.5,
+      "terminated": true,
+      "actions": 2,
+      "loopDetected": false,
+      "trace": [
+        {
+          "step": 1,
+          "status": "action-executed",
+          "action": {
+            "role": "link",
+            "label": "Reports",
+            "kind": "a",
+            "risk": "low"
+          },
+          "candidateCount": 31,
+          "provider": "local-literal-match",
+          "model": "unique-mentioned-navigation-label",
+          "selectionRule": "unique-mentioned-navigation-label",
+          "decisionLatencyMs": 0,
+          "elapsedMs": 317,
+          "confidenceSource": "not-applicable-rule",
+          "calibration": "not-applicable-rule",
+          "taskTargetVisible": null
+        },
+        {
+          "step": 2,
+          "status": "action-executed",
+          "action": {
+            "role": "link",
+            "label": "Orders",
+            "kind": "a",
+            "risk": "low"
+          },
+          "candidateCount": 57,
+          "provider": "local-literal-match",
+          "model": "unique-mentioned-navigation-label",
+          "selectionRule": "unique-mentioned-navigation-label",
+          "decisionLatencyMs": 0,
+          "elapsedMs": 931,
+          "confidenceSource": "not-applicable-rule",
+          "calibration": "not-applicable-rule",
+          "taskTargetVisible": null
+        },
+        {
+          "step": 3,
+          "status": "navigation-action-already-tried",
+          "action": {
+            "role": "link",
+            "label": "Reports",
+            "kind": "a",
+            "risk": "low"
+          },
+          "candidateCount": 33,
+          "provider": null,
+          "model": null,
+          "selectionRule": null,
+          "decisionLatencyMs": null,
+          "elapsedMs": 23,
+          "confidenceSource": null,
+          "calibration": null,
+          "taskTargetVisible": null
+        }
+      ],
+      "initialPage": {
+        "title": "Dashboard / Magento Admin",
+        "path": "/admin/admin/dashboard/"
+      },
+      "finalPage": {
+        "title": "Orders Report / Sales / Reports / Magento Admin",
+        "path": "/admin/reports/report_sales/sales/"
+      },
+      "resetLatencyMs": 10679,
+      "decisionCallLatenciesMs": [
+        317,
+        931,
+        23
+      ],
+      "latencyMs": 13540,
+      "browserGymVersion": "0.14.3",
+      "browserGymVerifiedVersion": "0.14.3",
+      "playwrightPythonVersion": "1.44.0",
+      "playwrightNodeVersion": "1.63.0",
+      "browserVersion": "HeadlessChrome/125.0.6422.26",
+      "pythonVersion": "3.12.13",
+      "nodeVersion": "v22.14.0",
+      "agentDecisionKitCommit": "7360b216b3c610a363a3646d5cf435aae7d414bd",
+      "workingTreeModified": false,
+      "testedSourceFile": "src/browser/manager.ts",
+      "operatingSystem": "Windows-10-10.0.19045-SP0",
+      "cpu": "AMD64 Family 25 Model 80 Stepping 0, AuthenticAMD",
+      "accelerator": "CPU",
+      "containerImage": "am1n3e/webarena-verified-shopping_admin:latest",
+      "containerImageDigest": "sha256:d0531dd27ed98d0c459ff9e88118bf2ed8b660b0ed99c38837db46c065a5be13",
+      "timestampUtc": "2026-10-01T12:07:14.719032+03:00",
+      "note": "One read-only navigation integration smoke, not a representative WebArena score or a general quality/speed claim. Only navigation tasks are accepted; pending confirmations are never auto-approved. The harness omits evaluator internals and expected answers."
+    },
+    {
+      "benchmark": "webarena-verified",
+      "taskId": 705,
+      "intentTemplateId": 268,
+      "taskType": "navigate",
+      "taskPrompt": "Show the sales order report for over the last 45 days (today is March 15, 2023).",
+      "runnerMode": "bounded-repeated-browser-decide-and-act",
+      "seed": 7,
+      "maxActions": 12,
+      "success": false,
+      "reward": 0.5,
+      "terminated": true,
+      "actions": 2,
+      "loopDetected": false,
+      "trace": [
+        {
+          "step": 1,
+          "status": "action-executed",
+          "action": {
+            "role": "link",
+            "label": "Reports",
+            "kind": "a",
+            "risk": "low"
+          },
+          "candidateCount": 31,
+          "provider": "local-literal-match",
+          "model": "unique-mentioned-navigation-label",
+          "selectionRule": "unique-mentioned-navigation-label",
+          "decisionLatencyMs": 0,
+          "elapsedMs": 308,
+          "confidenceSource": "not-applicable-rule",
+          "calibration": "not-applicable-rule",
+          "taskTargetVisible": null
+        },
+        {
+          "step": 2,
+          "status": "action-executed",
+          "action": {
+            "role": "link",
+            "label": "Orders",
+            "kind": "a",
+            "risk": "low"
+          },
+          "candidateCount": 57,
+          "provider": "local-literal-match",
+          "model": "unique-mentioned-navigation-label",
+          "selectionRule": "unique-mentioned-navigation-label",
+          "decisionLatencyMs": 0,
+          "elapsedMs": 784,
+          "confidenceSource": "not-applicable-rule",
+          "calibration": "not-applicable-rule",
+          "taskTargetVisible": null
+        },
+        {
+          "step": 3,
+          "status": "navigation-action-already-tried",
+          "action": {
+            "role": "link",
+            "label": "Reports",
+            "kind": "a",
+            "risk": "low"
+          },
+          "candidateCount": 33,
+          "provider": null,
+          "model": null,
+          "selectionRule": null,
+          "decisionLatencyMs": null,
+          "elapsedMs": 22,
+          "confidenceSource": null,
+          "calibration": null,
+          "taskTargetVisible": null
+        }
+      ],
+      "initialPage": {
+        "title": "Dashboard / Magento Admin",
+        "path": "/admin/admin/dashboard/"
+      },
+      "finalPage": {
+        "title": "Orders Report / Sales / Reports / Magento Admin",
+        "path": "/admin/reports/report_sales/sales/"
+      },
+      "resetLatencyMs": 10581,
+      "decisionCallLatenciesMs": [
+        308,
+        784,
+        22
+      ],
+      "latencyMs": 13308,
+      "browserGymVersion": "0.14.3",
+      "browserGymVerifiedVersion": "0.14.3",
+      "playwrightPythonVersion": "1.44.0",
+      "playwrightNodeVersion": "1.63.0",
+      "browserVersion": "HeadlessChrome/125.0.6422.26",
+      "pythonVersion": "3.12.13",
+      "nodeVersion": "v22.14.0",
+      "agentDecisionKitCommit": "7360b216b3c610a363a3646d5cf435aae7d414bd",
+      "workingTreeModified": false,
+      "testedSourceFile": "src/browser/manager.ts",
+      "operatingSystem": "Windows-10-10.0.19045-SP0",
+      "cpu": "AMD64 Family 25 Model 80 Stepping 0, AuthenticAMD",
+      "accelerator": "CPU",
+      "containerImage": "am1n3e/webarena-verified-shopping_admin:latest",
+      "containerImageDigest": "sha256:d0531dd27ed98d0c459ff9e88118bf2ed8b660b0ed99c38837db46c065a5be13",
+      "timestampUtc": "2026-10-01T12:07:32.690895+03:00",
+      "note": "One read-only navigation integration smoke, not a representative WebArena score or a general quality/speed claim. Only navigation tasks are accepted; pending confirmations are never auto-approved. The harness omits evaluator internals and expected answers."
+    },
+    {
+      "benchmark": "webarena-verified",
+      "taskId": 706,
+      "intentTemplateId": 268,
+      "taskType": "navigate",
+      "taskPrompt": "Show the refund report for for Q1 (today is March 15, 2023).",
+      "runnerMode": "bounded-repeated-browser-decide-and-act",
+      "seed": 7,
+      "maxActions": 12,
+      "success": false,
+      "reward": 0.5,
+      "terminated": true,
+      "actions": 2,
+      "loopDetected": false,
+      "trace": [
+        {
+          "step": 1,
+          "status": "action-executed",
+          "action": {
+            "role": "link",
+            "label": "Reports",
+            "kind": "a",
+            "risk": "low"
+          },
+          "candidateCount": 31,
+          "provider": "local-literal-match",
+          "model": "unique-mentioned-navigation-label",
+          "selectionRule": "unique-mentioned-navigation-label",
+          "decisionLatencyMs": 0,
+          "elapsedMs": 337,
+          "confidenceSource": "not-applicable-rule",
+          "calibration": "not-applicable-rule",
+          "taskTargetVisible": null
+        },
+        {
+          "step": 2,
+          "status": "action-executed",
+          "action": {
+            "role": "link",
+            "label": "Refunds",
+            "kind": "a",
+            "risk": "low"
+          },
+          "candidateCount": 57,
+          "provider": "local-literal-match",
+          "model": "unique-mentioned-navigation-label",
+          "selectionRule": "unique-mentioned-navigation-label",
+          "decisionLatencyMs": 0,
+          "elapsedMs": 803,
+          "confidenceSource": "not-applicable-rule",
+          "calibration": "not-applicable-rule",
+          "taskTargetVisible": null
+        },
+        {
+          "step": 3,
+          "status": "navigation-action-already-tried",
+          "action": {
+            "role": "link",
+            "label": "Reports",
+            "kind": "a",
+            "risk": "low"
+          },
+          "candidateCount": 32,
+          "provider": null,
+          "model": null,
+          "selectionRule": null,
+          "decisionLatencyMs": null,
+          "elapsedMs": 21,
+          "confidenceSource": null,
+          "calibration": null,
+          "taskTargetVisible": null
+        }
+      ],
+      "initialPage": {
+        "title": "Dashboard / Magento Admin",
+        "path": "/admin/admin/dashboard/"
+      },
+      "finalPage": {
+        "title": "Refunds Report / Sales / Reports / Magento Admin",
+        "path": "/admin/reports/report_sales/refunded/"
+      },
+      "resetLatencyMs": 10635,
+      "decisionCallLatenciesMs": [
+        337,
+        803,
+        21
+      ],
+      "latencyMs": 13396,
+      "browserGymVersion": "0.14.3",
+      "browserGymVerifiedVersion": "0.14.3",
+      "playwrightPythonVersion": "1.44.0",
+      "playwrightNodeVersion": "1.63.0",
+      "browserVersion": "HeadlessChrome/125.0.6422.26",
+      "pythonVersion": "3.12.13",
+      "nodeVersion": "v22.14.0",
+      "agentDecisionKitCommit": "7360b216b3c610a363a3646d5cf435aae7d414bd",
+      "workingTreeModified": false,
+      "testedSourceFile": "src/browser/manager.ts",
+      "operatingSystem": "Windows-10-10.0.19045-SP0",
+      "cpu": "AMD64 Family 25 Model 80 Stepping 0, AuthenticAMD",
+      "accelerator": "CPU",
+      "containerImage": "am1n3e/webarena-verified-shopping_admin:latest",
+      "containerImageDigest": "sha256:d0531dd27ed98d0c459ff9e88118bf2ed8b660b0ed99c38837db46c065a5be13",
+      "timestampUtc": "2026-10-01T12:07:50.80765+03:00",
+      "note": "One read-only navigation integration smoke, not a representative WebArena score or a general quality/speed claim. Only navigation tasks are accepted; pending confirmations are never auto-approved. The harness omits evaluator internals and expected answers."
+    },
+    {
+      "benchmark": "webarena-verified",
+      "taskId": 707,
+      "intentTemplateId": 268,
+      "taskType": "navigate",
+      "taskPrompt": "Show the sales order report for for last year (today is March 15, 2023).",
+      "runnerMode": "bounded-repeated-browser-decide-and-act",
+      "seed": 7,
+      "maxActions": 12,
+      "success": false,
+      "reward": 0.5,
+      "terminated": true,
+      "actions": 2,
+      "loopDetected": false,
+      "trace": [
+        {
+          "step": 1,
+          "status": "action-executed",
+          "action": {
+            "role": "link",
+            "label": "Reports",
+            "kind": "a",
+            "risk": "low"
+          },
+          "candidateCount": 31,
+          "provider": "local-literal-match",
+          "model": "unique-mentioned-navigation-label",
+          "selectionRule": "unique-mentioned-navigation-label",
+          "decisionLatencyMs": 0,
+          "elapsedMs": 315,
+          "confidenceSource": "not-applicable-rule",
+          "calibration": "not-applicable-rule",
+          "taskTargetVisible": null
+        },
+        {
+          "step": 2,
+          "status": "action-executed",
+          "action": {
+            "role": "link",
+            "label": "Orders",
+            "kind": "a",
+            "risk": "low"
+          },
+          "candidateCount": 57,
+          "provider": "local-literal-match",
+          "model": "unique-mentioned-navigation-label",
+          "selectionRule": "unique-mentioned-navigation-label",
+          "decisionLatencyMs": 0,
+          "elapsedMs": 782,
+          "confidenceSource": "not-applicable-rule",
+          "calibration": "not-applicable-rule",
+          "taskTargetVisible": null
+        },
+        {
+          "step": 3,
+          "status": "navigation-action-already-tried",
+          "action": {
+            "role": "link",
+            "label": "Reports",
+            "kind": "a",
+            "risk": "low"
+          },
+          "candidateCount": 33,
+          "provider": null,
+          "model": null,
+          "selectionRule": null,
+          "decisionLatencyMs": null,
+          "elapsedMs": 20,
+          "confidenceSource": null,
+          "calibration": null,
+          "taskTargetVisible": null
+        }
+      ],
+      "initialPage": {
+        "title": "Dashboard / Magento Admin",
+        "path": "/admin/admin/dashboard/"
+      },
+      "finalPage": {
+        "title": "Orders Report / Sales / Reports / Magento Admin",
+        "path": "/admin/reports/report_sales/sales/"
+      },
+      "resetLatencyMs": 10664,
+      "decisionCallLatenciesMs": [
+        315,
+        782,
+        20
+      ],
+      "latencyMs": 13391,
+      "browserGymVersion": "0.14.3",
+      "browserGymVerifiedVersion": "0.14.3",
+      "playwrightPythonVersion": "1.44.0",
+      "playwrightNodeVersion": "1.63.0",
+      "browserVersion": "HeadlessChrome/125.0.6422.26",
+      "pythonVersion": "3.12.13",
+      "nodeVersion": "v22.14.0",
+      "agentDecisionKitCommit": "7360b216b3c610a363a3646d5cf435aae7d414bd",
+      "workingTreeModified": false,
+      "testedSourceFile": "src/browser/manager.ts",
+      "operatingSystem": "Windows-10-10.0.19045-SP0",
+      "cpu": "AMD64 Family 25 Model 80 Stepping 0, AuthenticAMD",
+      "accelerator": "CPU",
+      "containerImage": "am1n3e/webarena-verified-shopping_admin:latest",
+      "containerImageDigest": "sha256:d0531dd27ed98d0c459ff9e88118bf2ed8b660b0ed99c38837db46c065a5be13",
+      "timestampUtc": "2026-10-01T12:08:08.93808+03:00",
+      "note": "One read-only navigation integration smoke, not a representative WebArena score or a general quality/speed claim. Only navigation tasks are accepted; pending confirmations are never auto-approved. The harness omits evaluator internals and expected answers."
+    },
+    {
+      "benchmark": "webarena-verified",
+      "taskId": 708,
+      "intentTemplateId": 268,
+      "taskType": "navigate",
+      "taskPrompt": "Show the tax report for for this year (today is March 15, 2023).",
+      "runnerMode": "bounded-repeated-browser-decide-and-act",
+      "seed": 7,
+      "maxActions": 12,
+      "success": false,
+      "reward": 0.5,
+      "terminated": true,
+      "actions": 2,
+      "loopDetected": false,
+      "trace": [
+        {
+          "step": 1,
+          "status": "action-executed",
+          "action": {
+            "role": "link",
+            "label": "Reports",
+            "kind": "a",
+            "risk": "low"
+          },
+          "candidateCount": 31,
+          "provider": "local-literal-match",
+          "model": "unique-mentioned-navigation-label",
+          "selectionRule": "unique-mentioned-navigation-label",
+          "decisionLatencyMs": 0,
+          "elapsedMs": 318,
+          "confidenceSource": "not-applicable-rule",
+          "calibration": "not-applicable-rule",
+          "taskTargetVisible": null
+        },
+        {
+          "step": 2,
+          "status": "action-executed",
+          "action": {
+            "role": "link",
+            "label": "Tax",
+            "kind": "a",
+            "risk": "low"
+          },
+          "candidateCount": 57,
+          "provider": "local-literal-match",
+          "model": "unique-mentioned-navigation-label",
+          "selectionRule": "unique-mentioned-navigation-label",
+          "decisionLatencyMs": 0,
+          "elapsedMs": 844,
+          "confidenceSource": "not-applicable-rule",
+          "calibration": "not-applicable-rule",
+          "taskTargetVisible": null
+        },
+        {
+          "step": 3,
+          "status": "navigation-action-already-tried",
+          "action": {
+            "role": "link",
+            "label": "Reports",
+            "kind": "a",
+            "risk": "low"
+          },
+          "candidateCount": 32,
+          "provider": null,
+          "model": null,
+          "selectionRule": null,
+          "decisionLatencyMs": null,
+          "elapsedMs": 27,
+          "confidenceSource": null,
+          "calibration": null,
+          "taskTargetVisible": null
+        }
+      ],
+      "initialPage": {
+        "title": "Dashboard / Magento Admin",
+        "path": "/admin/admin/dashboard/"
+      },
+      "finalPage": {
+        "title": "Tax Report / Sales / Reports / Magento Admin",
+        "path": "/admin/reports/report_sales/tax/"
+      },
+      "resetLatencyMs": 10553,
+      "decisionCallLatenciesMs": [
+        318,
+        844,
+        27
+      ],
+      "latencyMs": 13364,
+      "browserGymVersion": "0.14.3",
+      "browserGymVerifiedVersion": "0.14.3",
+      "playwrightPythonVersion": "1.44.0",
+      "playwrightNodeVersion": "1.63.0",
+      "browserVersion": "HeadlessChrome/125.0.6422.26",
+      "pythonVersion": "3.12.13",
+      "nodeVersion": "v22.14.0",
+      "agentDecisionKitCommit": "7360b216b3c610a363a3646d5cf435aae7d414bd",
+      "workingTreeModified": false,
+      "testedSourceFile": "src/browser/manager.ts",
+      "operatingSystem": "Windows-10-10.0.19045-SP0",
+      "cpu": "AMD64 Family 25 Model 80 Stepping 0, AuthenticAMD",
+      "accelerator": "CPU",
+      "containerImage": "am1n3e/webarena-verified-shopping_admin:latest",
+      "containerImageDigest": "sha256:d0531dd27ed98d0c459ff9e88118bf2ed8b660b0ed99c38837db46c065a5be13",
+      "timestampUtc": "2026-10-01T12:08:27.155575+03:00",
+      "note": "One read-only navigation integration smoke, not a representative WebArena score or a general quality/speed claim. Only navigation tasks are accepted; pending confirmations are never auto-approved. The harness omits evaluator internals and expected answers."
+    },
+    {
+      "benchmark": "webarena-verified",
+      "taskId": 709,
+      "intentTemplateId": 271,
+      "taskType": "navigate",
+      "taskPrompt": "Show the orders report from May 1, 2021 to March 31, 2022.",
+      "runnerMode": "bounded-repeated-browser-decide-and-act",
+      "seed": 7,
+      "maxActions": 12,
+      "success": false,
+      "reward": 0.5,
+      "terminated": true,
+      "actions": 2,
+      "loopDetected": false,
+      "trace": [
+        {
+          "step": 1,
+          "status": "action-executed",
+          "action": {
+            "role": "link",
+            "label": "Reports",
+            "kind": "a",
+            "risk": "low"
+          },
+          "candidateCount": 31,
+          "provider": "local-literal-match",
+          "model": "unique-mentioned-navigation-label",
+          "selectionRule": "unique-mentioned-navigation-label",
+          "decisionLatencyMs": 0,
+          "elapsedMs": 321,
+          "confidenceSource": "not-applicable-rule",
+          "calibration": "not-applicable-rule",
+          "taskTargetVisible": null
+        },
+        {
+          "step": 2,
+          "status": "action-executed",
+          "action": {
+            "role": "link",
+            "label": "Orders",
+            "kind": "a",
+            "risk": "low"
+          },
+          "candidateCount": 57,
+          "provider": "local-literal-match",
+          "model": "unique-mentioned-navigation-label",
+          "selectionRule": "unique-mentioned-navigation-label",
+          "decisionLatencyMs": 0,
+          "elapsedMs": 792,
+          "confidenceSource": "not-applicable-rule",
+          "calibration": "not-applicable-rule",
+          "taskTargetVisible": null
+        },
+        {
+          "step": 3,
+          "status": "navigation-action-already-tried",
+          "action": {
+            "role": "link",
+            "label": "Reports",
+            "kind": "a",
+            "risk": "low"
+          },
+          "candidateCount": 33,
+          "provider": null,
+          "model": null,
+          "selectionRule": null,
+          "decisionLatencyMs": null,
+          "elapsedMs": 27,
+          "confidenceSource": null,
+          "calibration": null,
+          "taskTargetVisible": null
+        }
+      ],
+      "initialPage": {
+        "title": "Dashboard / Magento Admin",
+        "path": "/admin/admin/dashboard/"
+      },
+      "finalPage": {
+        "title": "Orders Report / Sales / Reports / Magento Admin",
+        "path": "/admin/reports/report_sales/sales/"
+      },
+      "resetLatencyMs": 10548,
+      "decisionCallLatenciesMs": [
+        321,
+        792,
+        27
+      ],
+      "latencyMs": 13280,
+      "browserGymVersion": "0.14.3",
+      "browserGymVerifiedVersion": "0.14.3",
+      "playwrightPythonVersion": "1.44.0",
+      "playwrightNodeVersion": "1.63.0",
+      "browserVersion": "HeadlessChrome/125.0.6422.26",
+      "pythonVersion": "3.12.13",
+      "nodeVersion": "v22.14.0",
+      "agentDecisionKitCommit": "7360b216b3c610a363a3646d5cf435aae7d414bd",
+      "workingTreeModified": false,
+      "testedSourceFile": "src/browser/manager.ts",
+      "operatingSystem": "Windows-10-10.0.19045-SP0",
+      "cpu": "AMD64 Family 25 Model 80 Stepping 0, AuthenticAMD",
+      "accelerator": "CPU",
+      "containerImage": "am1n3e/webarena-verified-shopping_admin:latest",
+      "containerImageDigest": "sha256:d0531dd27ed98d0c459ff9e88118bf2ed8b660b0ed99c38837db46c065a5be13",
+      "timestampUtc": "2026-10-01T12:08:45.159085+03:00",
+      "note": "One read-only navigation integration smoke, not a representative WebArena score or a general quality/speed claim. Only navigation tasks are accepted; pending confirmations are never auto-approved. The harness omits evaluator internals and expected answers."
+    },
+    {
+      "benchmark": "webarena-verified",
+      "taskId": 710,
+      "intentTemplateId": 271,
+      "taskType": "navigate",
+      "taskPrompt": "Show the shipping report from August 5, 2022 to March 1, 2023.",
+      "runnerMode": "bounded-repeated-browser-decide-and-act",
+      "seed": 7,
+      "maxActions": 12,
+      "success": false,
+      "reward": 0.5,
+      "terminated": true,
+      "actions": 2,
+      "loopDetected": false,
+      "trace": [
+        {
+          "step": 1,
+          "status": "action-executed",
+          "action": {
+            "role": "link",
+            "label": "Reports",
+            "kind": "a",
+            "risk": "low"
+          },
+          "candidateCount": 31,
+          "provider": "local-literal-match",
+          "model": "unique-mentioned-navigation-label",
+          "selectionRule": "unique-mentioned-navigation-label",
+          "decisionLatencyMs": 0,
+          "elapsedMs": 328,
+          "confidenceSource": "not-applicable-rule",
+          "calibration": "not-applicable-rule",
+          "taskTargetVisible": null
+        },
+        {
+          "step": 2,
+          "status": "action-executed",
+          "action": {
+            "role": "link",
+            "label": "Shipping",
+            "kind": "a",
+            "risk": "low"
+          },
+          "candidateCount": 57,
+          "provider": "local-literal-match",
+          "model": "unique-mentioned-navigation-label",
+          "selectionRule": "unique-mentioned-navigation-label",
+          "decisionLatencyMs": 0,
+          "elapsedMs": 774,
+          "confidenceSource": "not-applicable-rule",
+          "calibration": "not-applicable-rule",
+          "taskTargetVisible": null
+        },
+        {
+          "step": 3,
+          "status": "navigation-action-already-tried",
+          "action": {
+            "role": "link",
+            "label": "Reports",
+            "kind": "a",
+            "risk": "low"
+          },
+          "candidateCount": 32,
+          "provider": null,
+          "model": null,
+          "selectionRule": null,
+          "decisionLatencyMs": null,
+          "elapsedMs": 20,
+          "confidenceSource": null,
+          "calibration": null,
+          "taskTargetVisible": null
+        }
+      ],
+      "initialPage": {
+        "title": "Dashboard / Magento Admin",
+        "path": "/admin/admin/dashboard/"
+      },
+      "finalPage": {
+        "title": "Shipping Report / Sales / Reports / Magento Admin",
+        "path": "/admin/reports/report_sales/shipping/"
+      },
+      "resetLatencyMs": 10595,
+      "decisionCallLatenciesMs": [
+        328,
+        774,
+        20
+      ],
+      "latencyMs": 13320,
+      "browserGymVersion": "0.14.3",
+      "browserGymVerifiedVersion": "0.14.3",
+      "playwrightPythonVersion": "1.44.0",
+      "playwrightNodeVersion": "1.63.0",
+      "browserVersion": "HeadlessChrome/125.0.6422.26",
+      "pythonVersion": "3.12.13",
+      "nodeVersion": "v22.14.0",
+      "agentDecisionKitCommit": "7360b216b3c610a363a3646d5cf435aae7d414bd",
+      "workingTreeModified": false,
+      "testedSourceFile": "src/browser/manager.ts",
+      "operatingSystem": "Windows-10-10.0.19045-SP0",
+      "cpu": "AMD64 Family 25 Model 80 Stepping 0, AuthenticAMD",
+      "accelerator": "CPU",
+      "containerImage": "am1n3e/webarena-verified-shopping_admin:latest",
+      "containerImageDigest": "sha256:d0531dd27ed98d0c459ff9e88118bf2ed8b660b0ed99c38837db46c065a5be13",
+      "timestampUtc": "2026-10-01T12:09:03.235162+03:00",
+      "note": "One read-only navigation integration smoke, not a representative WebArena score or a general quality/speed claim. Only navigation tasks are accepted; pending confirmations are never auto-approved. The harness omits evaluator internals and expected answers."
+    },
+    {
+      "benchmark": "webarena-verified",
+      "taskId": 711,
+      "intentTemplateId": 271,
+      "taskType": "navigate",
+      "taskPrompt": "Show the product view report from July 5, 2021 to May 31, 2023.",
+      "runnerMode": "bounded-repeated-browser-decide-and-act",
+      "seed": 7,
+      "maxActions": 12,
+      "success": false,
+      "reward": 0.0,
+      "terminated": true,
+      "actions": 1,
+      "loopDetected": false,
+      "trace": [
+        {
+          "step": 1,
+          "status": "action-executed",
+          "action": {
+            "role": "link",
+            "label": "Reports",
+            "kind": "a",
+            "risk": "low"
+          },
+          "candidateCount": 31,
+          "provider": "local-literal-match",
+          "model": "unique-mentioned-navigation-label",
+          "selectionRule": "unique-mentioned-navigation-label",
+          "decisionLatencyMs": 0,
+          "elapsedMs": 320,
+          "confidenceSource": "not-applicable-rule",
+          "calibration": "not-applicable-rule",
+          "taskTargetVisible": null
+        },
+        {
+          "step": 2,
+          "status": "navigation-action-already-tried",
+          "action": {
+            "role": "link",
+            "label": "Reports",
+            "kind": "a",
+            "risk": "low"
+          },
+          "candidateCount": 57,
+          "provider": null,
+          "model": null,
+          "selectionRule": null,
+          "decisionLatencyMs": null,
+          "elapsedMs": 28,
+          "confidenceSource": null,
+          "calibration": null,
+          "taskTargetVisible": null
+        }
+      ],
+      "initialPage": {
+        "title": "Dashboard / Magento Admin",
+        "path": "/admin/admin/dashboard/"
+      },
+      "finalPage": {
+        "title": "Dashboard / Magento Admin",
+        "path": "/admin/admin/dashboard/"
+      },
+      "resetLatencyMs": 10667,
+      "decisionCallLatenciesMs": [
+        320,
+        28
+      ],
+      "latencyMs": 12528,
+      "browserGymVersion": "0.14.3",
+      "browserGymVerifiedVersion": "0.14.3",
+      "playwrightPythonVersion": "1.44.0",
+      "playwrightNodeVersion": "1.63.0",
+      "browserVersion": "HeadlessChrome/125.0.6422.26",
+      "pythonVersion": "3.12.13",
+      "nodeVersion": "v22.14.0",
+      "agentDecisionKitCommit": "7360b216b3c610a363a3646d5cf435aae7d414bd",
+      "workingTreeModified": false,
+      "testedSourceFile": "src/browser/manager.ts",
+      "operatingSystem": "Windows-10-10.0.19045-SP0",
+      "cpu": "AMD64 Family 25 Model 80 Stepping 0, AuthenticAMD",
+      "accelerator": "CPU",
+      "containerImage": "am1n3e/webarena-verified-shopping_admin:latest",
+      "containerImageDigest": "sha256:d0531dd27ed98d0c459ff9e88118bf2ed8b660b0ed99c38837db46c065a5be13",
+      "timestampUtc": "2026-10-01T12:09:20.486902+03:00",
+      "note": "One read-only navigation integration smoke, not a representative WebArena score or a general quality/speed claim. Only navigation tasks are accepted; pending confirmations are never auto-approved. The harness omits evaluator internals and expected answers."
+    },
+    {
+      "benchmark": "webarena-verified",
+      "taskId": 712,
+      "intentTemplateId": 271,
+      "taskType": "navigate",
+      "taskPrompt": "Show the coupons report from May 1, 2021 to May 15, 2023.",
+      "runnerMode": "bounded-repeated-browser-decide-and-act",
+      "seed": 7,
+      "maxActions": 12,
+      "success": false,
+      "reward": 0.5,
+      "terminated": true,
+      "actions": 2,
+      "loopDetected": false,
+      "trace": [
+        {
+          "step": 1,
+          "status": "action-executed",
+          "action": {
+            "role": "link",
+            "label": "Reports",
+            "kind": "a",
+            "risk": "low"
+          },
+          "candidateCount": 31,
+          "provider": "local-literal-match",
+          "model": "unique-mentioned-navigation-label",
+          "selectionRule": "unique-mentioned-navigation-label",
+          "decisionLatencyMs": 0,
+          "elapsedMs": 315,
+          "confidenceSource": "not-applicable-rule",
+          "calibration": "not-applicable-rule",
+          "taskTargetVisible": null
+        },
+        {
+          "step": 2,
+          "status": "action-executed",
+          "action": {
+            "role": "link",
+            "label": "Coupons",
+            "kind": "a",
+            "risk": "low"
+          },
+          "candidateCount": 57,
+          "provider": "local-literal-match",
+          "model": "unique-mentioned-navigation-label",
+          "selectionRule": "unique-mentioned-navigation-label",
+          "decisionLatencyMs": 0,
+          "elapsedMs": 844,
+          "confidenceSource": "not-applicable-rule",
+          "calibration": "not-applicable-rule",
+          "taskTargetVisible": null
+        },
+        {
+          "step": 3,
+          "status": "navigation-action-already-tried",
+          "action": {
+            "role": "link",
+            "label": "Reports",
+            "kind": "a",
+            "risk": "low"
+          },
+          "candidateCount": 34,
+          "provider": null,
+          "model": null,
+          "selectionRule": null,
+          "decisionLatencyMs": null,
+          "elapsedMs": 22,
+          "confidenceSource": null,
+          "calibration": null,
+          "taskTargetVisible": null
+        }
+      ],
+      "initialPage": {
+        "title": "Dashboard / Magento Admin",
+        "path": "/admin/admin/dashboard/"
+      },
+      "finalPage": {
+        "title": "Coupons Report / Sales / Reports / Magento Admin",
+        "path": "/admin/reports/report_sales/coupons/"
+      },
+      "resetLatencyMs": 10689,
+      "decisionCallLatenciesMs": [
+        315,
+        844,
+        22
+      ],
+      "latencyMs": 13484,
+      "browserGymVersion": "0.14.3",
+      "browserGymVerifiedVersion": "0.14.3",
+      "playwrightPythonVersion": "1.44.0",
+      "playwrightNodeVersion": "1.63.0",
+      "browserVersion": "HeadlessChrome/125.0.6422.26",
+      "pythonVersion": "3.12.13",
+      "nodeVersion": "v22.14.0",
+      "agentDecisionKitCommit": "7360b216b3c610a363a3646d5cf435aae7d414bd",
+      "workingTreeModified": false,
+      "testedSourceFile": "src/browser/manager.ts",
+      "operatingSystem": "Windows-10-10.0.19045-SP0",
+      "cpu": "AMD64 Family 25 Model 80 Stepping 0, AuthenticAMD",
+      "accelerator": "CPU",
+      "containerImage": "am1n3e/webarena-verified-shopping_admin:latest",
+      "containerImageDigest": "sha256:d0531dd27ed98d0c459ff9e88118bf2ed8b660b0ed99c38837db46c065a5be13",
+      "timestampUtc": "2026-10-01T12:09:38.67201+03:00",
+      "note": "One read-only navigation integration smoke, not a representative WebArena score or a general quality/speed claim. Only navigation tasks are accepted; pending confirmations are never auto-approved. The harness omits evaluator internals and expected answers."
+    },
+    {
+      "benchmark": "webarena-verified",
+      "taskId": 713,
+      "intentTemplateId": 271,
+      "taskType": "navigate",
+      "taskPrompt": "Show the best sellers report from May 1, 2022 to May 31, 2023.",
+      "runnerMode": "bounded-repeated-browser-decide-and-act",
+      "seed": 7,
+      "maxActions": 12,
+      "success": false,
+      "reward": 0.0,
+      "terminated": true,
+      "actions": 1,
+      "loopDetected": false,
+      "trace": [
+        {
+          "step": 1,
+          "status": "action-executed",
+          "action": {
+            "role": "link",
+            "label": "Reports",
+            "kind": "a",
+            "risk": "low"
+          },
+          "candidateCount": 31,
+          "provider": "local-literal-match",
+          "model": "unique-mentioned-navigation-label",
+          "selectionRule": "unique-mentioned-navigation-label",
+          "decisionLatencyMs": 0,
+          "elapsedMs": 303,
+          "confidenceSource": "not-applicable-rule",
+          "calibration": "not-applicable-rule",
+          "taskTargetVisible": null
+        },
+        {
+          "step": 2,
+          "status": "navigation-action-already-tried",
+          "action": {
+            "role": "link",
+            "label": "Reports",
+            "kind": "a",
+            "risk": "low"
+          },
+          "candidateCount": 57,
+          "provider": null,
+          "model": null,
+          "selectionRule": null,
+          "decisionLatencyMs": null,
+          "elapsedMs": 27,
+          "confidenceSource": null,
+          "calibration": null,
+          "taskTargetVisible": null
+        }
+      ],
+      "initialPage": {
+        "title": "Dashboard / Magento Admin",
+        "path": "/admin/admin/dashboard/"
+      },
+      "finalPage": {
+        "title": "Dashboard / Magento Admin",
+        "path": "/admin/admin/dashboard/"
+      },
+      "resetLatencyMs": 10599,
+      "decisionCallLatenciesMs": [
+        303,
+        27
+      ],
+      "latencyMs": 12463,
+      "browserGymVersion": "0.14.3",
+      "browserGymVerifiedVersion": "0.14.3",
+      "playwrightPythonVersion": "1.44.0",
+      "playwrightNodeVersion": "1.63.0",
+      "browserVersion": "HeadlessChrome/125.0.6422.26",
+      "pythonVersion": "3.12.13",
+      "nodeVersion": "v22.14.0",
+      "agentDecisionKitCommit": "7360b216b3c610a363a3646d5cf435aae7d414bd",
+      "workingTreeModified": false,
+      "testedSourceFile": "src/browser/manager.ts",
+      "operatingSystem": "Windows-10-10.0.19045-SP0",
+      "cpu": "AMD64 Family 25 Model 80 Stepping 0, AuthenticAMD",
+      "accelerator": "CPU",
+      "containerImage": "am1n3e/webarena-verified-shopping_admin:latest",
+      "containerImageDigest": "sha256:d0531dd27ed98d0c459ff9e88118bf2ed8b660b0ed99c38837db46c065a5be13",
+      "timestampUtc": "2026-10-01T12:09:55.870276+03:00",
+      "note": "One read-only navigation integration smoke, not a representative WebArena score or a general quality/speed claim. Only navigation tasks are accepted; pending confirmations are never auto-approved. The harness omits evaluator internals and expected answers."
+    }
+  ],
+  "note": "Episode latency includes environment reset. Agent action latency includes browser inspection, decision, and any synthetic approval round-trip; decision latency is reported separately when available. These task and hardware samples are not representative quality or performance claims.",
+  "executionContext": {
+    "runnerPlatform": "Windows 10",
+    "sitePlatform": "Linux Docker container",
+    "siteExposure": "Loopback-only service reached through an SSH local port forward",
+    "forwardingPath": "runner localhost:7780 -> SSH tunnel -> remote host 127.0.0.1:17780 -> container port 80",
+    "image": "am1n3e/webarena-verified-shopping_admin",
+    "imageDigest": "sha256:d0531dd27ed98d0c459ff9e88118bf2ed8b660b0ed99c38837db46c065a5be13",
+    "taskIds": [
+      157,
+      374,
+      375,
+      676,
+      677,
+      678,
+      679,
+      680,
+      704,
+      705,
+      706,
+      707,
+      708,
+      709,
+      710,
+      711,
+      712,
+      713
+    ],
+    "scope": "18 read-only shopping_admin navigation tasks; no retrieval or mutation tasks"
+  }
+}
