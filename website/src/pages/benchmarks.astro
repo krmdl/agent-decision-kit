@@ -8,8 +8,17 @@ import visualDigitsRun from "../../../benchmarks/results/miniwob-visual-digits-5
 import visualDigitsRetryRun from "../../../benchmarks/results/miniwob-visual-digits-single-char-retry-5-seed-smoke.json";
 import currentEightTaskRun from "../../../benchmarks/results/miniwob-main-8-seed7-smoke.json";
 import repeatedEightTaskRun from "../../../benchmarks/results/miniwob-main-8-seed7-11-post-menu-fix-40.json";
-import cpuDecisionRun from "../../../benchmarks/results/decision-cases-independent-ryzen5600h-cpu-smoke.json";
-import dmlDecisionRun from "../../../benchmarks/results/decision-cases-independent-ryzen5600h-dml-smoke.json";
+import cpuDecisionRepeat1 from "../../../benchmarks/results/decision-cases-independent-ryzen5600h-cpu-repeat-20261002.json";
+import cpuDecisionRepeat2 from "../../../benchmarks/results/decision-cases-independent-ryzen5600h-cpu-repeat-2-20261002.json";
+import cpuDecisionRepeat3 from "../../../benchmarks/results/decision-cases-independent-ryzen5600h-cpu-repeat-3-20261002.json";
+import cpuDecisionRepeat4 from "../../../benchmarks/results/decision-cases-independent-ryzen5600h-cpu-repeat-4-20261002.json";
+import cpuDecisionRepeat5 from "../../../benchmarks/results/decision-cases-independent-ryzen5600h-cpu-repeat-5-20261002.json";
+import dmlDecisionRepeat1 from "../../../benchmarks/results/decision-cases-independent-ryzen5600h-dml-repeat-20261002.json";
+import dmlDecisionRepeat2 from "../../../benchmarks/results/decision-cases-independent-ryzen5600h-dml-repeat-2-20261002.json";
+import dmlDecisionRepeat3 from "../../../benchmarks/results/decision-cases-independent-ryzen5600h-dml-repeat-3-20261002.json";
+import dmlDecisionRepeat4 from "../../../benchmarks/results/decision-cases-independent-ryzen5600h-dml-repeat-4-20261002.json";
+import dmlDecisionRepeat5 from "../../../benchmarks/results/decision-cases-independent-ryzen5600h-dml-repeat-5-20261002.json";
+import dmlNodeProfile from "../../../benchmarks/results/decision-cases-independent-ryzen5600h-dml-node-profile-20261002.json";
 import verifiedNavigationRun from "../../../benchmarks/results/webarena-verified-shopping-admin-ad6e1b3-summary.json";
 import verifiedNavigationBaseline from "../../../benchmarks/results/webarena-verified-shopping-admin-initial-18-task-baseline.json";
 import remoteVerifiedNavigationRun from "../../../benchmarks/results/webarena-verified-docker-b-18-summary.json";
@@ -28,16 +37,44 @@ const verifiedNavigationDecisionP95 = verifiedNavigationRun.decisionCallLatencyM
 const verifiedNavigationBaselineMeanReward = verifiedNavigationBaseline.meanReward;
 const remoteVerifiedNavigationCount = remoteVerifiedNavigationRun.episodeCount;
 const remoteVerifiedNavigationDecisionP95 = remoteVerifiedNavigationRun.decisionCallLatencyMs.p95;
+const cpuDecisionRuns = [cpuDecisionRepeat1, cpuDecisionRepeat2, cpuDecisionRepeat3, cpuDecisionRepeat4, cpuDecisionRepeat5];
+const dmlDecisionRuns = [dmlDecisionRepeat1, dmlDecisionRepeat2, dmlDecisionRepeat3, dmlDecisionRepeat4, dmlDecisionRepeat5];
+const median = (values: number[]) => {
+  const ordered = [...values].sort((left, right) => left - right);
+  const middle = Math.floor(ordered.length / 2);
+  return ordered.length % 2 ? ordered[middle]! : Math.round((ordered[middle - 1]! + ordered[middle]!) / 2);
+};
+const summarizeDecisionRuns = (reports: typeof cpuDecisionRuns) => {
+  const p95Values = reports.map((report) => report.latencyMs.withinProcessSteadyState.p95);
+  return {
+    firstCall: median(reports.map((report) => report.latencyMs.firstCallIncludingInitialization)),
+    firstCallMax: Math.max(...reports.map((report) => report.latencyMs.firstCallIncludingInitialization)),
+    p50: median(reports.map((report) => report.latencyMs.withinProcessSteadyState.p50)),
+    p95: median(p95Values),
+    p95Min: Math.min(...p95Values),
+    p95Max: Math.max(...p95Values),
+  };
+};
+const cpuDecisionSummary = summarizeDecisionRuns(cpuDecisionRuns);
+const dmlDecisionSummary = summarizeDecisionRuns(dmlDecisionRuns);
+const dmlSlowerInEveryPair = dmlDecisionRuns.every((report, index) =>
+  report.latencyMs.withinProcessSteadyState.p95 > cpuDecisionRuns[index]!.latencyMs.withinProcessSteadyState.p95);
+const allWarmP95Under500 = [...cpuDecisionRuns, ...dmlDecisionRuns]
+  .every((report) => report.latencyMs.withinProcessSteadyState.p95 < 500);
+const dmlProviderCounts = dmlNodeProfile.runtime.onnxExecutionProviderNodeCounts;
+const dmlProviderCallCount = dmlNodeProfile.sampleCount;
 const decisionRows = [
-  { device: "CPU", report: cpuDecisionRun },
-  { device: "DirectML requested", report: dmlDecisionRun },
-].map(({ device, report }) => {
+  { device: "CPU", report: cpuDecisionRuns[0], summary: cpuDecisionSummary },
+  { device: "DirectML + CPU fallback", report: dmlDecisionRuns[0], summary: dmlDecisionSummary },
+].map(({ device, report, summary }) => {
   const reliability = report.confidenceReliability.find((item) => item.outcome === "predicted choice/yes-no correctness");
   return {
     device,
-    firstCall: report.latencyMs.firstCallIncludingInitialization,
-    p50: report.latencyMs.withinProcessSteadyState.p50,
-    p95: report.latencyMs.withinProcessSteadyState.p95,
+    firstCall: summary.firstCall,
+    p50: summary.p50,
+    p95: summary.p95,
+    p95Min: summary.p95Min,
+    p95Max: summary.p95Max,
     warmCount: report.latencyMs.withinProcessSteadyState.sampleCount,
     choiceCorrect: Math.round(report.byQuestionType.choice.accuracy * report.byQuestionType.choice.sampleCount),
     choiceTotal: report.byQuestionType.choice.sampleCount,
@@ -113,16 +150,16 @@ const decisionRows = [
     <section class="decision-runs" aria-labelledby="decision-runs-title">
       <p class="eyebrow">LOCAL DECISION DEVICE CHECK</p>
       <h2 id="decision-runs-title">CPU was faster on this small model.</h2>
-      <p class="comparison-note">Both runs used the same 30 project-specific labels on one Windows 10 Ryzen 5 5600H laptop with an operator-reported GeForce GTX 1650 (4 GB). The model-cache directory existed before each run, but cached files were not individually checked. A DirectML device was requested for the GPU row; ONNX Runtime's per-node execution and CPU fallback were not inspected.</p>
+      <p class="comparison-note">Each device row summarizes five matched runs over the same 30 project-specific labels on one Windows 10 Ryzen 5 5600H laptop with a GeForce GTX 1650 (4 GB, reported by <code>nvidia-smi</code>). The model-cache directory existed before each process, but individual cached files were not checked. A separate DirectML profile records which ONNX execution provider handled each node.</p>
       <div class="decision-table-wrap">
         <table>
-          <caption>One paired run · 29 within-process calls after initialization · labels are not held out</caption>
-          <thead><tr><th scope="col">Requested device</th><th scope="col">First call</th><th scope="col">Warm p50 / p95</th><th scope="col">Choice</th><th scope="col">Yes/no</th><th scope="col">Score MAE</th><th scope="col">Brier: Choice / yes-no</th><th scope="col">ECE (n=20)</th></tr></thead>
+          <caption>Five paired runs · 29 warm calls per run · labels are not held out</caption>
+          <thead><tr><th scope="col">Device</th><th scope="col">First call median (incl. init)</th><th scope="col">Warm p50 / p95 medians</th><th scope="col">Choice</th><th scope="col">Yes/no</th><th scope="col">Score MAE</th><th scope="col">Brier: Choice / yes-no</th><th scope="col">ECE (n=20)</th></tr></thead>
           <tbody>
             {decisionRows.map((row) => <tr>
               <th scope="row">{row.device}</th>
               <td>{row.firstCall} ms</td>
-              <td>{row.p50} / {row.p95} ms (n={row.warmCount})</td>
+              <td>{row.p50} / {row.p95} ms (p95 range {row.p95Min}–{row.p95Max}; n=29/run)</td>
               <td>{row.choiceCorrect}/{row.choiceTotal}</td>
               <td>{row.yesNoCorrect}/{row.yesNoTotal}</td>
               <td>{row.scoreMae.toFixed(3)}</td>
@@ -132,8 +169,8 @@ const decisionRows = [
           </tbody>
         </table>
       </div>
-      <p class="comparison-note">The GPU request was slower in this paired run: warm p95 was 132 ms versus 17 ms on CPU. Both measured p95 values are below 500 ms here, but this small non-held-out sample does not establish the target or a general speed guarantee. Confidence estimates remain uncalibrated; ECE is descriptive only.</p>
-      <div class="decision-raw-links"><a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/decision-cases-independent-ryzen5600h-cpu-smoke.json">CPU raw data ↗</a><a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/decision-cases-independent-ryzen5600h-dml-smoke.json">DirectML-request raw data ↗</a><a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/fixtures/decision-cases-independent.jsonl">30 labeled examples ↗</a></div>
+      <p class="comparison-note">Across these five pairs, CPU warm p95 had a {cpuDecisionSummary.p95} ms median ({cpuDecisionSummary.p95Min}–{cpuDecisionSummary.p95Max} ms across run p95s); DirectML had a {dmlDecisionSummary.p95} ms median ({dmlDecisionSummary.p95Min}–{dmlDecisionSummary.p95Max} ms){dmlSlowerInEveryPair ? " and was slower in every pair" : ""}. A separate {dmlProviderCallCount}-call ONNX profile observed {dmlProviderCounts.DmlExecutionProvider.toLocaleString("en-US")} <code>DmlExecutionProvider</code> node events and {dmlProviderCounts.CPUExecutionProvider.toLocaleString("en-US")} <code>CPUExecutionProvider</code> events ({Math.round(dmlProviderCounts.DmlExecutionProvider / dmlProviderCallCount)} and {Math.round(dmlProviderCounts.CPUExecutionProvider / dmlProviderCallCount)} per call). This verifies DirectML execution with some CPU fallback, but node counts do not measure compute share. {allWarmP95Under500 ? "Every warm p95 in these runs stayed below 500 ms" : "At least one warm p95 in these runs reached 500 ms"}; DirectML first-call latency included initialization, with a {dmlDecisionSummary.firstCall} ms median and {dmlDecisionSummary.firstCallMax} ms maximum. This one machine and non-held-out fixture do not establish a general speed guarantee or GPU advantage. Confidence estimates remain uncalibrated; ECE is descriptive only.</p>
+      <div class="decision-raw-links"><a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/decision-cases-independent-ryzen5600h-cpu-repeat-20261002.json">CPU raw run 1 ↗</a><a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/decision-cases-independent-ryzen5600h-dml-repeat-20261002.json">DirectML raw run 1 ↗</a><a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/decision-cases-independent-ryzen5600h-dml-node-profile-20261002.json">Node profile report ↗</a><a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/decision-cases-independent-ryzen5600h-dml-node-profile-20261002.onnx-profile.json.gz">Compressed ONNX trace ↗</a><a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/fixtures/decision-cases-independent.jsonl">30 labeled examples ↗</a></div>
     </section>
 
     <section class="other-runs" aria-labelledby="other-runs-title">
