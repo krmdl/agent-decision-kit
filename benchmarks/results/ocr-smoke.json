@@ -4,10 +4,10 @@
   "success": true,
   "engine": "tesseract.js",
   "language": "eng",
-  "screenshotMs": 73,
-  "initializationMs": 199,
-  "recognitionMs": 788,
-  "latencyMs": 1060,
+  "screenshotMs": 166,
+  "initializationMs": 889,
+  "recognitionMs": 1808,
+  "latencyMs": 2864,
   "sampleCount": 1,
   "expectedLabels": [
     "Save draft",
@@ -25,7 +25,7 @@
     "target": "Open task",
     "status": "awaiting-user-approval",
     "matchSource": "sparse-text-fallback",
-    "latencyMs": 678,
+    "latencyMs": 1453,
     "proposalCancelled": true
   },
   "visualClickSmoke": {
@@ -186,6 +186,6 @@
     "architecture": "x64",
     "cpuModel": "AMD Ryzen 5 5600H with Radeon Graphics         "
   },
-  "timestampUtc": "2026-10-01T07:40:13.162Z",
+  "timestampUtc": "2026-10-01T18:01:33.389Z",
   "note": "One synthetic canvas screenshot and local click smoke sample, not a quality or speed benchmark. Editable fields are masked. OCR engine scores are not calibrated. The click proposal required an exact unique match and a separate explicit confirmation; the harness checked cancellation and rejection of a stale screenshot. Its demo handler changes only local synthetic canvas pixels and the document title. A miss on small button text can happen; use local visual question answering when OCR is insufficient."
 }
