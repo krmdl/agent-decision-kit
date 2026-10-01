@@ -14,7 +14,7 @@ Agent Decision Kit follows one narrow pattern: make the model choose from a boun
 | Semantic screen / guard | `screen_text` / `agent-decision screen` | Up to eight caller-supplied yes/no checks; not moderation or a safety guarantee |
 | Reranking | `rerank_items` / `agent-decision rerank` | Chooses among 2–255 supplied items; returned values are ranking estimates |
 | Extraction | `extract_candidates` | Selects only among candidate values supplied by the caller; returns no invented free-form field values |
-| Context garbage collection | `context_prune` | Exact retained strings stay present across line boundaries; the request fails if a retained string is missing or its source chunks do not fit |
+| Context garbage collection | `context_prune` / `agent-decision context-prune` | Local heuristic by default; optional provider ranking with exact source text retained |
 | Semantic repository navigation | `code_navigate` | Skips hidden, dependency and build directories; it is a bounded filename/excerpt search, not a complete index |
 | Model routing | `model_route` | Deterministic complexity heuristic; it suggests a route but does not call a model |
 | Diff risk prefilter | `diff_risk_review` | Pattern checks locate review candidates; this is not a code audit |
@@ -22,17 +22,27 @@ Agent Decision Kit follows one narrow pattern: make the model choose from a boun
 
 ## Preserve context without rewriting it
 
-`context_prune` ranks lines with a small local heuristic and returns the original selected chunks. If you pass `retain`, each retained string must appear exactly in the output or the request fails when it cannot fit in the character budget.
+`context_prune` uses a small local heuristic by default and returns the original selected chunks. If you pass `retain`, each retained string must appear exactly in the output or the request fails when its source chunks cannot fit in the character budget.
+
+For task-aware selection, pass `semantic: true` and a query. The configured provider reranks at most 32 non-empty candidate chunks, using no more than 1,200 characters from each chunk as ranking input. The provider is not asked to summarize or rewrite the source. The result still contains complete original chunks, and requested retained strings remain verbatim. The selected text and query can include secrets: the default local provider keeps them on the machine, while Jev or another remote provider receives the bounded snippets when explicitly selected.
 
 ```json
 {
   "text": "tool output including a file path and error stack...",
   "budgetChars": 4000,
-  "retain": ["src/session.ts:42", "ECONNREFUSED 127.0.0.1:5432"]
+  "retain": ["src/session.ts:42", "ECONNREFUSED 127.0.0.1:5432"],
+  "semantic": true,
+  "query": "Find the output that explains the failed database connection"
 }
 ```
 
-This is a local, transparent baseline. It does not summarize, rewrite, or judge semantic relevance with the default model.
+Omit `semantic` and `query` for the local heuristic, which makes no model call. The CLI keeps stdout suitable for piping:
+
+```sh
+cat tool-output.txt | node dist/cli.js context-prune --semantic --query "Find the database connection failure" --retain "src/session.ts:42"
+```
+
+Semantic ranking reports provider, model, latency, confidence source, and calibration state. Treat the ranking as fallible; it can omit relevant text. The local heuristic remains useful when provider startup latency or data locality matters more than semantic ordering.
 
 ## A bounded browser loop
 

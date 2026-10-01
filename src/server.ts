@@ -5,7 +5,7 @@ import { DecisionRequestSchema, type DecisionProvider } from "./core/types.js";
 import { createProvider } from "./providers/index.js";
 import { BrowserManager } from "./browser/manager.js";
 import { closeOcrWorker } from "./browser/ocr.js";
-import { classifyText, extractFromCandidates, findRelevantFiles, pruneContext, rerankItems, reviewDiff, routeModel, screenText, verifyCompletion } from "./workflows.js";
+import { classifyText, extractFromCandidates, findRelevantFiles, pruneContext, pruneContextWithProvider, rerankItems, reviewDiff, routeModel, screenText, verifyCompletion } from "./workflows.js";
 
 function asToolResult(value: unknown) {
   const data = value && typeof value === "object" ? value as Record<string, unknown> : { result: value };
@@ -42,9 +42,14 @@ export function createServer(options: { provider?: DecisionProvider } = {}) {
 
   server.registerTool("context_prune", {
     title: "Prune context",
-    description: "Reduce text to a character budget while preserving requested retained strings verbatim. This is a simple local heuristic.",
-    inputSchema: { text: z.string(), budgetChars: z.number().int().min(0).max(1_000_000).default(12_000), retain: z.array(z.string()).default([]) },
-  }, async ({ text, budgetChars, retain }) => asToolResult(pruneContext(text, budgetChars, retain)));
+    description: "Reduce text to a character budget while preserving requested retained strings verbatim. Default selection is a local heuristic. To semantically rank chunks, explicitly set semantic=true and provide a query; the query and up to 32 snippets of 1,200 characters are sent to the configured decision provider, which may be remote. The selected source text is never rewritten.",
+    inputSchema: { text: z.string(), budgetChars: z.number().int().min(0).max(1_000_000).default(12_000), retain: z.array(z.string()).default([]), semantic: z.boolean().default(false), query: z.string().max(2_000).optional() },
+  }, async ({ text, budgetChars, retain, semantic, query }) => {
+    if (!semantic) return asToolResult(pruneContext(text, budgetChars, retain));
+    if (!query?.trim()) return asToolResult({ error: "A non-empty query is required when semantic=true." });
+    try { return asToolResult(await pruneContextWithProvider(text, budgetChars, retain, query, provider)); }
+    catch (error) { return asToolResult({ error: error instanceof Error ? error.message : String(error) }); }
+  });
 
   server.registerTool("model_route", {
     title: "Suggest a model route",

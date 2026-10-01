@@ -38,7 +38,9 @@ export async function findRelevantFiles(root: string, query: string, maxFiles = 
   return { root: rootPath, visitedEntries: Math.min(visited, 3_001), files: files.sort((a, b) => b.score - a.score).slice(0, maxFiles) };
 }
 
-export function pruneContext(input: string, budgetChars = 12_000, retain: string[] = []) {
+type ContextPlan = { chunks: string[]; retained: Set<number>; budgetChars: number };
+
+function prepareContext(input: string, budgetChars: number, retain: string[]): ContextPlan {
   if (!Number.isInteger(budgetChars) || budgetChars < 0) throw new Error("budgetChars must be a non-negative integer");
   const uniqueRetained = [...new Set(retain.filter((item) => item.length > 0))];
   const chunks = input.split(/(?<=\n)/);
@@ -72,11 +74,98 @@ export function pruneContext(input: string, budgetChars = 12_000, retain: string
   }
   used = [...kept].reduce((total, index) => total + chunks[index]!.length, 0);
   if (used > budgetChars) throw new Error("The source chunks required to preserve retained text exceed the context budget");
-  const ranked = chunks.map((text, index) => ({ index, text, score: (text.match(/\b(?:TODO|FIXME|error|export|function|class|interface|async|await|test|return)\b/gi) ?? []).length }))
-    .filter((item) => !kept.has(item.index)).sort((a, b) => b.score - a.score || a.index - b.index);
-  for (const item of ranked) if (used + item.text.length <= budgetChars) { kept.add(item.index); used += item.text.length; }
-  const output = chunks.map((text, index) => kept.has(index) ? text : "").join("");
-  return { text: output, inputChars: input.length, outputChars: output.length, budgetChars, retainedVerbatim: uniqueRetained.every((item) => output.includes(item)), omittedChunks: chunks.length - kept.size };
+  return { chunks, retained: kept, budgetChars };
+}
+
+function contextHeuristicScore(text: string) {
+  return (text.match(/\b(?:TODO|FIXME|error|export|function|class|interface|async|await|test|return)\b/gi) ?? []).length;
+}
+
+function finalizeContext(plan: ContextPlan, orderedIndices: number[]) {
+  const kept = new Set(plan.retained);
+  let used = [...kept].reduce((total, index) => total + plan.chunks[index]!.length, 0);
+  for (const index of orderedIndices) {
+    if (kept.has(index)) continue;
+    const text = plan.chunks[index]!;
+    if (used + text.length <= plan.budgetChars) { kept.add(index); used += text.length; }
+  }
+  const output = plan.chunks.map((text, index) => kept.has(index) ? text : "").join("");
+  return {
+    text: output,
+    inputChars: plan.chunks.join("").length,
+    outputChars: output.length,
+    budgetChars: plan.budgetChars,
+    retainedVerbatim: true,
+    omittedChunks: plan.chunks.length - kept.size,
+  };
+}
+
+function heuristicContextOrder(plan: ContextPlan) {
+  return plan.chunks.map((text, index) => ({ index, score: contextHeuristicScore(text) }))
+    .filter((item) => !plan.retained.has(item.index))
+    .sort((a, b) => b.score - a.score || a.index - b.index)
+    .map((item) => item.index);
+}
+
+export function pruneContext(input: string, budgetChars = 12_000, retain: string[] = []) {
+  const plan = prepareContext(input, budgetChars, retain);
+  const result = finalizeContext(plan, heuristicContextOrder(plan));
+  const uniqueRetained = [...new Set(retain.filter((item) => item.length > 0))];
+  return { ...result, retainedVerbatim: uniqueRetained.every((item) => result.text.includes(item)) };
+}
+
+export async function pruneContextWithProvider(input: string, budgetChars: number, retain: string[], query: string, provider: DecisionProvider) {
+  if (!query.trim()) throw new Error("A non-empty query is required for semantic context pruning");
+  const plan = prepareContext(input, budgetChars, retain);
+  const heuristicOrder = heuristicContextOrder(plan);
+  const baseline = finalizeContext(plan, heuristicOrder);
+  if (baseline.omittedChunks === 0) {
+    return { ...baseline, ranking: { method: "not-needed", candidateCount: 0, note: "The full context already fits the budget, so the provider was not called." } };
+  }
+
+  const queryTerms = [...new Set(query.toLocaleLowerCase("en-US").match(/[\p{L}\p{N}_./-]{2,}/gu) ?? [])];
+  const queryOverlap = (text: string) => {
+    const lower = text.toLocaleLowerCase("en-US");
+    return queryTerms.reduce((score, term) => score + (lower.includes(term) ? 1 : 0), 0);
+  };
+  const baselinePosition = new Map(heuristicOrder.map((index, position) => [index, position]));
+  const candidates = plan.chunks.map((text, index) => ({ index, text, overlap: queryOverlap(text), score: contextHeuristicScore(text) }))
+    .filter((item) => !plan.retained.has(item.index) && item.text.trim().length > 0)
+    .sort((a, b) => b.overlap - a.overlap || b.score - a.score || (baselinePosition.get(a.index) ?? a.index) - (baselinePosition.get(b.index) ?? b.index))
+    .slice(0, 32);
+  if (candidates.length < 2) {
+    const uniqueRetained = [...new Set(retain.filter((item) => item.length > 0))];
+    return {
+      ...baseline,
+      retainedVerbatim: uniqueRetained.every((item) => baseline.text.includes(item)),
+      ranking: { method: "local-heuristic-fallback", candidateCount: candidates.length, note: "At least two non-empty chunks are required for a provider choice; the local heuristic was used." },
+    };
+  }
+
+  const ranked = await rerankItems(query, candidates.map((item) => item.text.slice(0, 1_200)), provider);
+  const selected = ranked.answer?.type === "choice" ? Number(ranked.answer.choice.slice("item_".length)) - 1 : -1;
+  const hasProbabilities = ranked.answer?.type === "choice" && ranked.answer.probabilities !== undefined;
+  const rankedCandidateIndices = hasProbabilities
+    ? ranked.items.map((item) => candidates[item.index]!.index)
+    : [...(selected >= 0 && selected < candidates.length ? [candidates[selected]!.index] : []), ...candidates.filter((_item, index) => index !== selected).map((item) => item.index)];
+  const semanticOrder = [...rankedCandidateIndices, ...heuristicOrder.filter((index) => !rankedCandidateIndices.includes(index))];
+  const result = finalizeContext(plan, semanticOrder);
+  const uniqueRetained = [...new Set(retain.filter((item) => item.length > 0))];
+  return {
+    ...result,
+    retainedVerbatim: uniqueRetained.every((item) => result.text.includes(item)),
+    ranking: {
+      method: hasProbabilities ? "provider-probability-ranking" : "provider-choice-then-local-heuristic",
+      candidateCount: candidates.length,
+      provider: ranked.provider,
+      model: ranked.model,
+      latencyMs: ranked.latencyMs,
+      confidence: ranked.answer?.confidence,
+      confidenceSource: ranked.answer?.confidenceSource,
+      calibration: ranked.answer?.calibration,
+      note: "Selected source chunks remain verbatim. Ranking estimates can be wrong; review the returned text. Only up to 32 candidate snippets, each capped at 1,200 characters, were sent to the configured provider.",
+    },
+  };
 }
 
 export function routeModel(task: string, options: { available?: string[]; latencySensitive?: boolean } = {}) {

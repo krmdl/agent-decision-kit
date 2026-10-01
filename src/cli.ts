@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import { runServer } from "./server.js";
 import { createProvider } from "./providers/index.js";
 import { DecisionRequestSchema, type DecisionRequest } from "./core/types.js";
-import { classifyText, findRelevantFiles, pruneContext, rerankItems, reviewDiff, routeModel, screenText } from "./workflows.js";
+import { classifyText, findRelevantFiles, pruneContext, pruneContextWithProvider, rerankItems, reviewDiff, routeModel, screenText } from "./workflows.js";
 
 const program = new Command();
 program.name("agent-decision").description("Local-first MCP tools for structured decisions and browser automation").version("0.1.0-alpha.1");
@@ -64,9 +64,20 @@ program.command("rerank").description("Rerank newline-delimited candidate items 
 program.command("context-prune").description("Keep a bounded selection of stdin while preserving requested strings verbatim")
   .option("-b, --budget <characters>", "Character budget", "12000")
   .option("-r, --retain <text>", "Exact text that must remain; repeat the option", (value: string, previous: string[]) => [...previous, value], [] as string[])
-  .action(async ({ budget, retain }: { budget: string; retain: string[] }) => {
-    const result = pruneContext(await readStdin(), Number(budget), retain);
-    process.stderr.write(`[context-prune] ${result.inputChars} → ${result.outputChars} chars; ${result.omittedChunks} chunks omitted\n`);
+  .option("-q, --query <text>", "Task or question used to rank chunks; required with --semantic")
+  .option("--semantic", "Rank a bounded set of chunks with the configured provider; may send snippets to a remote provider")
+  .action(async ({ budget, retain, query, semantic }: { budget: string; retain: string[]; query?: string; semantic?: boolean }) => {
+    if (semantic && !query?.trim()) throw new Error("--semantic requires a non-empty --query");
+    if (query && !semantic) throw new Error("--query is used only with --semantic; omit it for local heuristic pruning");
+    const input = await readStdin();
+    const result = semantic
+      ? await pruneContextWithProvider(input, Number(budget), retain, query!, createProvider())
+      : pruneContext(input, Number(budget), retain);
+    let ranking = "; ranking=local-heuristic";
+    if ("ranking" in result && result.ranking && typeof result.ranking === "object" && "method" in result.ranking) {
+      ranking = `; ranking=${String(result.ranking.method)}`;
+    }
+    process.stderr.write(`[context-prune] ${result.inputChars} → ${result.outputChars} chars; ${result.omittedChunks} chunks omitted${ranking}\n`);
     process.stdout.write(result.text);
   });
 

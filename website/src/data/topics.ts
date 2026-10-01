@@ -51,12 +51,12 @@ export const workflows = [
   },
   {
     slug: "context-pruning", title: "Exact-Preserving Context Pruning", short: "Context pruning",
-    description: "Reduce tool output while keeping the file paths, commands, and error strings you mark to retain exactly unchanged.",
+    description: "Reduce tool output with a local heuristic or explicitly rerank bounded snippets against the current task, while keeping selected source text unchanged.",
     canonicalPath: "workflows/context-pruning/",
     problem: "An agent can spend a large part of its context window on repeated grep results, stack traces, or verbose command output. Summarizing the whole trace can alter a path or exception that later needs to be copied exactly.",
-    method: "context_prune splits supplied text into original newline-delimited chunks, keeps chunks containing each required retained string, then fills the remaining character budget using a small lexical heuristic. It does not ask a model to rewrite the survivors.",
-    example: `node dist/cli.js context-prune --budget 4000 --retain "src/session.ts:42"`,
-    caveat: "The implementation ranks chunks with a simple keyword heuristic, not a semantic garbage collector. It can omit useful lines. If retained strings do not fit in the budget it fails instead of silently dropping them.",
+    method: "context_prune first keeps original newline-delimited chunks containing each required retained string. By default it fills the remaining character budget with a small local heuristic. With semantic=true and a query, the configured provider reranks at most 32 snippets capped at 1,200 characters; output chunks are still copied verbatim and are never summarized.",
+    example: `node dist/cli.js context-prune --semantic --query "Find the database connection failure" --budget 4000 --retain "src/session.ts:42"`,
+    caveat: "Semantic ranking is an estimate and can omit useful lines. It sends the query and bounded snippets to the configured provider, which may be remote; keep the local provider selected for local-only processing. The default heuristic makes no model call. If retained strings do not fit in the budget, the request fails instead of silently dropping them.",
     related: ["code-navigation", "typed-decisions"],
   },
   {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DecisionRequestSchema } from "../src/core/types.js";
-import { extractFromCandidates, pruneContext, routeModel, reviewDiff, screenText, verifyCompletion } from "../src/workflows.js";
+import { extractFromCandidates, pruneContext, pruneContextWithProvider, routeModel, reviewDiff, screenText, verifyCompletion } from "../src/workflows.js";
 import type { DecisionProvider, DecisionRequest, DecisionResult } from "../src/core/types.js";
 
 describe("decision request schema", () => {
@@ -38,6 +38,36 @@ describe("local workflow helpers", () => {
     expect(result.retainedVerbatim).toBe(true);
     expect(result.text).toContain(exact);
     expect(result.outputChars).toBeLessThanOrEqual(120);
+  });
+
+  it("semantically ranks bounded chunks while preserving retained and selected source text exactly", async () => {
+    const provider: DecisionProvider = {
+      id: "fixture-ranker",
+      model: "fixture-choice",
+      async decide(request) {
+        const [name, question] = Object.entries(request.questions)[0]!;
+        if (question.type !== "choice") throw new Error("Expected one bounded choice question");
+        const match = Object.entries(question.criteria).find(([, description]) => description.includes("TARGET:"));
+        if (!match) throw new Error("Expected the target chunk among the bounded candidates");
+        const probabilities = Object.fromEntries(Object.keys(question.criteria).map((label) => [label, label === match[0] ? 0.95 : 0.05 / (Object.keys(question.criteria).length - 1)]));
+        return {
+          provider: this.id,
+          model: this.model,
+          latencyMs: 7,
+          answers: { [name]: { type: "choice", choice: match[0], probabilities, confidence: 0.95, confidenceSource: "provider-reported", calibration: "uncalibrated-estimate" } },
+        };
+      },
+    };
+    const pinned = "PINNED: ERROR at C:\\repo\\src\\db.ts:42\n";
+    const target = "TARGET: database connection refused at 127.0.0.1:5432\n";
+    const input = `${pinned}NOISE: stale output and unrelated details\n${target}NOISE: async function export return\n`;
+    const result = await pruneContextWithProvider(input, pinned.length + target.length, [pinned.trimEnd()], "Which chunk explains the database failure?", provider);
+
+    expect(result.text).toBe(`${pinned}${target}`);
+    expect(result.retainedVerbatim).toBe(true);
+    expect(result.outputChars).toBeLessThanOrEqual(result.budgetChars);
+    expect(result.omittedChunks).toBe(2);
+    expect(result.ranking).toMatchObject({ method: "provider-probability-ranking", candidateCount: 3, provider: "fixture-ranker", model: "fixture-choice", latencyMs: 7, calibration: "uncalibrated-estimate" });
   });
 
   it("fails clearly when a retained string is missing or its source lines do not fit", () => {
