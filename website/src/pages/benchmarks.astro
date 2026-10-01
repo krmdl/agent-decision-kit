@@ -203,7 +203,7 @@ const decisionRows = [
     <section class="prerequisites" aria-labelledby="prerequisites-title">
       <p class="eyebrow">BROADER BROWSERGYM SETUPS</p>
       <h2 id="prerequisites-title">WebArena scores need running benchmark sites.</h2>
-      <p class="prerequisite-lead">Installing BrowserGym alone does not provide the original WebArena or VisualWebArena sites. Their integrations need several configured domains; those full suites have no result here. The separate WebArena Verified run below covers {verifiedNavigationCount} read-only navigation tasks in one synthetic shopping_admin site.</p>
+      <p class="prerequisite-lead">Installing BrowserGym alone does not provide the original WebArena or VisualWebArena sites. Their integrations need several configured domains; those full suites have no result here. The upstream combined VisualWebArena/WebArena Docker example recommends an EC2 host with a 1,000 GB EBS root volume, so check storage and prepare every service before a full run. The separate WebArena Verified run below covers {verifiedNavigationCount} read-only navigation tasks in one synthetic shopping_admin site.</p>
       <div class="setup-grid">
         <article>
           <h3>WebArena</h3>
@@ -216,6 +216,7 @@ const decisionRows = [
           <p>Requires separate classifieds, shopping, Reddit, Wikipedia, and homepage URLs.</p>
           <code>VWA_CLASSIFIEDS · VWA_SHOPPING · VWA_REDDIT · VWA_WIKIPEDIA · VWA_HOMEPAGE</code>
           <a href="https://github.com/ServiceNow/BrowserGym/blob/main/browsergym/visualwebarena/README.md">BrowserGym VisualWebArena setup ↗</a>
+          <a href="https://github.com/web-arena-x/visualwebarena/blob/main/environment_docker/README.md">Upstream Docker services and storage guide ↗</a>
         </article>
         <article>
           <h3>WebArena Verified · shopping admin</h3>
