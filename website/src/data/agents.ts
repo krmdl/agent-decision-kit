@@ -44,10 +44,10 @@ export const agents = [
     path: ".cursor/mcp.json for a project or ~/.cursor/mcp.json globally",
     snippet: "Restart Cursor after adding the server, then enable it in Agent's available tools.",
     config: JSON.stringify({ mcpServers: { "agent-decision-kit": { type: "stdio", command: "node", args: ["/absolute/path/to/agent-decision-kit/dist/cli.js", "mcp"] } } }, null, 2),
-    verify: "Open Cursor's MCP settings, confirm the server is connected, then inspect available tools in the Agent tool picker.",
+    verify: "Open Cursor's MCP settings, confirm the server is connected, then inspect available tools in the Agent tool picker. If Cursor CLI is installed, run `agent mcp list-tools agent-decision-kit` to check the same server from the terminal.",
     workflow: "Fill the Release note draft field in the local demo. Do not submit it or click Delete draft.",
-    gotcha: "Cursor project and global config files are merged, with the project entry taking precedence for a server of the same name.",
-    detail: "Cursor MCP supports tools over stdio as well as hosted transports. This project uses local stdio for the browser, so Chromium runs beside the Cursor process instead of in a hosted service.",
+    gotcha: "Cursor project and global config files are merged, with the project entry taking precedence for a server of the same name. Auto-review is the default approval mode in Cursor 3.6 and later; use a narrow allowlist and keep the server's separate browser_confirm approval enabled.",
+    detail: "Cursor MCP supports tools over stdio as well as hosted transports. The Cursor CLI uses the editor's MCP configuration and can list server tools with `agent mcp list-tools`. This checks connectivity without a model-backed turn. This project uses local stdio for the browser, so Chromium runs beside the Cursor process instead of in a hosted service.",
   },
   {
     number: "04", slug: "gemini-cli", name: "Gemini CLI", family: "Google CLI",
