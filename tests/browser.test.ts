@@ -676,17 +676,21 @@ describe("Playwright browser safety flow", () => {
         <option value="card">Card</option>
         <option value="cash">Cash</option>
       </select>
+      <label for="delete-account">Delete account</label>
+      <input id="delete-account" type="checkbox" />
       <button type="button">Pay now</button>
     `);
 
     const snapshot = await browser.inspect();
     const status = snapshot.candidates.find((candidate) => candidate.kind === "select-one" && candidate.label.includes("Status"));
     const payment = snapshot.candidates.find((candidate) => candidate.kind === "select-one" && candidate.label.includes("Payment method"));
+    const deleteCheckbox = snapshot.candidates.find((candidate) => candidate.kind === "checkbox" && candidate.label.includes("Delete account"));
     const payButton = snapshot.candidates.find((candidate) => candidate.role === "button" && candidate.label === "Pay now");
 
     expect(status?.optionLabels).toContain("Payment Review");
     expect(status?.risk).toBe("low");
     expect(payment?.risk).toBe("low");
+    expect(deleteCheckbox?.risk).toBe("approval-required");
     expect(payButton?.risk).toBe("approval-required");
   }, 45_000);
 

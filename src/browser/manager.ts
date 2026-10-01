@@ -223,6 +223,7 @@ export class BrowserManager {
         return parts.join(" — ").slice(0, 240);
       };
       const supportedInputTypes = new Set(["text", "search", "email", "tel", "url", "number", "date", "datetime-local", "time", "month", "week", "range", "checkbox", "radio", "submit", "image", "button", "reset"]);
+      const formEntryInputTypes = new Set(["text", "search", "email", "tel", "url", "number", "date", "datetime-local", "time", "month", "week"]);
       const semanticRoles = "[role=button], [role=link], [role=tab], [role=checkbox], [role=radio], [role=switch], [role=slider], .ui-slider-handle[tabindex], [role=menuitem], [role=menuitemcheckbox], [role=menuitemradio], [role=option]";
       const semanticSelector = `button, a[href], input:not([type=password]):not([type=hidden]):not([type=file]), textarea, select, ${semanticRoles}`;
       const all = Array.from(document.querySelectorAll(semanticSelector));
@@ -298,7 +299,7 @@ export class BrowserManager {
         const riskyInput = tag === "input" && ["submit", "image", "reset"].includes(input.type);
         const riskyButton = tag === "button" && Boolean(button.form) && ["submit", "reset"].includes(button.type);
         const formEntryControl = tag === "select" || tag === "textarea"
-          || (tag === "input" && !["submit", "image", "reset", "button"].includes(input.type));
+          || (tag === "input" && formEntryInputTypes.has(input.type));
         const risky = customPointer || dragSource || dropTarget || riskyInput || riskyButton || (!formEntryControl && /\b(pay|payment|purchase|buy now|checkout|submit|send|publish|post|delete|remove|transfer|confirm order|place order|unsubscribe|share publicly)\b/i.test(riskLabel));
         const checked = ["checkbox", "radio"].includes(input.type) ? input.checked : ["checkbox", "radio", "switch", "menuitemcheckbox", "menuitemradio"].includes(role) && ["true", "false"].includes(element.getAttribute("aria-checked") ?? "") ? element.getAttribute("aria-checked") === "true" : undefined;
         const expanded = element.getAttribute("aria-expanded");
