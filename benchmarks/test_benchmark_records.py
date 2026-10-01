@@ -60,11 +60,11 @@ class RuntimeMetadataTests(unittest.TestCase):
 
 
 class BrowserActionCountTests(unittest.TestCase):
-    def test_blocked_loop_proposal_is_not_counted_as_an_executed_action(self):
+    def test_loop_detection_after_an_action_counts_but_a_blocked_action_does_not(self):
         trace = [
             {"status": "action-executed"},
-            {"status": "action-executed"},
             {"status": "action-loop-detected"},
+            {"status": "action-loop-blocked"},
         ]
 
         self.assertEqual(count_executed_actions(trace), 2)
@@ -76,6 +76,16 @@ class BrowserActionCountTests(unittest.TestCase):
         self.assertEqual(record["actions"], count_executed_actions(record["trace"]))
         self.assertEqual(record["loopDetected"], any(item["status"] == "action-loop-detected" for item in record["trace"]))
         self.assertEqual(record["success"], record["reward"] >= 1.0)
+
+
+class WebArenaReproductionDocsTests(unittest.TestCase):
+    def test_reproduction_matches_the_site_default_ports_and_image(self):
+        readme = (Path(__file__).parent / "README.md").read_text(encoding="utf-8")
+
+        self.assertIn("127.0.0.1:7780:80 -p 127.0.0.1:7781:8877", readme)
+        self.assertIn("--shopping-admin-url http://localhost:7780/admin", readme)
+        self.assertIn("am1n3e/webarena-verified-shopping_admin@sha256:d0531dd27ed98d0c459ff9e88118bf2ed8b660b0ed99c38837db46c065a5be13", readme)
+        self.assertIn("webarena-verified-shopping-admin-157-target-visible.json", readme)
 
 
 if __name__ == "__main__":

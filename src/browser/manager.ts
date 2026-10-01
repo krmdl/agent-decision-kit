@@ -326,7 +326,7 @@ export class BrowserManager {
           ...(privateValuePresent === undefined ? {} : { privateValuePresent }),
         };
       });
-      const heading = Array.from(document.querySelectorAll("h1,h2")).slice(0, 8).map((element) => redactEditableText(element.textContent ?? "")).filter(Boolean);
+      const heading = Array.from(document.querySelectorAll("h1,h2")).filter(visible).slice(0, 8).map((element) => redactEditableText(element.textContent ?? "")).filter(Boolean);
       const body = redactEditableText(document.body?.innerText ?? "").slice(0, 2_000);
       const privateFormState = Array.from(document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | HTMLElement>("input,textarea,select,[contenteditable]:not([contenteditable='false'])"))
         .map((element) => {
@@ -370,6 +370,10 @@ export class BrowserManager {
 
   async decideAndAct(task: string, provider: DecisionProvider) {
     const snapshot = await this.inspect();
+    const visibleCollectionHeading = findVisibleAllCollectionHeading(task, snapshot.headings);
+    if (visibleCollectionHeading) {
+      return { status: "navigation-target-visible", taskTargetVisible: visibleCollectionHeading, candidateCount: snapshot.candidates.length, note: "A visible page heading exactly matches the requested all/every collection. No additional navigation action is needed." };
+    }
     if (!snapshot.candidates.length) {
       return {
         status: "visual-only-page",
@@ -465,12 +469,13 @@ export class BrowserManager {
     }
     const beforeActionFingerprint = this.lastInspectionFingerprint;
     const effect = await this.perform(selected);
-    await this.inspect();
+    const afterActionSnapshot = await this.inspect();
     const visibleStateChanged = this.lastInspectionFingerprint !== beforeActionFingerprint;
+    const targetHeadingAfterAction = findVisibleAllCollectionHeading(task, afterActionSnapshot.headings);
     if (!visibleStateChanged) this.rememberNonProgressingAction(beforeActionFingerprint, selected);
     else this.nonProgressingActions.delete(nonProgressingActionKey(beforeActionFingerprint, selected));
-    const loopDetected = visibleStateChanged && this.recordAutomaticActionTransition(task, beforeActionFingerprint, this.lastInspectionFingerprint);
-    return { status: loopDetected ? "action-loop-detected" : "action-executed", action: selected, candidateCount: snapshot.candidates.length, provider: decision.provider, model: decision.model, decisionLatencyMs: Math.round(decision.latencyMs), confidence: decision.answers.action?.confidence, confidenceSource: decision.answers.action?.confidenceSource, calibration: decision.answers.action?.calibration, effect, visibleStateChanged, ...(loopDetected ? { loopDetected: true, note: "The action returned to a page state already observed for this task. Further automatic decisions on this task and state are blocked; inspect the page and choose a different control manually." } : {}) };
+    const loopDetected = !targetHeadingAfterAction && visibleStateChanged && this.recordAutomaticActionTransition(task, beforeActionFingerprint, this.lastInspectionFingerprint);
+    return { status: loopDetected ? "action-loop-detected" : "action-executed", action: selected, candidateCount: snapshot.candidates.length, provider: decision.provider, model: decision.model, decisionLatencyMs: Math.round(decision.latencyMs), confidence: decision.answers.action?.confidence, confidenceSource: decision.answers.action?.confidenceSource, calibration: decision.answers.action?.calibration, effect, visibleStateChanged, ...(targetHeadingAfterAction ? { taskTargetVisible: targetHeadingAfterAction, note: "The requested all/every collection is now visible under its matching page heading. No further navigation action is needed." } : loopDetected ? { loopDetected: true, note: "The action returned to a page state already observed for this task. Further automatic decisions on this task and state are blocked; inspect the page and choose a different control manually." } : {}) };
   }
 
   async confirm(token: string, approve: boolean) {
@@ -552,11 +557,12 @@ export class BrowserManager {
       : rangeValue !== undefined
         ? await this.setRange(candidate.ref, rangeValue)
         : await this.perform(candidate, clickTextControl);
-    await this.inspect();
+    const afterActionSnapshot = await this.inspect();
     const visibleStateChanged = this.lastInspectionFingerprint !== beforeActionFingerprint;
+    const targetHeadingAfterAction = findVisibleAllCollectionHeading(task, afterActionSnapshot.headings);
     if (!visibleStateChanged) this.rememberNonProgressingAction(beforeActionFingerprint, candidate);
     else this.nonProgressingActions.delete(nonProgressingActionKey(beforeActionFingerprint, candidate));
-    const loopDetected = visibleStateChanged && this.recordAutomaticActionTransition(task, beforeActionFingerprint, this.lastInspectionFingerprint);
+    const loopDetected = !targetHeadingAfterAction && visibleStateChanged && this.recordAutomaticActionTransition(task, beforeActionFingerprint, this.lastInspectionFingerprint);
     if (["single-collapsed-control", "unique-expand-control"].includes(rule)) {
       this.completedDisclosureIntent = { task: normalizeLabel(task), url: pageIdentity(this.requirePage().url()), createdAt: Date.now() };
     }
@@ -568,7 +574,7 @@ export class BrowserManager {
       if (!visitedCandidateKeys.includes(key)) visitedCandidateKeys.push(key);
       this.disclosureSearchIntent = { task: normalizeLabel(task), url, createdAt: Date.now(), visitedCandidateKeys };
     }
-    return { status: loopDetected ? "action-loop-detected" : "action-executed", action: candidate, ...metadata, effect, note: loopDetected ? "The action returned to a page state already observed for this task. Further automatic decisions on this task and state are blocked; inspect the page and choose a different control manually." : note, visibleStateChanged, ...(loopDetected ? { loopDetected: true } : {}) };
+    return { status: loopDetected ? "action-loop-detected" : "action-executed", action: candidate, ...metadata, effect, note: targetHeadingAfterAction ? "The requested all/every collection is now visible under its matching page heading. No further navigation action is needed." : loopDetected ? "The action returned to a page state already observed for this task. Further automatic decisions on this task and state are blocked; inspect the page and choose a different control manually." : note, visibleStateChanged, ...(targetHeadingAfterAction ? { taskTargetVisible: targetHeadingAfterAction } : loopDetected ? { loopDetected: true } : {}) };
   }
 
   private automaticActionTrajectoryKey(task: string) {
@@ -1201,6 +1207,18 @@ function findUniqueMentionedNavigationLabel(task: string, candidates: BrowserCan
     rule: "unique-mentioned-navigation-label",
     note: "The navigation request names one unique visible interactive label. Only that exact label is selected; consequential actions still require the normal separate approval.",
   };
+}
+
+function findVisibleAllCollectionHeading(task: string, headings: string[]) {
+  if (!/\b(?:go|navigate|view|show|open|visit|browse|display)\b/i.test(task)) return undefined;
+  const target = normalizeLabel(task).match(/\b(?:all|every)\s+(.+?)(?:\s+(?:in|on|from|for|at|with)\b|$)/u);
+  if (!target) return undefined;
+  const ignored = new Set(["all", "every", "the", "details", "detail", "information", "data", "list", "page", "screen", "section"]);
+  const targetWords = target[1]!.split(/\s+/u).filter((word) => word && !ignored.has(word));
+  if (!targetWords.length) return undefined;
+  const expectedHeading = targetWords.join(" ");
+  const matches = [...new Set(headings.filter((heading) => normalizeLabel(heading) === expectedHeading))];
+  return matches.length === 1 ? matches[0] : undefined;
 }
 
 function findExplicitRangePlan(task: string, candidates: BrowserCandidate[], rangeValues: Map<string, number>) {

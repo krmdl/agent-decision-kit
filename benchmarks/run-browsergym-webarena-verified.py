@@ -80,6 +80,27 @@ def free_port():
         return sock.getsockname()[1]
 
 
+def print_debug_snapshot(phase, step, snapshot):
+    url = urllib.parse.urlsplit(snapshot.get("url", ""))
+    candidates = []
+    for item in snapshot.get("candidates", [])[:40]:
+        label = str(item.get("label", ""))
+        candidates.append({
+            "role": item.get("role"),
+            "label": label[:100],
+            "kind": item.get("kind"),
+            "risk": item.get("risk"),
+        })
+    print(json.dumps({
+        "debugSnapshot": phase,
+        "step": step,
+        "title": snapshot.get("title"),
+        "path": url.path,
+        "headings": snapshot.get("headings", []),
+        "candidates": candidates,
+    }, ensure_ascii=False), file=sys.stderr)
+
+
 def task_record(task_id):
     records = json.loads(
         importlib.resources.files("webarena_verified")
@@ -103,7 +124,7 @@ def main():
     parser.add_argument("--shopping-admin-url", required=True, help="WebArena Verified shopping_admin URL")
     parser.add_argument("--seed", type=int, default=7)
     parser.add_argument("--max-actions", type=int, default=12)
-    parser.add_argument("--debug-candidates", action="store_true", help="Print candidate labels to stderr when the decision is unresolved")
+    parser.add_argument("--debug-candidates", action="store_true", help="Print bounded visible candidates before and after every action to stderr")
     parser.add_argument("--output", type=Path, help="Optional JSON path for the sanitized episode record")
     args = parser.parse_args()
     if not 1 <= args.max_actions <= 20:
@@ -166,22 +187,28 @@ def main():
         if not connect.get("connected"):
             raise RuntimeError(f"Could not attach to BrowserGym page: {connect}")
 
-        initial_url = urllib.parse.urlsplit(env.unwrapped.page.url)
+        initial_page = connect.get("page") or {}
+        initial_url = urllib.parse.urlsplit(initial_page.get("url", ""))
         initial_location = (initial_url.path, initial_url.query)
-        initial_title = env.unwrapped.page.title()
+        initial_title = initial_page.get("title", "")
+        browsergym_initial_url = urllib.parse.urlsplit(env.unwrapped.page.url)
+        if browsergym_initial_url.path != initial_url.path:
+            raise RuntimeError("The selected browser tab does not match BrowserGym's task page")
 
         for step in range(1, args.max_actions + 1):
+            if args.debug_candidates:
+                print_debug_snapshot("before", step, bridge.call("inspect"))
             decision_started = time.perf_counter()
             result = bridge.call("decide-and-act", task=task)
             elapsed_ms = round((time.perf_counter() - decision_started) * 1000)
             bridge_ms.append(elapsed_ms)
-            if args.debug_candidates and result.get("status") != "action-executed":
+            if args.debug_candidates:
+                print_debug_snapshot("after", step, bridge.call("inspect"))
+                browsergym_url = urllib.parse.urlsplit(env.unwrapped.page.url)
                 print(json.dumps({
-                    "status": result.get("status"),
-                    "candidates": [
-                        {key: item.get(key) for key in ("role", "label", "kind", "risk")}
-                        for item in result.get("candidates", [])
-                    ],
+                    "debugBrowserGymPage": step,
+                    "title": env.unwrapped.page.title(),
+                    "path": browsergym_url.path,
                 }, ensure_ascii=False), file=sys.stderr)
             action = result.get("action") or result.get("proposedAction") or {}
             trace.append({
@@ -196,12 +223,13 @@ def main():
                 "elapsedMs": elapsed_ms,
                 "confidenceSource": result.get("confidenceSource"),
                 "calibration": result.get("calibration"),
+                "taskTargetVisible": result.get("taskTargetVisible"),
             })
-            if result.get("status") != "action-executed":
+            if result.get("status") != "action-executed" or result.get("taskTargetVisible"):
                 break
 
-        active_page = env.unwrapped.page
-        final_url = urllib.parse.urlsplit(active_page.url)
+        final_page = bridge.call("inspect")
+        final_url = urllib.parse.urlsplit(final_page.get("url", ""))
         # The navigation response is evaluated independently by BrowserGym. No
         # dataset answer, expected URL, or evaluator configuration is read here.
         navigated = (final_url.path, final_url.query) != initial_location
@@ -247,7 +275,7 @@ def main():
             "loopDetected": any(entry["status"] == "action-loop-detected" for entry in trace),
             "trace": trace,
             "initialPage": {"title": initial_title, "path": initial_location[0]},
-            "finalPage": {"title": active_page.title(), "path": final_url.path},
+            "finalPage": {"title": final_page.get("title", ""), "path": final_url.path},
             "resetLatencyMs": reset_ms,
             "decisionCallLatenciesMs": bridge_ms,
             "latencyMs": round((time.perf_counter() - started) * 1000),

@@ -15,8 +15,8 @@ _UNIX_USER_PATH = re.compile(r"(?i)(?:/Users|/home)/[^/\s\"'<>]+(?:/[^\s\"'<>]*)
 
 
 def count_executed_actions(trace):
-    """Count completed browser actions, excluding proposals blocked before execution."""
-    return sum(1 for entry in trace if entry.get("status") == "action-executed")
+    """Count browser actions that ran, including one whose result detected a loop."""
+    return sum(1 for entry in trace if entry.get("status") in {"action-executed", "action-loop-detected"})
 
 
 def collect_runtime_metadata(root, *, browser_info=None, playwright_node_version=None, node_version=None, browsergym_package_commit=None):

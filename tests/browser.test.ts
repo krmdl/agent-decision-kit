@@ -29,6 +29,8 @@ describe("Playwright browser safety flow", () => {
   let copyFieldsHtml: Buffer;
   let ambiguousLabelsHtml: Buffer;
   let navigationLabelHtml: Buffer;
+  let navigationTargetHtml: Buffer;
+  let navigationHiddenTargetHtml: Buffer;
   let duplicateNavigationLabelsHtml: Buffer;
   let editableContentHtml: Buffer;
   let silentFormHtml: Buffer;
@@ -64,7 +66,9 @@ describe("Playwright browser safety flow", () => {
     multipleSelectHtml = Buffer.from('<!doctype html><label for="tags">Tags</label><select id="tags" multiple><option value="alpha" selected>Alpha</option><option value="beta">Beta</option><option value="gamma">Gamma</option></select><p id="status">Not submitted</p>');
     mixedPointerHtml = Buffer.from('<!doctype html><style>.faux-link { cursor: pointer }</style><button>Section</button><span id="target" class="faux-link">Ultrices</span><p id="status">Not clicked</p><script>document.querySelector("#target").addEventListener("click",()=>document.querySelector("#status").textContent="Clicked locally")</script>');
     ambiguousLabelsHtml = Buffer.from('<!doctype html><button type="button">Continue</button><a href="#next">Continue</a><p id="status">No action</p>');
-    navigationLabelHtml = Buffer.from('<!doctype html><a href="#customers" onclick="document.querySelector(\'#status\').textContent=\'Customers opened\'">Customers</a><p id="status">Dashboard</p>');
+    navigationLabelHtml = Buffer.from('<!doctype html><h1 id="heading">Dashboard</h1><a href="#customers" onclick="document.querySelector(\'#heading\').textContent=\'Customers\';document.querySelector(\'#status\').textContent=\'Customers opened\'">Customers</a><p id="status">Dashboard</p>');
+    navigationTargetHtml = Buffer.from('<!doctype html><h1>Customers</h1><a href="#customers">Customers</a>');
+    navigationHiddenTargetHtml = Buffer.from('<!doctype html><h1 style="display:none">Customers</h1><h1>Dashboard</h1><a href="#customers">Customers</a>');
     duplicateNavigationLabelsHtml = Buffer.from('<!doctype html><a href="#customers-one" onclick="document.querySelector(\'#status\').textContent=\'First customers opened\'">Customers</a><a href="#customers-two" onclick="document.querySelector(\'#status\').textContent=\'Second customers opened\'">Customers</a><p id="status">Dashboard</p>');
     checkboxHtml = Buffer.from('<!doctype html><label><input type="checkbox" name="updates"> Receive product updates</label>');
     submitHtml = Buffer.from('<!doctype html><form onsubmit="event.preventDefault(); document.querySelector(\'#status\').textContent = \'Submitted locally\'"><input type="submit" value="Send test"></form><p id="status">Not sent</p>');
@@ -99,7 +103,7 @@ describe("Playwright browser safety flow", () => {
         response.end(dragAndDropHtml);
         return;
       }
-      response.end(request.url === "/visual-only" ? visualHtml : request.url === "/pointer-text" ? pointerTextHtml : request.url === "/icon-pointer" ? iconPointerHtml : request.url === "/silent-pointer" ? silentPointerHtml : request.url === "/silent-input" ? silentInputHtml : request.url === "/mixed-pointer" ? mixedPointerHtml : request.url === "/checkbox" ? checkboxHtml : request.url === "/submit" ? submitHtml : request.url === "/checkbox-task" ? checkboxTaskHtml : request.url === "/tabs" ? tabHtml : request.url === "/expand" ? expandHtml : request.url === "/native-fields" ? nativeFieldsHtml : request.url === "/copy-fields" ? copyFieldsHtml : request.url === "/slider" ? sliderHtml : request.url === "/aria-slider" ? ariaSliderHtml : request.url === "/jquery-ui-slider" ? jqueryUiSliderHtml : request.url === "/autocomplete" ? autocompleteHtml : request.url === "/multi-select" ? multipleSelectHtml : request.url === "/ambiguous-labels" ? ambiguousLabelsHtml : request.url === "/navigation-label" ? navigationLabelHtml : request.url === "/duplicate-navigation-labels" ? duplicateNavigationLabelsHtml : request.url === "/editable" ? editableContentHtml : request.url === "/silent-form" ? silentFormHtml : request.url === "/decision-race" ? decisionRaceHtml : request.url === "/replacement-action" ? replacementActionHtml : request.url === "/dynamic-refs" ? dynamicRefsHtml : request.url === "/menu" ? menuHtml : request.url === "/ordinal-fields" ? ordinalFieldsHtml : request.url === "/textareas" ? textareaWidgetsHtml : request.url === "/ordinal-button" ? ordinalButtonHtml : request.url === "/multi-disclosure" ? multiDisclosureHtml : html);
+      response.end(request.url === "/visual-only" ? visualHtml : request.url === "/pointer-text" ? pointerTextHtml : request.url === "/icon-pointer" ? iconPointerHtml : request.url === "/silent-pointer" ? silentPointerHtml : request.url === "/silent-input" ? silentInputHtml : request.url === "/mixed-pointer" ? mixedPointerHtml : request.url === "/checkbox" ? checkboxHtml : request.url === "/submit" ? submitHtml : request.url === "/checkbox-task" ? checkboxTaskHtml : request.url === "/tabs" ? tabHtml : request.url === "/expand" ? expandHtml : request.url === "/native-fields" ? nativeFieldsHtml : request.url === "/copy-fields" ? copyFieldsHtml : request.url === "/slider" ? sliderHtml : request.url === "/aria-slider" ? ariaSliderHtml : request.url === "/jquery-ui-slider" ? jqueryUiSliderHtml : request.url === "/autocomplete" ? autocompleteHtml : request.url === "/multi-select" ? multipleSelectHtml : request.url === "/ambiguous-labels" ? ambiguousLabelsHtml : request.url === "/navigation-label" ? navigationLabelHtml : request.url === "/navigation-target" ? navigationTargetHtml : request.url === "/navigation-hidden-target" ? navigationHiddenTargetHtml : request.url === "/duplicate-navigation-labels" ? duplicateNavigationLabelsHtml : request.url === "/editable" ? editableContentHtml : request.url === "/silent-form" ? silentFormHtml : request.url === "/decision-race" ? decisionRaceHtml : request.url === "/replacement-action" ? replacementActionHtml : request.url === "/dynamic-refs" ? dynamicRefsHtml : request.url === "/menu" ? menuHtml : request.url === "/ordinal-fields" ? ordinalFieldsHtml : request.url === "/textareas" ? textareaWidgetsHtml : request.url === "/ordinal-button" ? ordinalButtonHtml : request.url === "/multi-disclosure" ? multiDisclosureHtml : html);
     });
     await new Promise<void>((resolve, reject) => {
       server.once("error", reject);
@@ -748,8 +752,41 @@ describe("Playwright browser safety flow", () => {
     };
 
     const result = await browser.decideAndAct("View the details of all customers", provider);
-    expect(result).toMatchObject({ status: "action-executed", selectionRule: "unique-mentioned-navigation-label", action: { label: "Customers" } });
+    expect(result).toMatchObject({ status: "action-executed", selectionRule: "unique-mentioned-navigation-label", action: { label: "Customers" }, taskTargetVisible: "Customers" });
     expect(result.effect.textDelta.excerpt).toContain("Customers opened");
+  }, 45_000);
+
+  it("stops when the visible heading already names the requested all-items page", async () => {
+    profile = await mkdtemp(path.join(os.tmpdir(), "adk-browser-navigation-target-visible-test-"));
+    browser = new BrowserManager({ headless: true, profileDir: path.join(profile, "chromium") });
+    await browser.launch(`${baseUrl}navigation-target`);
+    const provider: DecisionProvider = {
+      id: "remote-test-provider",
+      model: "unused-test-provider",
+      decide: async () => { throw new Error("A visible requested collection heading should stop navigation locally"); },
+    };
+
+    const result = await browser.decideAndAct("View the details of all customers", provider);
+
+    expect(result).toMatchObject({ status: "navigation-target-visible", taskTargetVisible: "Customers" });
+    expect((await browser.inspect()).url).not.toContain("#customers");
+  }, 45_000);
+
+  it("does not treat a hidden collection heading as the visible destination", async () => {
+    profile = await mkdtemp(path.join(os.tmpdir(), "adk-browser-hidden-navigation-target-test-"));
+    browser = new BrowserManager({ headless: true, profileDir: path.join(profile, "chromium") });
+    await browser.launch(`${baseUrl}navigation-hidden-target`);
+    const provider: DecisionProvider = {
+      id: "remote-test-provider",
+      model: "unused-test-provider",
+      decide: async () => { throw new Error("A hidden heading must not count as the requested destination"); },
+    };
+
+    const result = await browser.decideAndAct("View the details of all customers", provider);
+
+    expect(result).toMatchObject({ status: "action-executed", selectionRule: "unique-mentioned-navigation-label", action: { label: "Customers" } });
+    expect(result).not.toHaveProperty("taskTargetVisible");
+    expect((await browser.inspect()).headings).toEqual(["Dashboard"]);
   }, 45_000);
 
   it("keeps duplicate navigation labels ambiguous", async () => {
