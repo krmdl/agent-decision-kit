@@ -191,7 +191,7 @@ describe("Playwright browser safety flow", () => {
     await browser?.close();
     await debugContext?.close();
     debugContext = undefined;
-    if (profile) await rm(profile, { recursive: true, force: true });
+    if (profile) await rm(profile, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
     vi.restoreAllMocks();
   });
 
@@ -657,6 +657,37 @@ describe("Playwright browser safety flow", () => {
     expect(country?.label).not.toContain("Unavailable");
     expect(date?.label).toContain("Date");
     expect(JSON.stringify(snapshot)).not.toContain('value="cn"');
+  }, 45_000);
+
+  it("keeps a status filter low-risk when one option mentions payment", async () => {
+    profile = await mkdtemp(path.join(os.tmpdir(), "adk-browser-filter-option-risk-test-"));
+    browser = new BrowserManager({ headless: true, profileDir: path.join(profile, "chromium") });
+    await browser.launch(`${baseUrl}native-fields`);
+    const page = (browser as unknown as { page: Page }).page;
+    await page.setContent(`
+      <label for="order-status">Status</label>
+      <select id="order-status" name="status">
+        <option value="">Any</option>
+        <option value="suspected_fraud">Suspected Fraud</option>
+        <option value="payment_review">Payment Review</option>
+      </select>
+      <label for="payment-method">Payment method</label>
+      <select id="payment-method" name="payment_method">
+        <option value="card">Card</option>
+        <option value="cash">Cash</option>
+      </select>
+      <button type="button">Pay now</button>
+    `);
+
+    const snapshot = await browser.inspect();
+    const status = snapshot.candidates.find((candidate) => candidate.kind === "select-one" && candidate.label.includes("Status"));
+    const payment = snapshot.candidates.find((candidate) => candidate.kind === "select-one" && candidate.label.includes("Payment method"));
+    const payButton = snapshot.candidates.find((candidate) => candidate.role === "button" && candidate.label === "Pay now");
+
+    expect(status?.optionLabels).toContain("Payment Review");
+    expect(status?.risk).toBe("low");
+    expect(payment?.risk).toBe("low");
+    expect(payButton?.risk).toBe("approval-required");
   }, 45_000);
 
   it("selects an exact requested native option before proposing the approval-gated submit", async () => {

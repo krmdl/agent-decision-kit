@@ -190,6 +190,7 @@ export class BrowserManager {
         }
         return "";
       };
+      const riskLabels = new WeakMap<Element, string>();
       const labelFor = (element: Element) => {
         const input = element as HTMLInputElement;
         const labelledBy = (element.getAttribute("aria-labelledby") ?? "").split(/\s+/).filter(Boolean).map((id) => redactEditableText(document.getElementById(id)?.textContent ?? "")).filter(Boolean).join(" ");
@@ -215,6 +216,7 @@ export class BrowserManager {
         const textLabels = [aria, id, wrappingLabel, precedingLabel, imageAlt, text, placeholder, name, toggleState, disclosureState].filter(Boolean);
         const icon = textLabels.length ? "" : iconLabelFor(element);
         const parts = [...new Set([...textLabels, icon].filter(Boolean))];
+        riskLabels.set(element, parts.join(" — "));
         const currentOption = isSelect ? (element as HTMLSelectElement).selectedOptions[0]?.label.trim() : "";
         if (currentOption) parts.push(`Currently selected: ${currentOption}`);
         if (options.length) parts.push(`Options: ${options.join(", ")}`);
@@ -291,10 +293,13 @@ export class BrowserManager {
         const isAriaSlider = role === "slider" && !isKeyboardWidgetSlider && !isNativeRange;
         const kind = customPointer ? "custom-pointer" : dragSource && !semanticSet.has(element) ? "drag-source" : dropTarget && !semanticSet.has(element) ? "drop-target" : isNativeRange || isAriaSlider || isKeyboardWidgetSlider ? "range" : tag === "input" ? (input.type || "text") : tag === "select" ? ((element as HTMLSelectElement).multiple ? "select-multiple" : "select-one") : tag;
         const label = labelFor(element) || `${role} ${index + 1}`;
+        const riskLabel = riskLabels.get(element) ?? label;
         const button = element as HTMLButtonElement;
         const riskyInput = tag === "input" && ["submit", "image", "reset"].includes(input.type);
         const riskyButton = tag === "button" && Boolean(button.form) && ["submit", "reset"].includes(button.type);
-        const risky = customPointer || dragSource || dropTarget || riskyInput || riskyButton || /\b(pay|payment|purchase|buy now|checkout|submit|send|publish|post|delete|remove|transfer|confirm order|place order|unsubscribe|share publicly)\b/i.test(label);
+        const formEntryControl = tag === "select" || tag === "textarea"
+          || (tag === "input" && !["submit", "image", "reset", "button"].includes(input.type));
+        const risky = customPointer || dragSource || dropTarget || riskyInput || riskyButton || (!formEntryControl && /\b(pay|payment|purchase|buy now|checkout|submit|send|publish|post|delete|remove|transfer|confirm order|place order|unsubscribe|share publicly)\b/i.test(riskLabel));
         const checked = ["checkbox", "radio"].includes(input.type) ? input.checked : ["checkbox", "radio", "switch", "menuitemcheckbox", "menuitemradio"].includes(role) && ["true", "false"].includes(element.getAttribute("aria-checked") ?? "") ? element.getAttribute("aria-checked") === "true" : undefined;
         const expanded = element.getAttribute("aria-expanded");
         const selected = element.getAttribute("aria-selected");

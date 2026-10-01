@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Classify browser form controls using their accessible control labels, so sensitive words in a select option do not block safe filtering while consequential actions remain approval-gated.
 - Recheck up to eight repeated digit glyphs with local single-character OCR and record the five-seed visual-only MiniWoB retry run.
 - Stop after a visible page heading exactly matches a requested all/every collection; return the matched destination and avoid reopening its navigation menu.
 - Add opt-in provider ranking to `context_prune` and `context-prune`; keep the local heuristic as the default and return selected source chunks verbatim.
