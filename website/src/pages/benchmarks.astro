@@ -1,7 +1,7 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 import { siteBase } from "../utils/site.js";
-import latestRun from "../../../benchmarks/results/miniwob-expanded-multi-tool-78e53ae.json";
+import latestRun from "../../../benchmarks/results/miniwob-expanded-multi-tool-8ffc709.json";
 import focusedRun from "../../../benchmarks/results/miniwob-targeted-browser-fixes-8490bd7.json";
 import cpuDecisionRun from "../../../benchmarks/results/decision-cases-independent-ryzen5600h-cpu-smoke.json";
 import dmlDecisionRun from "../../../benchmarks/results/decision-cases-independent-ryzen5600h-dml-smoke.json";
@@ -12,7 +12,7 @@ const failureCount = episodeCount - successCount;
 const successPercent = Math.round(latestRun.taskSuccessRate * 100);
 const environment = latestRun.rawRecords[0];
 const commitUrl = `https://github.com/krmdl/agent-decision-kit/commit/${latestRun.suite.agentDecisionKitCommit}`;
-const rawRunUrl = "https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/miniwob-expanded-multi-tool-78e53ae.json";
+const rawRunUrl = "https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/miniwob-expanded-multi-tool-8ffc709.json";
 const decisionRows = [
   { device: "CPU", report: cpuDecisionRun },
   { device: "DirectML requested", report: dmlDecisionRun },
@@ -49,7 +49,7 @@ const decisionRows = [
       <div class="section-heading">
         <p class="eyebrow">LATEST MULTI-TOOL INTEGRATION</p>
         <h2 id="latest-title">{successCount} of {episodeCount} tasks succeeded.</h2>
-        <p>The bounded harness extracted explicit targets from synthetic task instructions, used <code>browser_copy_field</code> and <code>browser_set_checkboxes</code> for local form workflows, and exercised <code>browser_set_range</code> on keyboard-operated sliders. Each Submit action still received a separate local-only synthetic approval. Pointer-wrapper deduplication fixed a menu regression while the exact-sender email task remained successful. This measures tool integration, not an autonomous coding-agent score. The visual fallback described two pages without acting; three task goals remained unmet.</p>
+        <p>The bounded harness extracted explicit targets from synthetic task instructions, used <code>browser_copy_field</code> and <code>browser_set_checkboxes</code> for local form workflows, and exercised <code>browser_set_range</code> on keyboard-operated sliders. Each Submit action still received a separate local-only synthetic approval. This rerun on commit {latestRun.suite.agentDecisionKitCommit.slice(0, 7)} reproduced 23/26 successes; the same three task goals remain unmet. The two visual-only pages received local image descriptions but no browser action. This measures tool integration, not an autonomous coding-agent score.</p>
         <p class="comparison-note">Task success requires a raw MiniWoB reward of at least 1.0; positive partial rewards count as failures. This avoids BrowserGym 0.14.3's partial-reward-to-success conversion documented in <a href="https://github.com/ServiceNow/BrowserGym/issues/392">upstream issue 392</a>.</p>
       </div>
 
@@ -81,15 +81,16 @@ const decisionRows = [
           <div><dt>Agent Decision Kit</dt><dd><a href={commitUrl}>{latestRun.suite.agentDecisionKitCommit.slice(0, 7)}</a></dd></div>
           <div><dt>Benchmark</dt><dd>BrowserGym MiniWoB 0.14.3</dd></div>
           <div><dt>Browser and runtimes</dt><dd>{environment.browserVersion} · Node {environment.nodeVersion} · Python {environment.pythonVersion} · Playwright Python {environment.playwrightPythonVersion} / Node {environment.playwrightNodeVersion}</dd></div>
-          <div><dt>Machine</dt><dd>{environment.operatingSystem} · CPU</dd></div>
+          <div><dt>Machine</dt><dd>{environment.operatingSystem} · {environment.cpuModel}</dd></div>
+          <div><dt>Runner image</dt><dd>{environment.containerImage} · {environment.containerImageId.slice(0, 19)}</dd></div>
           <div><dt>Task set</dt><dd>26 curated MiniWoB tasks · seed 7 · eight actions per task</dd></div>
-          <div><dt>Model path</dt><dd>Local semantic model and CPU visual fallback; no remote decision provider</dd></div>
+          <div><dt>Model path</dt><dd>Local semantic model and CPU visual descriptions; no remote decision provider</dd></div>
         </dl>
       </div>
       <aside>
         <b>How to read the latency</b>
-        <p>Every task starts a fresh Node bridge. Four measured decision calls had p50 239 ms / p95 692 ms; this run does not establish warm throughput or the consumer-GPU target.</p>
-        <p>Two visual-only pages used local image description on CPU and took tens of seconds. The tool reports this fallback as slower.</p>
+        <p>Every task starts a fresh Node bridge. Four timed decision calls had p50 {latestRun.decisionCallLatencyMs.p50} ms / p95 {latestRun.decisionCallLatencyMs.p95} ms. This run does not establish warm throughput or the consumer-GPU target.</p>
+        <p>Two visual-only pages used local image description on CPU and took 25.8 s and 31.5 s; neither received a browser action. The text and OCR action tools were not exercised in this run.</p>
         <a class="text-link" href={rawRunUrl}>Inspect the summary and all raw episodes ↗</a>
       </aside>
     </section>
