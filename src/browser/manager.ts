@@ -16,11 +16,12 @@ type VisualMatchSource = "automatic" | "sparse-text-pass" | "sparse-text-fallbac
 type VisualSnapshotSource = "ocr" | "local-vision";
 type VisualSnapshot = { url: string; fingerprint: string; privateStateFingerprint: string; lines: OcrLine[]; matchSource: VisualMatchSource; source: VisualSnapshotSource; viewport: ViewportMetrics; screenshotPixels: ScreenshotPixels; createdAt: number };
 type DisclosureSearchIntent = { task: string; url: string; createdAt: number; visitedCandidateKeys: string[] };
+type HierarchicalMenuIntent = { task: string; url: string; path: string[]; nextIndex: number; createdAt: number };
 type AutomaticActionTrajectory = { fingerprints: Set<string>; blockedFingerprint?: string };
 type DeterministicBrowserMatch = { candidate: BrowserCandidate; rule: string; note: string; optionLabel?: string; rangeValue?: number };
 type InspectedBrowserCandidate = BrowserCandidate & { privateRangeValue?: number; privateValuePresent?: boolean };
 type PendingBrowserApproval =
-  | { kind: "dom"; ref: string; createdAt: number; url: string; fingerprint: string }
+  | { kind: "dom"; ref: string; createdAt: number; url: string; fingerprint: string; menuPath?: HierarchicalMenuIntent }
   | { kind: "drag"; sourceRef: string; targetRef: string; createdAt: number; url: string; fingerprint: string }
   | { kind: "visual"; text: string; box: OcrBox; confidence: number; matchSource: VisualMatchSource; createdAt: number; url: string; fingerprint: string; privateStateFingerprint: string; viewport: ViewportMetrics; screenshotPixels: ScreenshotPixels }
   | { kind: "visual-click"; point: { x: number; y: number }; source: VisualSnapshotSource; createdAt: number; url: string; fingerprint: string; privateStateFingerprint: string; viewport: ViewportMetrics; screenshotPixels: ScreenshotPixels }
@@ -45,6 +46,7 @@ export class BrowserManager {
   private lastInspectionFingerprint = "";
   private completedDisclosureIntent: { task: string; url: string; createdAt: number } | undefined;
   private disclosureSearchIntent: DisclosureSearchIntent | undefined;
+  private hierarchicalMenuIntent: HierarchicalMenuIntent | undefined;
   private lastVisualSnapshot: VisualSnapshot | undefined;
   private readonly headless: boolean;
   private readonly profileDir: string;
@@ -413,13 +415,58 @@ export class BrowserManager {
     if (this.automaticActionLoopBlocked(task)) {
       return { status: "action-loop-blocked", candidateCount: snapshot.candidates.length, note: "This task returned to a page state already reached by its automatic actions. No further automatic action will be repeated; inspect the page and choose a different control manually." };
     }
-    let localMatch: ReturnType<typeof findDeterministicMatch>;
+    const requestedMenuPath = parseHierarchicalMenuPath(task);
+    let menuPathMatch: DeterministicBrowserMatch | undefined;
+    if (requestedMenuPath) {
+      const taskKey = normalizeLabel(task);
+      const pageUrl = pageIdentity(this.requirePage().url());
+      const prior = this.hierarchicalMenuIntent;
+      const active = prior
+        && prior.task === taskKey
+        && prior.url === pageUrl
+        && prior.path.map(normalizeLabel).join(" > ") === requestedMenuPath.map(normalizeLabel).join(" > ")
+        && Date.now() - prior.createdAt <= 5 * 60_000;
+      const intent = active ? prior : { task: taskKey, url: pageUrl, path: requestedMenuPath, nextIndex: 0, createdAt: Date.now() };
+      this.hierarchicalMenuIntent = intent;
+      const segment = intent.path[intent.nextIndex];
+      if (!segment) {
+        return { status: "menu-path-complete", candidateCount: snapshot.candidates.length, note: "Every explicitly named menu step has already been selected. Inspect the current page to continue." };
+      }
+      const target = normalizeLabel(segment);
+      const matches = snapshot.candidates.filter((candidate) => candidate.role === "menuitem" && labelParts(candidate).includes(target));
+      if (matches.length !== 1) {
+        this.hierarchicalMenuIntent = undefined;
+        return {
+          status: matches.length ? "ambiguous-menu-path-step" : "menu-path-step-not-visible",
+          candidateCount: snapshot.candidates.length,
+          candidates: snapshot.candidates,
+          note: matches.length
+            ? `The current explicit menu path step “${segment}” matches multiple visible menu items. No action was taken.`
+            : `The current explicit menu path step “${segment}” is not uniquely visible. No action was guessed; inspect the page and request the visible menu item.`
+        };
+      }
+      const isFinalMenuPathStep = intent.nextIndex === intent.path.length - 1;
+      menuPathMatch = {
+        candidate: matches[0]!,
+        rule: "explicit-hierarchical-menu-path",
+        note: isFinalMenuPathStep
+          ? `The task gives an explicit ${intent.path.length}-item menu path. Its final uniquely visible item, “${segment}”, is selected.`
+          : `The task gives an explicit ${intent.path.length}-item menu path. The next uniquely visible parent, “${segment}”, is hovered to reveal the following submenu item; nothing is selected yet.`
+      };
+      this.disclosureSearchIntent = undefined;
+      this.completedDisclosureIntent = undefined;
+    } else if (this.hierarchicalMenuIntent) {
+      this.hierarchicalMenuIntent = undefined;
+    }
+    let localMatch: ReturnType<typeof findDeterministicMatch> = menuPathMatch;
     const searchIntent = this.disclosureSearchIntent;
-    const searchIsActive = searchIntent
+    const searchIsActive = !menuPathMatch && searchIntent
       && searchIntent.url === pageIdentity(this.requirePage().url())
       && searchIntent.task === normalizeLabel(task)
       && Date.now() - searchIntent.createdAt <= 5 * 60_000;
-    if (searchIsActive) {
+    if (menuPathMatch) {
+      // The explicit menu path has already resolved the next visible item.
+    } else if (searchIsActive) {
       const exactTarget = findUniqueQuotedLabel(task, snapshot.candidates);
       if (exactTarget) {
         localMatch = { candidate: exactTarget, rule: "unique-exact-quoted-label", note: "The exact quoted target is now visible in the disclosure search. Its unique visible label is selected locally." };
@@ -445,7 +492,7 @@ export class BrowserManager {
       const submit = findUniqueSubmitCandidate(snapshot.candidates);
       if (submit) localMatch = { candidate: submit, rule: "expanded-section-then-submit", note: "The previous call expanded the requested section. This explicit next step still requires separate approval before submission." };
     }
-    if (!searchIsActive) {
+    if (!searchIsActive && !menuPathMatch) {
       const rangePlan = findExplicitRangePlan(task, snapshot.candidates, this.privateRangeValues);
       if (rangePlan?.error) return { status: "no-safe-selection", candidateCount: snapshot.candidates.length, candidates: snapshot.candidates, note: rangePlan.error };
       if (rangePlan?.allSet && !/\b(?:submit|send|publish|post)\b/i.test(task)) return { status: "target-values-already-set", candidateCount: snapshot.candidates.length, note: "Every explicitly named visible slider already has its requested value. No control was changed." };
@@ -526,14 +573,17 @@ export class BrowserManager {
     const pending = this.pending.get(token);
     this.pending.delete(token);
     if (!pending || Date.now() - pending.createdAt > 5 * 60_000) throw new Error("Approval token is invalid or expired. Inspect the page and request the action again.");
-    if (!approve) return {
+    if (!approve) {
+      if (pending.kind === "dom" && pending.menuPath) this.clearHierarchicalMenuIntent(pending.menuPath);
+      return {
       status: "cancelled",
       ...(pending.kind === "dom" ? { actionRef: pending.ref }
         : pending.kind === "drag" ? { sourceRef: pending.sourceRef, targetRef: pending.targetRef }
           : pending.kind === "visual" ? { proposedText: pending.text }
             : pending.kind === "visual-click" ? { proposedPointCss: pending.point }
               : pending.kind === "visual-drag" ? { proposedDragCss: { start: pending.start, end: pending.end } } : {}),
-    };
+      };
+    }
     if (pending.kind === "visual" || pending.kind === "visual-click" || pending.kind === "visual-drag") {
       const page = this.requirePage();
       const capture = await this.captureMaskedViewport();
@@ -583,12 +633,18 @@ export class BrowserManager {
     }
     const snapshot = await this.inspect();
     const candidate = this.candidates.get(pending.ref);
-    if (!candidate || snapshot.url !== pending.url || this.lastInspectionFingerprint !== pending.fingerprint) throw new Error("The page changed after the action was proposed. The approval was cancelled; inspect it and request the action again.");
-    const effect = await this.perform(candidate);
+    if (!candidate || snapshot.url !== pending.url || this.lastInspectionFingerprint !== pending.fingerprint) {
+      if (pending.menuPath) this.clearHierarchicalMenuIntent(pending.menuPath);
+      throw new Error("The page changed after the action was proposed. The approval was cancelled; inspect it and request the action again.");
+    }
+    const effect = pending.menuPath
+      ? await this.performHierarchicalMenuStep(candidate, pending.menuPath)
+      : await this.perform(candidate);
     const after = await this.inspect();
     const visibleStateChanged = this.lastInspectionFingerprint !== pending.fingerprint;
     if (!visibleStateChanged) this.rememberNonProgressingAction(pending.fingerprint, candidate);
     else this.nonProgressingActions.delete(nonProgressingActionKey(pending.fingerprint, candidate));
+    if (pending.menuPath) this.advanceHierarchicalMenuIntent(pending.menuPath, visibleStateChanged, after.url === pending.url);
     return {
       status: "action-executed-after-approval",
       action: candidate,
@@ -599,6 +655,7 @@ export class BrowserManager {
   }
 
   private async applyLocalMatch(candidate: BrowserCandidate, snapshot: { title: string; url: string; headings: string[]; textExcerpt: string; candidates: BrowserCandidate[] }, rule: string, note: string, task: string, optionLabel?: string, rangeValue?: number) {
+    const menuPathProgress = rule === "explicit-hierarchical-menu-path" ? this.hierarchicalMenuIntent : undefined;
     const metadata = {
       candidateCount: snapshot.candidates.length,
       provider: "local-literal-match",
@@ -612,18 +669,21 @@ export class BrowserManager {
     } as const;
     if (candidate.risk === "approval-required") {
       const token = randomUUID();
-      this.pending.set(token, { kind: "dom", ref: candidate.ref, createdAt: Date.now(), url: snapshot.url, fingerprint: this.lastInspectionFingerprint });
+      this.pending.set(token, { kind: "dom", ref: candidate.ref, createdAt: Date.now(), url: snapshot.url, fingerprint: this.lastInspectionFingerprint, ...(menuPathProgress ? { menuPath: menuPathProgress } : {}) });
       return { status: "awaiting-user-approval", approvalToken: token, proposedAction: candidate, ...metadata, note };
     }
     const clickTextControl = rule === "explicit-any-textarea" && /\bclick\b/i.test(task);
     const beforeActionFingerprint = this.lastInspectionFingerprint;
-    const effect = optionLabel !== undefined
+    const effect = menuPathProgress
+      ? await this.performHierarchicalMenuStep(candidate, menuPathProgress)
+      : optionLabel !== undefined
       ? await this.selectOption(candidate.ref, optionLabel)
       : rangeValue !== undefined
         ? await this.setRange(candidate.ref, rangeValue)
         : await this.perform(candidate, clickTextControl);
     const afterActionSnapshot = await this.inspect();
     const visibleStateChanged = this.lastInspectionFingerprint !== beforeActionFingerprint;
+    if (menuPathProgress) this.advanceHierarchicalMenuIntent(menuPathProgress, visibleStateChanged, afterActionSnapshot.url === snapshot.url);
     const targetHeadingAfterAction = findVisibleAllCollectionHeading(task, afterActionSnapshot.headings);
     if (!visibleStateChanged) this.rememberNonProgressingAction(beforeActionFingerprint, candidate);
     else this.nonProgressingActions.delete(nonProgressingActionKey(beforeActionFingerprint, candidate));
@@ -1124,7 +1184,7 @@ export class BrowserManager {
     if (this.context && this.ownsContext) await this.context.close().catch(() => undefined);
     if (this.browser) await this.browser.close().catch(() => undefined);
     await closeOcrWorker().catch(() => undefined);
-    this.context = undefined; this.browser = undefined; this.page = undefined; this.ownsContext = false; this.lastInspectionFingerprint = ""; this.candidates.clear(); this.pending.clear(); this.privateFieldValuePresence.clear(); this.privateRangeValues.clear(); this.nonProgressingActions.clear(); this.automaticActionTrajectories.clear(); this.navigationActionsByTask.clear(); this.completedDisclosureIntent = undefined; this.disclosureSearchIntent = undefined; this.lastVisualSnapshot = undefined;
+    this.context = undefined; this.browser = undefined; this.page = undefined; this.ownsContext = false; this.lastInspectionFingerprint = ""; this.candidates.clear(); this.pending.clear(); this.privateFieldValuePresence.clear(); this.privateRangeValues.clear(); this.nonProgressingActions.clear(); this.automaticActionTrajectories.clear(); this.navigationActionsByTask.clear(); this.completedDisclosureIntent = undefined; this.disclosureSearchIntent = undefined; this.hierarchicalMenuIntent = undefined; this.lastVisualSnapshot = undefined;
     return { closed: true };
   }
 
@@ -1162,6 +1222,23 @@ export class BrowserManager {
     await page.waitForTimeout(150);
     const after = await page.locator("body").innerText({ timeout: 3_000 }).catch(() => "");
     return { url: redactBrowserUrl(page.url()), title: await page.title().catch(() => ""), textDelta: diffExcerpt(before, after) };
+  }
+
+  private async performHierarchicalMenuStep(candidate: BrowserCandidate, intent: HierarchicalMenuIntent) {
+    if (intent.nextIndex >= intent.path.length - 1) return this.perform(candidate);
+    const nextSegment = intent.path[intent.nextIndex + 1];
+    if (!nextSegment) return this.perform(candidate);
+    await this.candidateLocator(candidate.ref).hover({ timeout: 5_000 });
+    let submenuVisible = false;
+    try {
+      await this.requirePage().getByRole("menuitem", { name: nextSegment, exact: true }).first().waitFor({ state: "visible", timeout: 1_500 });
+      submenuVisible = true;
+    } catch {
+      // The next path item must become visibly actionable before the intent advances.
+    }
+    return { hovered: true, submenuVisible, note: submenuVisible
+      ? "A non-final explicit menu path segment was hovered until its next named submenu item became visible. No menu item was selected yet."
+      : "The menu item was hovered, but the next named submenu item did not become visible. The menu path will not advance or guess." };
   }
 
   private candidateLocator(ref: string) {
@@ -1216,6 +1293,24 @@ export class BrowserManager {
     return current;
   }
 
+  private clearHierarchicalMenuIntent(step?: HierarchicalMenuIntent) {
+    const current = this.hierarchicalMenuIntent;
+    if (!step || (current?.task === step.task && current.url === step.url && current.nextIndex === step.nextIndex)) {
+      this.hierarchicalMenuIntent = undefined;
+    }
+  }
+
+  private advanceHierarchicalMenuIntent(step: HierarchicalMenuIntent, visibleStateChanged: boolean, samePage: boolean) {
+    const current = this.hierarchicalMenuIntent;
+    if (!current || current.task !== step.task || current.url !== step.url || current.nextIndex !== step.nextIndex) return;
+    if (!visibleStateChanged || !samePage) {
+      this.hierarchicalMenuIntent = undefined;
+      return;
+    }
+    const nextIndex = current.nextIndex + 1;
+    this.hierarchicalMenuIntent = { ...current, nextIndex, createdAt: Date.now() };
+  }
+
   private requirePage(): Page {
     if (!this.page || this.page.isClosed()) throw new Error("No browser tab is connected. Call browser_launch or browser_connect first.");
     return this.page;
@@ -1248,6 +1343,15 @@ function validateViewportPoint(point: { x: number; y: number }, viewport: Viewpo
     throw new Error(`Visual coordinates must be integer CSS viewport pixels inside the current ${viewport.width}×${viewport.height} viewport.`);
   }
   return point;
+}
+
+function parseHierarchicalMenuPath(task: string) {
+  if (task.length > 500) return undefined;
+  const match = task.match(/^\s*(?:please\s+)?select\s+([^.!?\r\n]+?)\s*[.!?]?\s*$/iu);
+  if (!match) return undefined;
+  const path = match[1]!.split(/\s*>\s*/u).map((segment) => segment.trim());
+  if (path.length < 2 || path.length > 5 || path.some((segment) => !segment || segment.length > 100)) return undefined;
+  return path;
 }
 
 function findDeterministicMatch(task: string, candidates: BrowserCandidate[], rangeValues: Map<string, number>): DeterministicBrowserMatch | undefined {

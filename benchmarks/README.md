@@ -266,6 +266,26 @@ The checked-in run recognized the label on CPU in 14,813 ms with model files alr
 
 `results/miniwob-main-8-seed7-smoke.json` and its eight episode files rerun the standard bounded browser loop on the current `8a4f3a1` source: eight curated MiniWoB tasks passed with full raw reward and no timeouts. The Windows CPU host was a Ryzen 5 5600H; the run used Node 22.14.0, Python 3.10.0, BrowserGym 0.14.3, Playwright Python 1.44.0 / Node 1.63.0, and Chromium 125. End-to-end latency including reset was p50 1,763 ms / p95 2,295 ms; the browser action loop was p50 333 ms / p95 737 ms. Three semantic decisions used the cached local `Xenova/all-MiniLM-L6-v2` model (p50 184 ms / p95 197 ms); five other decisions resolved with local rules. The three-call model sample is too small for a general latency claim, and the curated tasks are not representative BrowserGym coverage. This run does not exercise the new visual actions.
 
+`results/miniwob-main-8-seed7-11-pre-menu-fix-40.json` preserves the 40-episode comparison before hierarchical menu handling: 36/40 episodes earned full reward, with all four misses on `click-menu`. `results/miniwob-main-8-seed7-11-post-menu-fix-40.json` and its 40 raw episode records rerun the same eight curated tasks with seeds 7–11 after adding explicit nested-menu path handling. All 40 earned full raw reward, with no timeouts. The previously failing menu paths now hover each non-final visible menu item until its named submenu appears, then select only the final path item. The Windows CPU host was a Ryzen 5 5600H; runs used Node 22.14.0, Python 3.10.0, BrowserGym 0.14.3, Playwright Python 1.44.0 / Node 1.63.0, and Chromium 125. Across the 40 episodes, end-to-end latency including reset was p50 2,036 ms / p95 2,685 ms; the browser decision/action loop was p50 394 ms / p95 995 ms. Eleven episodes used semantic inference (11 calls; p50 186 ms / p95 197 ms); the other 29 resolved with local rules only. Fifteen synthetic approvals were restricted to the exact local MiniWoB file URL. This paired result is evidence for this small regression set only, not broad browser quality, a complete agent score, Jev parity, or a speed claim. The episode records identify base revision `c53e2ca` and mark the working tree modified; the final completion guard added after the run only prevents the same path from firing again on a repeated call.
+
+Reproduce the 40 episodes from an activated BrowserGym 0.14.3 Python environment and the same MiniWoB++ revision. The runner writes one suite summary and eight raw episode JSON files for each seed; aggregate the 40 episode files afterward:
+
+```powershell
+$tasks = @('click-test','click-button','click-link','click-tab','click-collapsible','click-dialog','click-menu','click-checkboxes')
+foreach ($seed in 7..11) {
+  python benchmarks/run-browsergym-miniwob-suite.py `
+    --miniwob-root /path/to/miniwob-plusplus/miniwob/html/miniwob `
+    --tasks $tasks --seed $seed --max-actions 5 --timeout-seconds 120 `
+    --approve-synthetic-actions `
+    --output "benchmarks/results/miniwob-main-8-seed7-11-post-menu-fix-seed-$seed.json"
+}
+$records = foreach ($seed in 7..11) {
+  foreach ($task in $tasks) { "benchmarks/results/miniwob-main-8-seed7-11-post-menu-fix-seed-$seed-$task.json" }
+}
+python benchmarks/aggregate-browsergym.py @records `
+  --output benchmarks/results/miniwob-main-8-seed7-11-post-menu-fix-40.json
+```
+
 Reproduce the same task set from the repository root with the pinned MiniWoB++ checkout:
 
 ```sh

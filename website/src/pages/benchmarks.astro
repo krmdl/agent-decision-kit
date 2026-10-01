@@ -6,6 +6,7 @@ import previousFullRun from "../../../benchmarks/results/miniwob-expanded-multi-
 import focusedRun from "../../../benchmarks/results/miniwob-targeted-browser-fixes-8490bd7.json";
 import visualDigitsRun from "../../../benchmarks/results/miniwob-visual-digits-5-seed-smoke.json";
 import currentEightTaskRun from "../../../benchmarks/results/miniwob-main-8-seed7-smoke.json";
+import repeatedEightTaskRun from "../../../benchmarks/results/miniwob-main-8-seed7-11-post-menu-fix-40.json";
 import cpuDecisionRun from "../../../benchmarks/results/decision-cases-independent-ryzen5600h-cpu-smoke.json";
 import dmlDecisionRun from "../../../benchmarks/results/decision-cases-independent-ryzen5600h-dml-smoke.json";
 import verifiedNavigationRun from "../../../benchmarks/results/webarena-verified-shopping-admin-ad6e1b3-summary.json";
@@ -169,6 +170,12 @@ const decisionRows = [
           <div><strong>{currentEightTaskRun.successCount}/{currentEightTaskRun.episodeCount}</strong><span>Current 8-task MiniWoB smoke · Windows CPU</span></div>
           <p>Eight curated tasks on commit <code>{currentEightTaskRun.suite.agentDecisionKitCommit.slice(0, 7)}</code>, with no timeouts. End-to-end latency including reset was p50 {currentEightTaskRun.latencyMs.p50} ms / p95 {currentEightTaskRun.latencyMs.p95} ms; the browser action loop was p50 {currentEightTaskRun.agentActionLatencyMs.p50} ms / p95 {currentEightTaskRun.agentActionLatencyMs.p95} ms. Three cached local model decisions had p95 {currentEightTaskRun.decisionCallLatencyMs.p95} ms (n=3); five tasks used local rules. This small smoke run does not establish general speed or quality.</p>
           <a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/miniwob-main-8-seed7-smoke.json">Summary and eight raw episodes ↗</a>
+        </article>
+        <article>
+          <div><strong>{repeatedEightTaskRun.successCount}/{repeatedEightTaskRun.episodeCount}</strong><span>Eight-task regression · five seeds · Windows CPU</span></div>
+          <p>The same eight curated tasks were repeated with seeds 7–11 after hierarchical menu handling was added. All episodes earned full raw reward with no timeouts. The prior matched run was 36/40, with all four failures in <code>click-menu</code>. End-to-end latency including reset was p50 {repeatedEightTaskRun.latencyMs.p50} ms / p95 {repeatedEightTaskRun.latencyMs.p95} ms; the browser decision/action loop was p50 {repeatedEightTaskRun.agentActionLatencyMs.p50} ms / p95 {repeatedEightTaskRun.agentActionLatencyMs.p95} ms. Eleven semantic provider calls had p95 {repeatedEightTaskRun.decisionCallLatencyMs.p95} ms. This paired result is a small regression check, not a broad browser score or speed claim.</p>
+          <a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/miniwob-main-8-seed7-11-post-menu-fix-40.json">Post-fix aggregate and 40 raw episodes ↗</a>
+          <a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/miniwob-main-8-seed7-11-pre-menu-fix-40.json">Matched pre-fix aggregate ↗</a>
         </article>
         <article>
           <div><strong>3/3</strong><span>Full-reward tool smoke</span></div>

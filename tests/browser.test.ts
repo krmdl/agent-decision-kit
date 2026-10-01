@@ -80,6 +80,7 @@ describe("Playwright browser safety flow", () => {
   let replacementActionHtml: Buffer;
   let dynamicRefsHtml: Buffer;
   let menuHtml: Buffer;
+  let hierarchicalMenuHtml: Buffer;
   let ordinalFieldsHtml: Buffer;
   let multiDisclosureHtml: Buffer;
   let textareaWidgetsHtml: Buffer;
@@ -131,6 +132,7 @@ describe("Playwright browser safety flow", () => {
     replacementActionHtml = Buffer.from('<!doctype html><button data-adk-ref="r1" onclick="document.querySelector(\'#status\').textContent=\'Dangerous action executed\'">Delete all data</button><p id="status">Not executed</p>');
     dynamicRefsHtml = Buffer.from('<!doctype html><button id="old">Old action</button><button id="new" hidden onclick="document.querySelector(\'#status\').textContent=\'New action clicked\'">New action</button><p id="status">Not clicked</p>');
     menuHtml = Buffer.from('<!doctype html><style>#items{cursor:pointer}</style><button id="menu" aria-expanded="false">Menu</button><div id="items" role="menu" hidden><button role="menuitem" onclick="document.querySelector(\'#status\').textContent=\'Zoomed\'">Zoom In</button></div><p id="status">Menu closed</p><script>document.querySelector(\'#menu\').addEventListener(\'click\',e=>{const open=e.currentTarget.getAttribute(\'aria-expanded\')!==\'true\';e.currentTarget.setAttribute(\'aria-expanded\',String(open));document.querySelector(\'#items\').hidden=!open})</script>');
+    hierarchicalMenuHtml = Buffer.from('<!doctype html><div role="menu"><button id="parent" role="menuitem">Koo</button></div><div id="submenu" role="menu" hidden><button role="menuitem" onclick="document.querySelector(\'#status\').textContent=\'Path selected\'">Suzanne</button></div><p id="status">Menu closed</p><script>document.querySelector(\'#parent\').addEventListener(\'mouseenter\',()=>document.querySelector(\'#submenu\').hidden=false)</script>');
     ordinalFieldsHtml = Buffer.from('<!doctype html><form><label><input type="radio" name="choice"> Alpha</label><label><input type="radio" name="choice"> Beta</label><label><input type="radio" name="choice"> Gamma</label><label>Text one <input type="text"></label><label>Text two <input type="text"></label></form>');
     textareaWidgetsHtml = Buffer.from('<!doctype html><textarea aria-label="First notes" onclick="document.querySelector(\'#status\').textContent=\'Clicked textarea\'"></textarea><textarea aria-label="Second notes"></textarea><p id="status">Not clicked</p>');
     ordinalButtonHtml = Buffer.from('<!doctype html><button>ONE</button><button>TWO</button>');
@@ -149,6 +151,10 @@ describe("Playwright browser safety flow", () => {
       response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
       if (request.url === "/drag-and-drop") {
         response.end(dragAndDropHtml);
+        return;
+      }
+      if (request.url === "/hierarchical-menu") {
+        response.end(hierarchicalMenuHtml);
         return;
       }
       response.end(request.url === "/visual-only" ? visualHtml : request.url === "/visual-gestures" ? visualGesturesHtml : request.url === "/visual-scroll" ? visualScrollHtml : request.url === "/pointer-text" ? pointerTextHtml : request.url === "/icon-pointer" ? iconPointerHtml : request.url === "/silent-pointer" ? silentPointerHtml : request.url === "/silent-input" ? silentInputHtml : request.url === "/mixed-pointer" ? mixedPointerHtml : request.url === "/checkbox" ? checkboxHtml : request.url === "/submit" ? submitHtml : request.url === "/checkbox-task" ? checkboxTaskHtml : request.url === "/tabs" ? tabHtml : request.url === "/expand" ? expandHtml : request.url === "/native-fields" ? nativeFieldsHtml : request.url === "/copy-fields" ? copyFieldsHtml : request.url === "/slider" ? sliderHtml : request.url === "/aria-slider" ? ariaSliderHtml : request.url === "/jquery-ui-slider" ? jqueryUiSliderHtml : request.url === "/autocomplete" ? autocompleteHtml : request.url === "/multi-select" ? multipleSelectHtml : request.url === "/ambiguous-labels" ? ambiguousLabelsHtml : request.url === "/navigation-label" ? navigationLabelHtml : request.url === "/navigation-targeting" ? navigationTargetingHtml : request.url === "/navigation-orders" ? navigationOrdersHtml : request.url === "/navigation-target" ? navigationTargetHtml : request.url === "/navigation-hidden-target" ? navigationHiddenTargetHtml : request.url === "/duplicate-navigation-labels" ? duplicateNavigationLabelsHtml : request.url === "/editable" ? editableContentHtml : request.url === "/silent-form" ? silentFormHtml : request.url === "/decision-race" ? decisionRaceHtml : request.url === "/replacement-action" ? replacementActionHtml : request.url === "/dynamic-refs" ? dynamicRefsHtml : request.url === "/menu" ? menuHtml : request.url === "/ordinal-fields" ? ordinalFieldsHtml : request.url === "/textareas" ? textareaWidgetsHtml : request.url === "/ordinal-button" ? ordinalButtonHtml : request.url === "/multi-disclosure" ? multiDisclosureHtml : request.url === "/adjacent-label-table" ? adjacentLabelTableHtml : html);
@@ -1041,6 +1047,25 @@ describe("Playwright browser safety flow", () => {
     const selected = await browser.decideAndAct(task, provider);
     expect(selected).toMatchObject({ status: "action-executed", action: { label: "Zoom In" } });
     expect((await browser.inspect()).textExcerpt).toContain("Zoomed");
+  }, 45_000);
+
+  it("resolves an explicit nested menu path one visible step at a time", async () => {
+    profile = await mkdtemp(path.join(os.tmpdir(), "adk-browser-hierarchical-menu-test-"));
+    browser = new BrowserManager({ headless: true, profileDir: path.join(profile, "chromium") });
+    await browser.launch(`${baseUrl}hierarchical-menu`);
+    const provider: DecisionProvider = {
+      id: "remote-test-provider",
+      model: "unused-test-provider",
+      decide: async () => { throw new Error("An explicit visible menu path should resolve locally"); },
+    };
+
+    const first = await browser.decideAndAct("Select Koo>Suzanne.", provider);
+    expect(first).toMatchObject({ status: "action-executed", selectionRule: "explicit-hierarchical-menu-path", action: { label: "Koo", role: "menuitem" }, effect: { hovered: true, submenuVisible: true } });
+    const second = await browser.decideAndAct("Select Koo>Suzanne.", provider);
+    expect(second).toMatchObject({ status: "action-executed", selectionRule: "explicit-hierarchical-menu-path", action: { label: "Suzanne", role: "menuitem" } });
+    const repeated = await browser.decideAndAct("Select Koo>Suzanne.", provider);
+    expect(repeated.status).toBe("menu-path-complete");
+    expect((await browser.inspect()).textExcerpt).toContain("Path selected");
   }, 45_000);
 
   it("uses explicit radio and text-field ordinals without entering inferred text", async () => {
