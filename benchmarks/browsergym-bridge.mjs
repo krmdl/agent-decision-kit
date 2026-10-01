@@ -30,16 +30,21 @@ for await (const line of input) {
         result = { node: process.version, playwright: playwrightPackage.version };
         break;
       case "connect":
-        result = await browser.connect(request.endpoint, request.pageIndex ?? 0);
+        result = await browser.connect(request.endpoint, request.pageIndex, request.targetId);
         break;
       case "matches-task-location": {
         const expected = new URL(request.expectedUrl);
         const current = new URL(browser.page.url());
+        const sameOrigin = expected.origin === current.origin;
+        const samePath = expected.pathname === current.pathname;
+        const sameSearch = expected.search === current.search;
+        const sameHash = expected.hash === current.hash;
         result = {
-          matches: expected.origin === current.origin
-            && expected.pathname === current.pathname
-            && expected.search === current.search
-            && expected.hash === current.hash,
+          matches: sameOrigin && samePath && sameSearch && sameHash,
+          sameOrigin,
+          samePath,
+          sameSearch,
+          sameHash,
         };
         break;
       }

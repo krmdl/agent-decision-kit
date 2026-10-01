@@ -82,6 +82,28 @@ def free_port():
         return sock.getsockname()[1]
 
 
+def browsergym_page_selection(page):
+    browser = page.context.browser
+    contexts = browser.contexts if browser is not None else [page.context]
+    pages = [candidate for context in contexts for candidate in context.pages]
+    for index, candidate in enumerate(pages):
+        if candidate is page:
+            return index, len(pages)
+    raise RuntimeError("Could not identify BrowserGym's exact page in the CDP tab list")
+
+
+def browsergym_target_id(page):
+    session = page.context.new_cdp_session(page)
+    try:
+        target_info = session.send("Target.getTargetInfo").get("targetInfo", {})
+        target_id = target_info.get("targetId")
+        if not isinstance(target_id, str) or not target_id:
+            raise RuntimeError("BrowserGym did not return a CDP target ID for its task page")
+        return target_id
+    finally:
+        session.detach()
+
+
 def print_debug_snapshot(phase, step, snapshot, include_page_content=False):
     url = urllib.parse.urlsplit(snapshot.get("url", ""))
     candidates = []
@@ -107,7 +129,7 @@ def print_debug_snapshot(phase, step, snapshot, include_page_content=False):
     print(json.dumps(record, ensure_ascii=False), file=sys.stderr)
 
 
-def print_debug_decision(step, result):
+def print_debug_decision(step, result, retry_attempt=0):
     candidates = []
     for item in result.get("candidates", [])[:40]:
         candidates.append({
@@ -118,6 +140,7 @@ def print_debug_decision(step, result):
         })
     print(json.dumps({
         "debugDecision": step,
+        "retryAttempt": retry_attempt,
         "status": result.get("status"),
         "provider": result.get("provider"),
         "model": result.get("model"),
@@ -150,6 +173,7 @@ def main():
     parser.add_argument("--shopping-admin-url", required=True, help="WebArena Verified shopping_admin URL")
     parser.add_argument("--seed", type=int, default=7)
     parser.add_argument("--max-actions", type=int, default=12)
+    parser.add_argument("--stale-page-retries", type=int, default=1, help="Re-inspect and request a fresh decision after a stale-snapshot response; capped at two retries")
     parser.add_argument("--debug-candidates", action="store_true", help="Print bounded visible candidates before and after every action to stderr")
     parser.add_argument("--debug-page-content", action="store_true", help="Include bounded visible text and table cells in debug output; this may contain page data")
     parser.add_argument("--debug-open-navigation", nargs="+", help="Debug only: follow exact visible low-risk link/menu labels, print the resulting snapshots, and exit without scoring")
@@ -158,6 +182,8 @@ def main():
     args = parser.parse_args()
     if not 1 <= args.max_actions <= 20:
         raise SystemExit("--max-actions must be between 1 and 20")
+    if not 0 <= args.stale_page_retries <= 2:
+        raise SystemExit("--stale-page-retries must be between 0 and 2")
     if args.debug_open_navigation and not args.debug_candidates:
         raise SystemExit("--debug-open-navigation requires --debug-candidates")
     if args.debug_page_content and not args.debug_candidates:
@@ -217,8 +243,11 @@ def main():
         if urllib.parse.urlsplit(endpoint).hostname not in {"127.0.0.1", "localhost", "::1"}:
             raise RuntimeError("BrowserGym returned a non-loopback CDP endpoint")
 
+        browsergym_page = env.unwrapped.page
+        browsergym_page_index, browsergym_page_count = browsergym_page_selection(browsergym_page)
+        selected_target_id = browsergym_target_id(browsergym_page)
         bridge = NodeBridge()
-        connect = bridge.call("connect", endpoint=endpoint, pageIndex=0)
+        connect = bridge.call("connect", endpoint=endpoint, targetId=selected_target_id)
         if not connect.get("connected"):
             raise RuntimeError(f"Could not attach to BrowserGym page: {connect}")
 
@@ -226,9 +255,20 @@ def main():
         initial_url = urllib.parse.urlsplit(initial_page.get("url", ""))
         initial_location = (initial_url.path, initial_url.query)
         initial_title = initial_page.get("title", "")
-        browsergym_initial_url = urllib.parse.urlsplit(env.unwrapped.page.url)
+        browsergym_initial_url = urllib.parse.urlsplit(browsergym_page.url)
         if browsergym_initial_url.path != initial_url.path:
-            raise RuntimeError("The selected browser tab does not match BrowserGym's task page")
+            raise RuntimeError("The selected CDP tab does not match BrowserGym's exact task page")
+        if initial_title != browsergym_page.title():
+            raise RuntimeError("The selected CDP tab title does not match BrowserGym's exact task page")
+        if args.debug_candidates:
+            print(json.dumps({
+                "debugBrowserGymPageSelection": {
+                    "pageIndex": browsergym_page_index,
+                    "pageCount": browsergym_page_count,
+                    "title": browsergym_page.title(),
+                    "path": browsergym_initial_url.path,
+                },
+            }, ensure_ascii=False), file=sys.stderr)
 
         if args.debug_open_navigation:
             for path_step, label in enumerate(args.debug_open_navigation, start=1):
@@ -268,14 +308,45 @@ def main():
             return 0
 
         for step in range(1, args.max_actions + 1):
-            if args.debug_candidates:
-                print_debug_snapshot("before", step, bridge.call("inspect"), args.debug_page_content)
-            decision_started = time.perf_counter()
-            result = bridge.call("decide-and-act", task=task)
-            elapsed_ms = round((time.perf_counter() - decision_started) * 1000)
-            bridge_ms.append(elapsed_ms)
-            if args.debug_candidates:
-                print_debug_decision(step, result)
+            retry_attempt = 0
+            attempt_traces = []
+            while True:
+                if args.debug_candidates:
+                    phase = "before" if retry_attempt == 0 else "stale-retry-before"
+                    print_debug_snapshot(phase, step, bridge.call("inspect"), args.debug_page_content)
+                decision_started = time.perf_counter()
+                result = bridge.call("decide-and-act", task=task)
+                elapsed_ms = round((time.perf_counter() - decision_started) * 1000)
+                bridge_ms.append(elapsed_ms)
+                browsergym_location = env.unwrapped.page.evaluate("window.location.href")
+                same_page = bridge.call("matches-task-location", expectedUrl=browsergym_location)
+                if not same_page.get("matches"):
+                    raise RuntimeError(f"The decision bridge and BrowserGym no longer reference the same browser page: {same_page}")
+                if args.debug_candidates:
+                    print_debug_decision(step, result, retry_attempt)
+                action = result.get("action") or result.get("proposedAction") or {}
+                attempt_traces.append({
+                    "step": step,
+                    "retryAttempt": retry_attempt,
+                    "status": result.get("status"),
+                    "action": {key: action.get(key) for key in ("role", "label", "kind", "risk") if key in action},
+                    "candidateCount": result.get("candidateCount"),
+                    "provider": result.get("provider"),
+                    "model": result.get("model"),
+                    "selectionRule": result.get("selectionRule"),
+                    "decisionLatencyMs": result.get("decisionLatencyMs"),
+                    "elapsedMs": elapsed_ms,
+                    "confidenceSource": result.get("confidenceSource"),
+                    "calibration": result.get("calibration"),
+                    "taskTargetVisible": result.get("taskTargetVisible"),
+                })
+                if result.get("status") != "page-changed-during-decision" or retry_attempt >= args.stale_page_retries:
+                    break
+                retry_attempt += 1
+                refreshed = bridge.call("inspect")
+                if args.debug_candidates:
+                    print_debug_snapshot("stale-retry-fresh", step, refreshed, args.debug_page_content)
+            trace.extend(attempt_traces)
             if args.debug_candidates:
                 print_debug_snapshot("after", step, bridge.call("inspect"), args.debug_page_content)
                 browsergym_url = urllib.parse.urlsplit(env.unwrapped.page.url)
@@ -284,29 +355,21 @@ def main():
                     "title": env.unwrapped.page.title(),
                     "path": browsergym_url.path,
                 }, ensure_ascii=False), file=sys.stderr)
-            action = result.get("action") or result.get("proposedAction") or {}
-            trace.append({
-                "step": step,
-                "status": result.get("status"),
-                "action": {key: action.get(key) for key in ("role", "label", "kind", "risk") if key in action},
-                "candidateCount": result.get("candidateCount"),
-                "provider": result.get("provider"),
-                "model": result.get("model"),
-                "selectionRule": result.get("selectionRule"),
-                "decisionLatencyMs": result.get("decisionLatencyMs"),
-                "elapsedMs": elapsed_ms,
-                "confidenceSource": result.get("confidenceSource"),
-                "calibration": result.get("calibration"),
-                "taskTargetVisible": result.get("taskTargetVisible"),
-            })
             if result.get("status") != "action-executed" or result.get("taskTargetVisible"):
                 break
 
         final_page = bridge.call("inspect")
         final_url = urllib.parse.urlsplit(final_page.get("url", ""))
+        browsergym_location = env.unwrapped.page.evaluate("window.location.href")
+        same_page = bridge.call("matches-task-location", expectedUrl=browsergym_location)
+        if not same_page.get("matches"):
+            raise RuntimeError(f"The decision bridge and BrowserGym ended on different browser pages: {same_page}")
+        browsergym_final_url = urllib.parse.urlsplit(browsergym_location)
+        if final_url.path != browsergym_final_url.path:
+            raise RuntimeError("The decision bridge and BrowserGym ended on different page paths")
         # The navigation response is evaluated independently by BrowserGym. No
         # dataset answer, expected URL, or evaluator configuration is read here.
-        navigated = (final_url.path, final_url.query) != initial_location
+        navigated = (browsergym_final_url.path, browsergym_final_url.query) != initial_location
         response_text = json.dumps({
             "task_type": "NAVIGATE",
             "status": "SUCCESS" if navigated else "UNKNOWN_ERROR",
@@ -339,9 +402,12 @@ def main():
             "intentTemplateId": item.get("intent_template_id"),
             "taskType": "navigate",
             "taskPrompt": item.get("intent"),
-            "runnerMode": "bounded-repeated-browser-decide-and-act",
+            "runnerMode": "bounded-browser-decide-and-act-with-stale-retries",
             "seed": args.seed,
             "maxActions": args.max_actions,
+            "maxStalePageRetries": args.stale_page_retries,
+            "browserGymPageIndex": browsergym_page_index,
+            "browserGymPageCount": browsergym_page_count,
             "success": reward >= 1.0,
             "reward": reward,
             "terminated": terminated,

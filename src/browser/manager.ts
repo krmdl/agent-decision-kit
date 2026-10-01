@@ -93,12 +93,34 @@ export class BrowserManager {
     return this.describePage();
   }
 
-  async connect(endpoint: string, pageIndex?: number) {
+  async connect(endpoint: string, pageIndex?: number, targetId?: string) {
     const cdpEndpoint = await resolveCdpWebSocketEndpoint(endpoint);
     const browser = await chromium.connectOverCDP(cdpEndpoint);
     const pages = browser.contexts().flatMap((context) => context.pages());
     const tabs = await Promise.all(pages.map(async (page, index) => ({ index, title: await page.title().catch(() => ""), url: redactBrowserUrl(page.url()) })));
-    if (pageIndex === undefined) {
+    let selectedPageIndex = pageIndex;
+    if (targetId !== undefined) {
+      const matches: number[] = [];
+      for (const [index, page] of pages.entries()) {
+        try {
+          const session = await page.context().newCDPSession(page);
+          try {
+            const info = await session.send("Target.getTargetInfo");
+            if (info.targetInfo?.targetId === targetId) matches.push(index);
+          } finally {
+            await session.detach().catch(() => undefined);
+          }
+        } catch {
+          // A page that cannot be inspected through CDP is not selected.
+        }
+      }
+      if (matches.length !== 1) {
+        await browser.close();
+        return { connected: false, error: "The selected browser target is not uniquely available", tabs };
+      }
+      selectedPageIndex = matches[0]!;
+    }
+    if (selectedPageIndex === undefined) {
       await browser.close();
       return {
         connected: false,
@@ -107,12 +129,12 @@ export class BrowserManager {
         note: "Choose one listed tab index and call browser_connect again with pageIndex. Listing tabs does not attach or perform browser actions.",
       };
     }
-    if (!Number.isInteger(pageIndex) || pageIndex < 0 || pageIndex >= pages.length) {
+    if (!Number.isInteger(selectedPageIndex) || selectedPageIndex < 0 || selectedPageIndex >= pages.length) {
       await browser.close();
       return { connected: false, error: "Selected tab index is not available", tabs };
     }
     this.browser = browser;
-    this.page = pages[pageIndex]!;
+    this.page = pages[selectedPageIndex]!;
     this.context = this.page.context();
     this.ownsContext = false;
     this.lastVisualSnapshot = undefined;
@@ -222,6 +244,29 @@ export class BrowserManager {
         if (options.length) parts.push(`Options: ${options.join(", ")}`);
         return parts.join(" — ").slice(0, 240);
       };
+      const rowContextFor = (element: Element) => {
+        const row = element.closest("tr") as HTMLTableRowElement | null;
+        const table = row?.closest("table");
+        if (!row || !table || !visible(row) || !boundedTableRows.has(row)) return "";
+        const headerRow = (Array.from(table.querySelectorAll("thead tr")).find(visible)
+          ?? Array.from(table.querySelectorAll("tr")).find((candidate) => candidate !== row && candidate.querySelector("th") && visible(candidate))) as HTMLTableRowElement | undefined;
+        if (!headerRow || headerRow === row) return "";
+        const headers = Array.from(headerRow.cells).slice(0, 6).map((cell) => redactEditableText(cell.innerText ?? "").slice(0, 60));
+        const actionCell = element.closest("td, th");
+        const fields = Array.from(row.cells).slice(0, 6).flatMap((cell, index) => {
+          if (!visible(cell) || cell === actionCell) return [];
+          const value = redactEditableText(cell.innerText ?? "").slice(0, 72);
+          if (!value) return [];
+          return [`${headers[index] || `column ${index + 1}`}: ${value}`];
+        });
+        return fields.slice(0, 5).join("; ").slice(0, 180);
+      };
+      const boundedTableRows = new WeakSet<Element>();
+      for (const table of Array.from(document.querySelectorAll("table")).filter(visible).slice(0, 3)) {
+        for (const row of Array.from(table.querySelectorAll("tr")).filter((candidate) => candidate.closest("table") === table && visible(candidate)).slice(0, 6)) {
+          boundedTableRows.add(row);
+        }
+      }
       const supportedInputTypes = new Set(["text", "search", "email", "tel", "url", "number", "date", "datetime-local", "time", "month", "week", "range", "checkbox", "radio", "submit", "image", "button", "reset"]);
       const formEntryInputTypes = new Set(["text", "search", "email", "tel", "url", "number", "date", "datetime-local", "time", "month", "week"]);
       const semanticRoles = "[role=button], [role=link], [role=tab], [role=checkbox], [role=radio], [role=switch], [role=slider], .ui-slider-handle[tabindex], [role=menuitem], [role=menuitemcheckbox], [role=menuitemradio], [role=option]";
@@ -293,7 +338,9 @@ export class BrowserManager {
         const role = customPointer ? "pointer-target" : element.getAttribute("role") ?? (isKeyboardWidgetSlider ? "slider" : dragSource && !semanticSet.has(element) ? "draggable" : dropTarget && !semanticSet.has(element) ? "drop-target" : tag === "a" ? "link" : tag === "button" ? "button" : tag === "select" ? "combobox" : tag);
         const isAriaSlider = role === "slider" && !isKeyboardWidgetSlider && !isNativeRange;
         const kind = customPointer ? "custom-pointer" : dragSource && !semanticSet.has(element) ? "drag-source" : dropTarget && !semanticSet.has(element) ? "drop-target" : isNativeRange || isAriaSlider || isKeyboardWidgetSlider ? "range" : tag === "input" ? (input.type || "text") : tag === "select" ? ((element as HTMLSelectElement).multiple ? "select-multiple" : "select-one") : tag;
-        const label = labelFor(element) || `${role} ${index + 1}`;
+        const baseLabel = labelFor(element) || `${role} ${index + 1}`;
+        const rowContext = rowContextFor(element);
+        const label = `${baseLabel}${rowContext ? ` — row: ${rowContext}` : ""}`.slice(0, 240);
         const riskLabel = riskLabels.get(element) ?? label;
         const button = element as HTMLButtonElement;
         const riskyInput = tag === "input" && ["submit", "image", "reset"].includes(input.type);
@@ -426,7 +473,7 @@ export class BrowserManager {
     const safeSnapshot = { ...snapshot, candidates };
     this.lastInspectionFingerprint = snapshotFingerprint({ ...safeSnapshot, privateStateFingerprint });
     browserDebug(`inspect finished with ${candidates.length} candidates`);
-    return { ...safeSnapshot, url: redactBrowserUrl(snapshot.url), candidates: candidates.map(({ ref, role, label, kind, risk, checked, expanded, selected, readOnly, dragSource, dropTarget, optionLabels, selectedOptionLabels, min, max, step }) => ({ ref, role, label, kind, risk, ...(checked === undefined ? {} : { checked }), ...(expanded === undefined ? {} : { expanded }), ...(selected === undefined ? {} : { selected }), ...(readOnly === undefined ? {} : { readOnly }), ...(dragSource === undefined ? {} : { dragSource }), ...(dropTarget === undefined ? {} : { dropTarget }), ...(optionLabels === undefined ? {} : { optionLabels }), ...(selectedOptionLabels === undefined ? {} : { selectedOptionLabels }), ...(min === undefined ? {} : { min }), ...(max === undefined ? {} : { max }), ...(step === undefined ? {} : { step }) })), inspectMs: Math.round(performance.now() - before), candidateLimit: 80, note: "Bounded visible DOM/accessibility snapshot. It includes up to three visible HTML tables with six rows and six cells each, and adjacent explicit labels for otherwise unassociated form fields. Alongside semantic controls, it scans keyboard-operated jQuery UI slider handles with a linked visible numeric readout, native drag sources and declared drop targets, and clear CSS pointer-only text or icon targets within the same 80-candidate limit. Distinct labeled child targets are exposed separately; CSS image filenames may provide a fallback label for icon-only controls. Custom targets have no semantic role and always require a separate approval. Native select options are limited to 12 enabled labels; current editable values, passwords, cookies and storage are not returned. Editable values, slider readings and action destinations are hashed locally only to invalidate stale approvals. URL credentials, query and hash are redacted." };
+    return { ...safeSnapshot, url: redactBrowserUrl(snapshot.url), candidates: candidates.map(({ ref, role, label, kind, risk, checked, expanded, selected, readOnly, dragSource, dropTarget, optionLabels, selectedOptionLabels, min, max, step }) => ({ ref, role, label, kind, risk, ...(checked === undefined ? {} : { checked }), ...(expanded === undefined ? {} : { expanded }), ...(selected === undefined ? {} : { selected }), ...(readOnly === undefined ? {} : { readOnly }), ...(dragSource === undefined ? {} : { dragSource }), ...(dropTarget === undefined ? {} : { dropTarget }), ...(optionLabels === undefined ? {} : { optionLabels }), ...(selectedOptionLabels === undefined ? {} : { selectedOptionLabels }), ...(min === undefined ? {} : { min }), ...(max === undefined ? {} : { max }), ...(step === undefined ? {} : { step }) })), inspectMs: Math.round(performance.now() - before), candidateLimit: 80, note: "Bounded visible DOM/accessibility snapshot. It includes up to three visible HTML tables with six rows and six cells each; visible table actions also include a bounded label of their non-action row cells. It includes adjacent explicit labels for otherwise unassociated form fields. Alongside semantic controls, it scans keyboard-operated jQuery UI slider handles with a linked visible numeric readout, native drag sources and declared drop targets, and clear CSS pointer-only text or icon targets within the same 80-candidate limit. Distinct labeled child targets are exposed separately; CSS image filenames may provide a fallback label for icon-only controls. Custom targets have no semantic role and always require a separate approval. Native select options are limited to 12 enabled labels; current editable values, passwords, cookies and storage are not returned. Editable values, slider readings and action destinations are hashed locally only to invalidate stale approvals. URL credentials, query and hash are redacted." };
   }
 
   async decideAndAct(task: string, provider: DecisionProvider) {
@@ -1432,6 +1479,9 @@ function findDeterministicMatch(task: string, candidates: BrowserCandidate[], ra
     if (matches.length === 1) return { candidate: matches[0]!, rule: "explicit-tab-number", note: "The task names one tab number that matches one visible tab label." };
   }
 
+  const rowContextNavigationAction = findUniqueRowContextNavigationAction(task, candidates);
+  if (rowContextNavigationAction) return rowContextNavigationAction;
+
   const navigationLabel = findUniqueMentionedNavigationLabel(task, candidates, headings);
   if (navigationLabel) return navigationLabel;
 
@@ -1589,6 +1639,39 @@ function findUniqueMentionedNavigationLabel(task: string, candidates: BrowserCan
     candidate: best[0]!.candidate,
     rule: "unique-mentioned-navigation-label",
     note: "The navigation request names one unique visible interactive label. Only that exact label is selected; consequential actions still require the normal separate approval.",
+  };
+}
+
+function findUniqueRowContextNavigationAction(task: string, candidates: BrowserCandidate[]) {
+  const normalizedTask = normalizeLabel(task);
+  const command = normalizedTask.match(/\b(?:go|navigate|view|show|open|visit|browse|display)\b(?:\s+to)?\s+(.+)/u)?.[1];
+  if (!command) return undefined;
+  const ignored = new Set(["a", "all", "an", "and", "are", "at", "being", "details", "detail", "display", "every", "for", "from", "go", "in", "information", "is", "list", "navigate", "of", "on", "open", "page", "screen", "section", "settings", "show", "the", "to", "view", "visit", "was", "were", "with"]);
+  const targetWords = command.split(/\s+/u).filter((word) => word && !ignored.has(word)).map(normalizeNavigationWord);
+  if (!targetWords.length) return undefined;
+  const relationshipHeader = /\b(?:parent|child|related|source|owner|assigned|created|updated|previous|reference|action|status|path|url|store|website)\b/u;
+  const navigationAction = /^(?:view|open|show|details?|manage|inspect|configure)(?:\s|$)/u;
+  const matches = candidates.filter((candidate) => {
+    if (!["link", "menuitem"].includes(candidate.role) || candidate.risk !== "low") return false;
+    const marker = " — row: ";
+    const markerIndex = candidate.label.indexOf(marker);
+    if (markerIndex < 0 || !navigationAction.test(normalizeLabel(candidate.label.slice(0, markerIndex)))) return false;
+    const fields = candidate.label.slice(markerIndex + marker.length).split(";").flatMap((rawField) => {
+      const separator = rawField.indexOf(":");
+      if (separator < 0) return [];
+      const header = normalizeLabel(rawField.slice(0, separator));
+      if (relationshipHeader.test(header)) return [];
+      const fieldWords = new Set(normalizeLabel(rawField.slice(separator + 1)).split(/\s+/u).map(normalizeNavigationWord));
+      for (const word of header.split(/\s+/u).map(normalizeNavigationWord)) fieldWords.add(word);
+      return [fieldWords];
+    });
+    return fields.some((fieldWords) => targetWords.every((word) => fieldWords.has(word)));
+  });
+  if (matches.length !== 1) return undefined;
+  return {
+    candidate: matches[0]!,
+    rule: "unique-row-context-navigation-action",
+    note: "The task's named destination uniquely matches a non-relational field in one visible table row, which has one low-risk view action. That row action is selected; consequential actions still require separate approval.",
   };
 }
 
