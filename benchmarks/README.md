@@ -264,6 +264,18 @@ The checked-in run recognized the label on CPU in 14,813 ms with model files alr
 
 `results/miniwob-visual-digits-5-seed-smoke.json` and its five per-seed episodes check digit-only OCR on BrowserGym's visual-only `ascending-numbers` task. Four of five seeds (7–10) earned full raw reward after five separately approved local clicks; seed 11 was safely stopped with zero clicks because OCR misread a visible `1` as `4`. End-to-end latency including reset was p50 2,535 ms / p95 2,871 ms; the bounded browser/OCR/action loop was p50 1,178 ms / p95 1,258 ms. The five synthetic approvals per successful episode were restricted to the exact local MiniWoB file URL. This is one task repeated on one Windows CPU host, not a representative success rate, general OCR reliability, or a speed claim. The task used BrowserGym 0.14.3, MiniWoB++ commit `7fd85d7`, Node 22.14.0, Python 3.10.0, Playwright Python 1.44.0 / Node 1.63.0, Chromium 125, and a Ryzen 5 5600H CPU. The Tesseract language data was already cached. Keep the failed seed with the passing episodes.
 
+`results/miniwob-main-8-seed7-smoke.json` and its eight episode files rerun the standard bounded browser loop on the current `8a4f3a1` source: eight curated MiniWoB tasks passed with full raw reward and no timeouts. The Windows CPU host was a Ryzen 5 5600H; the run used Node 22.14.0, Python 3.10.0, BrowserGym 0.14.3, Playwright Python 1.44.0 / Node 1.63.0, and Chromium 125. End-to-end latency including reset was p50 1,763 ms / p95 2,295 ms; the browser action loop was p50 333 ms / p95 737 ms. Three semantic decisions used the cached local `Xenova/all-MiniLM-L6-v2` model (p50 184 ms / p95 197 ms); five other decisions resolved with local rules. The three-call model sample is too small for a general latency claim, and the curated tasks are not representative BrowserGym coverage. This run does not exercise the new visual actions.
+
+Reproduce the same task set from the repository root with the pinned MiniWoB++ checkout:
+
+```sh
+python benchmarks/run-browsergym-miniwob-suite.py \\
+  --miniwob-root /path/to/miniwob-plusplus/miniwob/html/miniwob \
+  --tasks click-test click-button click-link click-tab click-collapsible click-dialog click-menu click-checkboxes \
+  --seed 7 --max-actions 5 --timeout-seconds 120 --approve-synthetic-actions \
+  --output benchmarks/results/miniwob-main-8-seed7-smoke.json
+```
+
 Reproduce one seed with the installed BrowserGym 0.14.3 environment and a MiniWoB++ checkout:
 
 ```sh
