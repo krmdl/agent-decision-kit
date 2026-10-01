@@ -55,8 +55,34 @@ def explicit_slider_values(task):
     return [float(value) for value in values]
 
 
-def multi_tool_action(task, candidates, completed_fields, visible_text=""):
+def multi_tool_action(task, candidates, completed_fields, visible_text="", visible_tables=None):
     """Extract only explicit MiniWoB task values for the tool integration smoke path."""
+    if re.search(r"\b(?:value that corresponds|corresponds with each label|each label into the form)\b", task, re.IGNORECASE) and re.search(r"\bsubmit\b", task, re.IGNORECASE):
+        text_fields = [candidate for candidate in candidates if candidate.get("role") in {"input", "textbox"} and candidate.get("kind") in {"text", "search", "email", "tel", "url", "number"} and not candidate.get("readOnly")]
+        if not text_fields or not visible_tables:
+            return None
+        for ordinal, field in enumerate(text_fields, start=1):
+            if field_key(field) in completed_fields:
+                continue
+            field_label = normalized(field.get("label", "")).rstrip(" :")
+            if not field_label:
+                return None
+            matching_fields = [candidate for candidate in text_fields if normalized(candidate.get("label", "")).rstrip(" :") == field_label]
+            if len(matching_fields) != 1:
+                return None
+            matching_rows = [
+                row for table in visible_tables for row in table.get("rows", [])
+                if len(row) >= 2 and normalized(str(row[0])).rstrip(" :") == field_label
+            ]
+            if len(matching_rows) != 1 or not str(matching_rows[0][1]).strip():
+                return None
+            value = str(matching_rows[0][1]).strip()
+            return "fill", {"ref": field["ref"], "text": value}, {"fieldKind": "visible-table-value", "fieldOrdinal": ordinal, "characterCount": len(value)}
+        submit_controls = [candidate for candidate in candidates if candidate.get("kind") == "submit" or candidate.get("role") == "button" and normalized(candidate.get("label", "").split("—", 1)[0]).rstrip(" :") == "submit"]
+        if len(submit_controls) == 1 and submit_controls[0].get("risk") == "approval-required":
+            return "act", {"ref": submit_controls[0]["ref"]}, {"fieldKind": "submit-after-visible-table-values"}
+        return None
+
     email_reply = re.search(
         r'\bfind\s+the\s+email\s+by\s+(.+?)\s+and\s+reply\s+to\s+them\s+with\s+the\s+text\s+["“]([^"”\r\n]+)["”]',
         task,
@@ -274,6 +300,8 @@ class NodeBridge:
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             bufsize=1,
             env=env,
         )
@@ -425,7 +453,7 @@ def main():
         for step_index in range(args.max_actions):
             if args.multi_tool:
                 inspected = bridge.call("inspect")
-                planned = multi_tool_action(task, inspected.get("candidates", []), completed_fields, inspected.get("textExcerpt", ""))
+                planned = multi_tool_action(task, inspected.get("candidates", []), completed_fields, inspected.get("textExcerpt", ""), inspected.get("tables", []))
                 if planned:
                     operation, fields, metadata = planned
                     action_result = bridge.call(operation, **fields)
@@ -454,7 +482,7 @@ def main():
                         break
                     if operation == "set-range" and action_result.get("status") not in {"set", "already-set"}:
                         break
-                    if metadata.get("fieldKind") in {"submit-after-explicit-slider-entry", "submit-after-local-copy", "submit-after-explicit-checkbox-batch", "submit-after-email-reply"}:
+                    if metadata.get("fieldKind") in {"submit-after-explicit-slider-entry", "submit-after-local-copy", "submit-after-explicit-checkbox-batch", "submit-after-email-reply", "submit-after-visible-table-values"}:
                         break
                     continue
 
@@ -661,7 +689,7 @@ def main():
             "rawTaskInfo": task_info,
             "timestampUtc": datetime.now(timezone.utc).isoformat(),
             "maxActions": args.max_actions,
-            "note": "A curated MiniWoB integration smoke check, not a representative BrowserGym benchmark or a full autonomous agent. Multi-tool mode extracts only explicit task values and visible native options; field values are omitted from action traces. The optional OCR path attempts only the quoted link target and its coordinate click remains behind the standard one-use approval gate; synthetic approval is possible only for the exact local MiniWoB file URL.",
+            "note": "A curated MiniWoB integration smoke check, not a representative BrowserGym benchmark or a full autonomous agent. Multi-tool mode extracts only explicit task values, unique matches from bounded visible tables, and visible native options; field values are omitted from action traces. The optional OCR path attempts only the quoted link target and its coordinate click remains behind the standard one-use approval gate; synthetic approval is possible only for the exact local MiniWoB file URL.",
             "visualOcrActionsEnabled": args.visual_ocr_actions,
         }
         if args.output:

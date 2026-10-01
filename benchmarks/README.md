@@ -92,7 +92,9 @@ The prior `results/miniwob-expanded-multi-tool-60bec66.json` run and its 26 epis
 
 `results/miniwob-expanded-multi-tool-00b7b13.json` and its 26 per-task files record a later same-task-set run that also completed 22/26 with no timeouts. The exact-sender email path passed, but the custom pointer-target path introduced a duplicate for the nested menu item, so `click-menu-2` regressed. End-to-end latency including reset was p50 1,216 ms / p95 22,676 ms; browser action-loop latency was p50 379 ms / p95 21,628 ms; five measured decision calls had p50 292 ms / p95 1,091 ms. The two visual-only tasks still failed after local CPU descriptions; `read-table-2` was the other failure. This run exposed a menu-target ambiguity and is kept alongside the repaired result rather than omitted.
 
-`results/miniwob-expanded-multi-tool-8ffc709.json` and its 26 per-task files are the latest run on source commit `8ffc7093c3b7732589bfb33a48a123c0514c9ddb`. It completed 23/26 (88.5%) with no harness timeouts, using the same task set, seed 7, eight-action cap, BrowserGym 0.14.3, MiniWoB++ commit `7fd85d71a4b60325c6585396ec4f48377d049838`, Node 24.20.0, Python 3.12.3, Playwright Python 1.44.0 / Node 1.63.0, and Chromium 125. The run used `adk-browsergym-miniwob:0.14.3` on Linux x64 CPU; the host CPU was Intel Xeon Gold 6140 at 2.30 GHz. It exercised the full-reward check, approval-gated local actions, checkbox batching, field copying, select options, and sliders. End-to-end latency including reset was p50 1,130 ms / p95 25,838 ms; browser action-loop latency was p50 351 ms / p95 25,015 ms; four timed decision calls had p50 241 ms / p95 2,190 ms. The same three tasks remained incomplete: `ascending-numbers` (25,838 ms) and `daily-calendar` (31,523 ms) only received local visual descriptions and took no actions; `read-table-2` failed in 828 ms. All three failures were `task-goal-not-achieved`; none timed out. This harness does not test `browser_visual_text`, `browser_visual_action`, or the drag-and-drop tool. It is a bounded tool-integration run that extracts explicit values from synthetic task instructions, not a full autonomous agent, representative quality benchmark, or general speed claim. Raw episode files preserve tool traces, approvals, versions, and failures.
+`results/miniwob-expanded-multi-tool-8ffc709.json` and its 26 per-task files preserve the prior full curated run on source commit `8ffc7093c3b7732589bfb33a48a123c0514c9ddb`. It completed 23/26 (88.5%) with no harness timeouts on Linux x64 CPU. End-to-end latency including reset was p50 1,130 ms / p95 25,838 ms; browser action-loop latency was p50 351 ms / p95 25,015 ms; four timed decision calls had p50 241 ms / p95 2,190 ms. It included `ascending-numbers` and `daily-calendar`, which received local visual descriptions without browser actions, and `read-table-2`, which stopped before filling its fields. This older run is retained as a 26-task reference, not as the latest result.
+
+`results/miniwob-dom-table-24-5b52abc-utf8.json` and its 24 per-task records are the latest DOM-focused integration run. The curated task set excludes the two visual-only pages `ascending-numbers` and `daily-calendar`; it completed all 24 selected tasks with no harness timeouts. `read-table-2` now succeeds through bounded visible table rows and explicit adjacent field labels, and `click-checkboxes-large` selects ten named checkboxes in one batch call. End-to-end latency including BrowserGym reset was p50 1,665 ms / p95 2,598 ms; browser action-loop latency was p50 323 ms / p95 907 ms; four local semantic calls had p50 191 ms / p95 430 ms. This Windows 10 Pro CPU run used an AMD Ryzen 5 5600H, Node 22.14.0, Python 3.10.0, BrowserGym 0.14.3, MiniWoB++ commit `7fd85d71a4b60325c6585396ec4f48377d049838`, Playwright Python 1.44.0 / Node 1.63.0, and Chromium 125. The records identify base commit `5b52abc1c261d13ed4619a96beebf9522f1c4aea` and mark that the working tree was modified. The multi-tool harness uses explicit synthetic task instructions and visible rows; synthetic approval is limited to the exact local MiniWoB file URL. These 24 selected tasks do not establish a full MiniWoB score, autonomous-agent quality, general speed, GPU performance, or visual task success. All visual tools remain outside this run.
 
 `results/miniwob-expanded-multi-tool-78e53ae.json` and its 26 per-task files are the previous same-task-set run. It also completed 23/26 (88.5%) with no harness timeouts on Linux x64 CPU, using BrowserGym 0.14.3, MiniWoB++ commit `7fd85d71a4b60325c6585396ec4f48377d049838`, Node 24.20.0, Python 3.12.3, Playwright Python 1.44.0 / Node 1.63.0, and Chromium 125. The source commit was `78e53ae5c92ef15c772a09691939d1a3b812aefa`. End-to-end latency including reset was p50 1,192 ms / p95 23,342 ms; browser action-loop latency was p50 361 ms / p95 22,317 ms; four measured decision calls had p50 239 ms / p95 692 ms. This prior run remains available for comparison, but these two samples do not establish a speed change. The bounded harness is not a full autonomous agent or representative quality benchmark. Raw episode files preserve tool traces, approvals, versions, and failures.
 
@@ -116,6 +118,21 @@ python benchmarks/run-browsergym-miniwob-suite.py \
   --seed 7 --max-actions 8 --timeout-seconds 180 \
   --multi-tool --approve-synthetic-actions \
   --output benchmarks/results/miniwob-expanded-multi-tool-8ffc709.json
+```
+
+Reproduce the current DOM-focused subset (omitting the two visual-only tasks that are covered separately):
+
+```sh
+python benchmarks/run-browsergym-miniwob-suite.py \
+  --miniwob-root /tmp/miniwob-plusplus/miniwob/html/miniwob \
+  --tasks choose-date-easy choose-list click-button click-checkboxes-large \
+    click-collapsible-2 click-dialog-2 click-link click-menu-2 click-option \
+    click-scroll-list click-tab-2-easy click-test-2 click-widget copy-paste \
+    email-inbox-noscroll enter-date enter-text-2 focus-text-2 form-sequence-2 \
+    navigate-tree read-table-2 search-engine use-autocomplete-nodelay use-slider-2 \
+  --seed 7 --max-actions 8 --timeout-seconds 120 \
+  --multi-tool --approve-synthetic-actions \
+  --output benchmarks/results/miniwob-dom-table-24-5b52abc-utf8.json
 ```
 
 Reproduce the multi-tool fixture with the same BrowserGym setup:

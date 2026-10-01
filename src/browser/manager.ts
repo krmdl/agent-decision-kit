@@ -7,6 +7,7 @@ import { closeOcrWorker, findExactOcrTextMatches, recognizeScreenshotText, type 
 import type { DecisionProvider } from "../core/types.js";
 
 export type BrowserCandidate = { ref: string; role: string; label: string; kind: string; risk: "low" | "approval-required"; checked?: boolean; expanded?: boolean; selected?: boolean; readOnly?: boolean; dragSource?: boolean; dropTarget?: boolean; optionLabels?: string[]; selectedOptionLabels?: string[]; min?: number; max?: number; step?: number };
+export type BrowserTable = { index: number; rows: string[][] };
 export type BrowserManagerOptions = { headless?: boolean; profileDir?: string; includeCandidateSnapshot?: boolean };
 
 type ViewportMetrics = { width: number; height: number; devicePixelRatio: number };
@@ -170,9 +171,12 @@ export class BrowserManager {
         const aria = redactEditableText(element.getAttribute("aria-label") || labelledBy || element.getAttribute("title") || "");
         const imageAlt = redactEditableText(element.getAttribute("alt") ?? "");
         const id = element.id ? redactEditableText(document.querySelector(`label[for="${CSS.escape(element.id)}"]`)?.textContent ?? "") : "";
-        const wrappingLabel = redactEditableText(element.closest("label")?.textContent ?? "");
         const isSelect = element.tagName.toLowerCase() === "select";
         const isEditableControl = element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || isSelect;
+        const wrappingLabel = redactEditableText(element.closest("label")?.textContent ?? "");
+        const precedingLabel = isEditableControl && element.previousElementSibling?.tagName.toLowerCase() === "label"
+          ? redactEditableText(element.previousElementSibling.textContent ?? "")
+          : "";
         const text = isEditableControl ? "" : redactEditableText(element.textContent ?? "");
         const placeholder = input.placeholder ?? "";
         const name = input.getAttribute("name") ?? "";
@@ -183,7 +187,7 @@ export class BrowserManager {
         const options = isSelect
           ? Array.from((element as HTMLSelectElement).options).filter((option) => !option.disabled && !(option.parentElement?.tagName === "OPTGROUP" && (option.parentElement as HTMLOptGroupElement).disabled) && option.label.trim()).slice(0, 12).map((option) => option.label.trim())
           : [];
-        const textLabels = [aria, id, wrappingLabel, imageAlt, text, placeholder, name, toggleState, disclosureState].filter(Boolean);
+        const textLabels = [aria, id, wrappingLabel, precedingLabel, imageAlt, text, placeholder, name, toggleState, disclosureState].filter(Boolean);
         const icon = textLabels.length ? "" : iconLabelFor(element);
         const parts = [...new Set([...textLabels, icon].filter(Boolean))];
         const currentOption = isSelect ? (element as HTMLSelectElement).selectedOptions[0]?.label.trim() : "";
@@ -332,6 +336,20 @@ export class BrowserManager {
       });
       const heading = Array.from(document.querySelectorAll("h1,h2")).filter(visible).slice(0, 8).map((element) => redactEditableText(element.textContent ?? "")).filter(Boolean);
       const body = redactEditableText(document.body?.innerText ?? "").slice(0, 2_000);
+      const tables: BrowserTable[] = Array.from(document.querySelectorAll("table"))
+        .filter(visible)
+        .slice(0, 3)
+        .map((table, index) => ({
+          index: index + 1,
+          rows: Array.from(table.querySelectorAll("tr"))
+            .filter((row) => row.closest("table") === table && visible(row))
+            .slice(0, 6)
+            .map((row) => Array.from(row.cells)
+              .filter(visible)
+              .slice(0, 6)
+              .map((cell) => redactEditableText(cell.innerText ?? "").slice(0, 120))),
+        }))
+        .filter((table) => table.rows.length > 0);
       const privateFormState = Array.from(document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | HTMLElement>("input,textarea,select,[contenteditable]:not([contenteditable='false'])"))
         .map((element) => {
           if (element instanceof HTMLInputElement) return ["input", element.type, element.value, element.checked];
@@ -354,7 +372,7 @@ export class BrowserManager {
           form: form ? { action: form.action, method: form.method, target: form.target, enctype: form.enctype } : null,
         };
       });
-      return { title: document.title, url: location.href, headings: heading, textExcerpt: body, candidates, privateFormState, privateActionState };
+      return { title: document.title, url: location.href, headings: heading, textExcerpt: body, tables, candidates, privateFormState, privateActionState };
     }, this.referenceAttributeName);
     const { privateFormState, privateActionState, candidates: rawCandidates, ...snapshot } = result;
     this.privateFieldValuePresence.clear();
@@ -369,7 +387,7 @@ export class BrowserManager {
     const privateStateFingerprint = createHash("sha256").update(JSON.stringify({ privateFormState, privateActionState, privateRangeState })).digest("hex");
     const safeSnapshot = { ...snapshot, candidates };
     this.lastInspectionFingerprint = snapshotFingerprint({ ...safeSnapshot, privateStateFingerprint });
-    return { ...safeSnapshot, url: redactBrowserUrl(snapshot.url), candidates: candidates.map(({ ref, role, label, kind, risk, checked, expanded, selected, readOnly, dragSource, dropTarget, optionLabels, selectedOptionLabels, min, max, step }) => ({ ref, role, label, kind, risk, ...(checked === undefined ? {} : { checked }), ...(expanded === undefined ? {} : { expanded }), ...(selected === undefined ? {} : { selected }), ...(readOnly === undefined ? {} : { readOnly }), ...(dragSource === undefined ? {} : { dragSource }), ...(dropTarget === undefined ? {} : { dropTarget }), ...(optionLabels === undefined ? {} : { optionLabels }), ...(selectedOptionLabels === undefined ? {} : { selectedOptionLabels }), ...(min === undefined ? {} : { min }), ...(max === undefined ? {} : { max }), ...(step === undefined ? {} : { step }) })), inspectMs: Math.round(performance.now() - before), candidateLimit: 80, note: "Bounded visible DOM/accessibility snapshot. Alongside semantic controls, it scans keyboard-operated jQuery UI slider handles with a linked visible numeric readout, native drag sources and declared drop targets, and clear CSS pointer-only text or icon targets within the same 80-candidate limit. Distinct labeled child targets are exposed separately; CSS image filenames may provide a fallback label for icon-only controls. Custom targets have no semantic role and always require a separate approval. Native select options are limited to 12 enabled labels; editable values, passwords, cookies and storage are not returned. Editable values, slider readings and action destinations are hashed locally only to invalidate stale approvals. URL credentials, query and hash are redacted." };
+    return { ...safeSnapshot, url: redactBrowserUrl(snapshot.url), candidates: candidates.map(({ ref, role, label, kind, risk, checked, expanded, selected, readOnly, dragSource, dropTarget, optionLabels, selectedOptionLabels, min, max, step }) => ({ ref, role, label, kind, risk, ...(checked === undefined ? {} : { checked }), ...(expanded === undefined ? {} : { expanded }), ...(selected === undefined ? {} : { selected }), ...(readOnly === undefined ? {} : { readOnly }), ...(dragSource === undefined ? {} : { dragSource }), ...(dropTarget === undefined ? {} : { dropTarget }), ...(optionLabels === undefined ? {} : { optionLabels }), ...(selectedOptionLabels === undefined ? {} : { selectedOptionLabels }), ...(min === undefined ? {} : { min }), ...(max === undefined ? {} : { max }), ...(step === undefined ? {} : { step }) })), inspectMs: Math.round(performance.now() - before), candidateLimit: 80, note: "Bounded visible DOM/accessibility snapshot. It includes up to three visible HTML tables with six rows and six cells each, and adjacent explicit labels for otherwise unassociated form fields. Alongside semantic controls, it scans keyboard-operated jQuery UI slider handles with a linked visible numeric readout, native drag sources and declared drop targets, and clear CSS pointer-only text or icon targets within the same 80-candidate limit. Distinct labeled child targets are exposed separately; CSS image filenames may provide a fallback label for icon-only controls. Custom targets have no semantic role and always require a separate approval. Native select options are limited to 12 enabled labels; current editable values, passwords, cookies and storage are not returned. Editable values, slider readings and action destinations are hashed locally only to invalidate stale approvals. URL credentials, query and hash are redacted." };
   }
 
   async decideAndAct(task: string, provider: DecisionProvider) {
@@ -1087,8 +1105,8 @@ function diffExcerpt(before: string, after: string) {
   return { changed: true, excerpt };
 }
 
-function snapshotFingerprint(snapshot: { title: string; url: string; headings: string[]; textExcerpt: string; candidates: BrowserCandidate[]; privateStateFingerprint?: string }) {
-  const stable = JSON.stringify({ title: snapshot.title, url: snapshot.url, headings: snapshot.headings, textExcerpt: snapshot.textExcerpt, candidates: snapshot.candidates.map(({ ref, role, label, kind, risk, checked, expanded, selected, readOnly, optionLabels, selectedOptionLabels, min, max, step }) => ({ ref, role, label, kind, risk, checked, expanded, selected, readOnly, optionLabels, selectedOptionLabels, min, max, step })), privateStateFingerprint: snapshot.privateStateFingerprint ?? "" });
+function snapshotFingerprint(snapshot: { title: string; url: string; headings: string[]; textExcerpt: string; tables?: BrowserTable[]; candidates: BrowserCandidate[]; privateStateFingerprint?: string }) {
+  const stable = JSON.stringify({ title: snapshot.title, url: snapshot.url, headings: snapshot.headings, textExcerpt: snapshot.textExcerpt, tables: snapshot.tables ?? [], candidates: snapshot.candidates.map(({ ref, role, label, kind, risk, checked, expanded, selected, readOnly, optionLabels, selectedOptionLabels, min, max, step }) => ({ ref, role, label, kind, risk, checked, expanded, selected, readOnly, optionLabels, selectedOptionLabels, min, max, step })), privateStateFingerprint: snapshot.privateStateFingerprint ?? "" });
   return createHash("sha256").update(stable).digest("hex");
 }
 

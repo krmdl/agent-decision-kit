@@ -113,7 +113,7 @@ export function createServer(options: { provider?: DecisionProvider } = {}) {
 
   server.registerTool("browser_inspect", {
     title: "Inspect browser page",
-    description: "Return a bounded visible DOM/accessibility snapshot. Alongside semantic controls, scan clear CSS pointer-only text or icon targets; distinct labeled child targets are exposed separately, and icon filenames can supply fallback labels. Custom targets have no semantic role and always require approval. Includes at most 12 enabled labels per native select, range-slider min/max/step, and read-only picker markers, but never returns current field values, passwords, cookies, or storage.",
+    description: "Return a bounded visible DOM/accessibility snapshot with up to three HTML tables (six rows and six cells per table) and adjacent explicit labels for form fields. Alongside semantic controls, scan clear CSS pointer-only text or icon targets; distinct labeled child targets are exposed separately, and icon filenames can supply fallback labels. Custom targets have no semantic role and always require approval. Includes at most 12 enabled labels per native select, range-slider min/max/step, and read-only picker markers, but never returns current field values, passwords, cookies, or storage.",
     inputSchema: {},
   }, async () => asToolResult(await browser.inspect()));
 

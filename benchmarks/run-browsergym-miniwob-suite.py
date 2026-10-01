@@ -111,6 +111,8 @@ def main():
                 cwd=ROOT,
                 capture_output=True,
                 text=True,
+                encoding="utf-8",
+                errors="replace",
                 timeout=args.timeout_seconds,
                 check=False,
             )
@@ -167,7 +169,7 @@ def main():
         "agentDecisionKitCommit": suite_environment["agentDecisionKitCommit"],
         "toolCoverage": exercised_tools,
         "notExercisedTools": sorted(supported_tools - set(exercised_tools)),
-        "limitation": "This is a curated integration harness, not a full autonomous agent or representative BrowserGym benchmark. In multi-tool mode, it extracts only explicit values from synthetic task instructions, selects exact visible options, and sets explicit keyboard-slider targets. When enabled, synthetic approval is limited to an explicitly requested action on the exact local file:// task page. The optional visual OCR path tries only an explicitly quoted link label.",
+        "limitation": "This is a curated integration harness, not a full autonomous agent or representative BrowserGym benchmark. In multi-tool mode, it extracts only explicit values from synthetic task instructions, uses unique matches from bounded visible table rows, selects exact visible options, and sets explicit keyboard-slider targets. When enabled, synthetic approval is limited to an explicitly requested action on the exact local file:// task page. The optional visual OCR path tries only an explicitly quoted link label.",
         "seed": args.seed,
         "maxActionsPerTask": args.max_actions,
         "timeoutSecondsPerTask": args.timeout_seconds,

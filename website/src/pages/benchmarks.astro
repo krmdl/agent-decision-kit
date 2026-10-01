@@ -1,7 +1,8 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 import { siteBase } from "../utils/site.js";
-import latestRun from "../../../benchmarks/results/miniwob-expanded-multi-tool-8ffc709.json";
+import latestRun from "../../../benchmarks/results/miniwob-dom-table-24-5b52abc-utf8.json";
+import previousFullRun from "../../../benchmarks/results/miniwob-expanded-multi-tool-8ffc709.json";
 import focusedRun from "../../../benchmarks/results/miniwob-targeted-browser-fixes-8490bd7.json";
 import cpuDecisionRun from "../../../benchmarks/results/decision-cases-independent-ryzen5600h-cpu-smoke.json";
 import dmlDecisionRun from "../../../benchmarks/results/decision-cases-independent-ryzen5600h-dml-smoke.json";
@@ -14,7 +15,7 @@ const failureCount = episodeCount - successCount;
 const successPercent = Math.round(latestRun.taskSuccessRate * 100);
 const environment = latestRun.rawRecords[0];
 const commitUrl = `https://github.com/krmdl/agent-decision-kit/commit/${latestRun.suite.agentDecisionKitCommit}`;
-const rawRunUrl = "https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/miniwob-expanded-multi-tool-8ffc709.json";
+const rawRunUrl = "https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/miniwob-dom-table-24-5b52abc-utf8.json";
 const verifiedNavigationCount = verifiedNavigationRun.episodeCount;
 const verifiedNavigationSuccesses = verifiedNavigationRun.successCount;
 const verifiedNavigationPartial = verifiedNavigationRun.partialRewardCount;
@@ -54,9 +55,9 @@ const decisionRows = [
 
     <section class="latest" aria-labelledby="latest-title">
       <div class="section-heading">
-        <p class="eyebrow">LATEST MULTI-TOOL INTEGRATION</p>
+      <p class="eyebrow">LATEST DOM MULTI-TOOL INTEGRATION</p>
         <h2 id="latest-title">{successCount} of {episodeCount} tasks succeeded.</h2>
-        <p>The bounded harness extracted explicit targets from synthetic task instructions, used <code>browser_copy_field</code> and <code>browser_set_checkboxes</code> for local form workflows, and exercised <code>browser_set_range</code> on keyboard-operated sliders. Each Submit action still received a separate local-only synthetic approval. This rerun on commit {latestRun.suite.agentDecisionKitCommit.slice(0, 7)} reproduced 23/26 successes; the same three task goals remain unmet. The two visual-only pages received local image descriptions but no browser action. This measures tool integration, not an autonomous coding-agent score.</p>
+        <p>This Windows CPU run completed 24 selected DOM tasks from the earlier 26-task MiniWoB set. It excludes the visual-only <code>ascending-numbers</code> and <code>daily-calendar</code> tasks. The bounded harness extracts explicit targets from synthetic task instructions, reads unique values from visible HTML tables, uses <code>browser_copy_field</code> and <code>browser_set_checkboxes</code> for local form workflows, and exercises <code>browser_set_range</code> on keyboard-operated sliders. Each Submit action receives a separate local-only synthetic approval. The previous full 26-task run completed {previousFullRun.successCount}/{previousFullRun.episodeCount}; it is a different task set and machine, so the rates should not be compared directly. This measures tool integration, not an autonomous coding-agent score.</p>
         <p class="comparison-note">Task success requires a raw MiniWoB reward of at least 1.0; positive partial rewards count as failures. This avoids BrowserGym 0.14.3's partial-reward-to-success conversion documented in <a href="https://github.com/ServiceNow/BrowserGym/issues/392">upstream issue 392</a>.</p>
       </div>
 
@@ -75,29 +76,29 @@ const decisionRows = [
       <div class="metrics-grid">
         <article class="metric"><p class="eyebrow">TASK SUCCESS</p><strong>{successCount}/{episodeCount}</strong><span>{successPercent}% on this curated set</span></article>
         <article class="metric"><p class="eyebrow">BROWSER LOOP P50</p><strong>{(latestRun.agentActionLatencyMs.p50 / 1000).toFixed(2)}s</strong><span>Includes tool actions and inspection</span></article>
-        <article class="metric"><p class="eyebrow">BROWSER LOOP P95</p><strong>{(latestRun.agentActionLatencyMs.p95 / 1000).toFixed(1)}s</strong><span>Two local vision descriptions drive the slow tail</span></article>
-        <article class="metric"><p class="eyebrow">DECISION CALL P95</p><strong>{latestRun.decisionCallLatencyMs.p95}ms</strong><span>Cold call in a new Node process per task</span></article>
+        <article class="metric"><p class="eyebrow">BROWSER LOOP P95</p><strong>{(latestRun.agentActionLatencyMs.p95 / 1000).toFixed(2)}s</strong><span>Includes browser inspection, selection, and actions</span></article>
+        <article class="metric"><p class="eyebrow">DECISION CALL P95</p><strong>{latestRun.decisionCallLatencyMs.p95}ms</strong><span>Four local semantic calls across 24 episodes</span></article>
       </div>
     </section>
 
     <section class="conditions" aria-labelledby="conditions-title">
       <div>
         <p class="eyebrow">REPRODUCTION DETAILS</p>
-        <h2 id="conditions-title">A CPU run with a fixed task set.</h2>
+        <h2 id="conditions-title">A CPU run with a fixed DOM task set.</h2>
         <dl>
-          <div><dt>Agent Decision Kit</dt><dd><a href={commitUrl}>{latestRun.suite.agentDecisionKitCommit.slice(0, 7)}</a></dd></div>
+          <div><dt>Base source commit</dt><dd><a href={commitUrl}>{latestRun.suite.agentDecisionKitCommit.slice(0, 7)}</a> · benchmark used a modified working tree</dd></div>
           <div><dt>Benchmark</dt><dd>BrowserGym MiniWoB 0.14.3</dd></div>
           <div><dt>Browser and runtimes</dt><dd>{environment.browserVersion} · Node {environment.nodeVersion} · Python {environment.pythonVersion} · Playwright Python {environment.playwrightPythonVersion} / Node {environment.playwrightNodeVersion}</dd></div>
-          <div><dt>Machine</dt><dd>{environment.operatingSystem} · {environment.cpuModel}</dd></div>
-          <div><dt>Runner image</dt><dd>{environment.containerImage} · {environment.containerImageId.slice(0, 19)}</dd></div>
-          <div><dt>Task set</dt><dd>26 curated MiniWoB tasks · seed 7 · eight actions per task</dd></div>
-          <div><dt>Model path</dt><dd>Local semantic model and CPU visual descriptions; no remote decision provider</dd></div>
+          <div><dt>Machine</dt><dd>Windows 10 Pro · {environment.cpuModel}</dd></div>
+          <div><dt>Runner</dt><dd>Native Windows browser process · CPU · no Docker container</dd></div>
+          <div><dt>Task set</dt><dd>24 curated DOM tasks · seed 7 · eight actions per task; excludes two visual-only tasks</dd></div>
+          <div><dt>Model path</dt><dd>Local semantic model · no vision call or remote decision provider in this run</dd></div>
         </dl>
       </div>
       <aside>
         <b>How to read the latency</b>
-        <p>Every task starts a fresh Node bridge. Four timed decision calls had p50 {latestRun.decisionCallLatencyMs.p50} ms / p95 {latestRun.decisionCallLatencyMs.p95} ms. This run does not establish warm throughput or the consumer-GPU target.</p>
-        <p>Two visual-only pages used local image description on CPU and took 25.8 s and 31.5 s; neither received a browser action. The text and OCR action tools were not exercised in this run.</p>
+        <p>Total task time includes BrowserGym environment reset: p50 {(latestRun.latencyMs.p50 / 1000).toFixed(2)} s / p95 {(latestRun.latencyMs.p95 / 1000).toFixed(2)} s. The browser tool loop had p50 {latestRun.agentActionLatencyMs.p50} ms / p95 {latestRun.agentActionLatencyMs.p95} ms. Four measured local semantic calls had p50 {latestRun.decisionCallLatencyMs.p50} ms / p95 {latestRun.decisionCallLatencyMs.p95} ms. These samples do not establish warm throughput or the consumer-GPU target.</p>
+        <p>The visual-only tasks and OCR/visual action tools were not exercised. Every benchmark confirmation is synthetic and restricted by the harness to a local MiniWoB page.</p>
         <a class="text-link" href={rawRunUrl}>Inspect the summary and all raw episodes ↗</a>
       </aside>
     </section>
@@ -132,6 +133,11 @@ const decisionRows = [
       <p class="eyebrow">OTHER RECORDED RUNS</p>
       <h2 id="other-runs-title">Different runs answer different questions.</h2>
       <div class="run-list">
+        <article>
+          <div><strong>{previousFullRun.successCount}/{previousFullRun.episodeCount}</strong><span>Prior full 26-task MiniWoB run</span></div>
+          <p>Linux CPU integration on the larger curated set. The two visual-only pages were described but not acted on, and <code>read-table-2</code> stopped before entry. It remains useful as a broader task-set record, but is not directly comparable with the latest DOM-only Windows run.</p>
+          <a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/miniwob-expanded-multi-tool-8ffc709.json">Raw run ↗</a>
+        </article>
         <article>
           <div><strong>22/26</strong><span>Intermediate pointer run</span></div>
           <p>The exact-sender email flow passed, while duplicate nested menu targets caused a regression. The later pointer-wrapper fix restored that menu task; the two visual-only tasks and <code>read-table-2</code> still failed.</p>
@@ -168,7 +174,7 @@ const decisionRows = [
           <a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/miniwob-expanded-smoke-suite.json">Raw run ↗</a>
         </article>
       </div>
-      <p class="comparison-note">The latest and prior 26-task runs share a task set, seed, and action cap, but each is one CPU integration observation on a changing toolchain; neither establishes general browser quality or speed. Other counts use different task sets. No Jev parity comparison has been run. The original multi-site WebArena and VisualWebArena suites have no results. A separate {verifiedNavigationCount}-task WebArena Verified sweep on one synthetic admin site reached full reward on {verifiedNavigationSuccesses}/{verifiedNavigationCount} tasks and partial reward on {verifiedNavigationPartial}; it remains a narrow navigation integration sample.</p>
+      <p class="comparison-note">The latest 24-task DOM subset and prior 26-task run differ in task coverage, host, and source state; neither establishes general browser quality or speed. No Jev parity comparison has been run. The original multi-site WebArena and VisualWebArena suites have no results. A separate {verifiedNavigationCount}-task WebArena Verified sweep on one synthetic admin site reached full reward on {verifiedNavigationSuccesses}/{verifiedNavigationCount} tasks and partial reward on {verifiedNavigationPartial}; it remains a narrow navigation integration sample.</p>
       <a class="text-link" href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/README.md">Read the full protocol and reproduction commands →</a>
     </section>
 

@@ -42,6 +42,7 @@ class RuntimeMetadataTests(unittest.TestCase):
             )
 
         self.assertEqual(metadata["agentDecisionKitCommit"], "not-reported")
+        self.assertIsNone(metadata["workingTreeModified"])
         self.assertEqual(metadata["browserGymPackageCommit"], "browsergym-commit")
         self.assertEqual(metadata["playwrightNodeVersion"], "1.63.0")
         self.assertEqual(metadata["nodeVersion"], "v24.20.0")

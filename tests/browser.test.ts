@@ -52,6 +52,7 @@ describe("Playwright browser safety flow", () => {
   let ariaSliderHtml: Buffer;
   let jqueryUiSliderHtml: Buffer;
   let dragAndDropHtml: Buffer;
+  let adjacentLabelTableHtml: Buffer;
 
   beforeAll(async () => {
     const html = await readFile(path.resolve("examples/browser-demo.html"));
@@ -64,6 +65,7 @@ describe("Playwright browser safety flow", () => {
     ariaSliderHtml = Buffer.from('<!doctype html><div id="level" role="slider" aria-label="Level" aria-valuemin="0" aria-valuemax="20" aria-valuenow="4" tabindex="0" style="width:120px;height:20px"></div><p id="value">4</p><script>document.querySelector("#level").addEventListener("keydown",event=>{const control=event.currentTarget;let value=Number(control.getAttribute("aria-valuenow"));if(event.key==="ArrowRight")value=Math.min(20,value+1);else if(event.key==="ArrowLeft")value=Math.max(0,value-1);else return;event.preventDefault();control.setAttribute("aria-valuenow",String(value));document.querySelector("#value").textContent=String(value)})</script>');
     jqueryUiSliderHtml = Buffer.from('<!doctype html><div id="slider-1" class="ui-slider" data-output="value"><span class="ui-slider-handle" tabindex="0" style="display:block;position:absolute;width:16px;height:16px"></span></div><p id="value">4</p><script>document.querySelector(".ui-slider-handle").addEventListener("keydown",event=>{let value=Number(document.querySelector("#value").textContent);if(event.key==="ArrowRight")value=Math.min(20,value+1);else if(event.key==="ArrowLeft")value=Math.max(0,value-1);else return;event.preventDefault();document.querySelector("#value").textContent=String(value)})</script>');
     dragAndDropHtml = await readFile(path.resolve("examples/browser-drag-demo.html"));
+    adjacentLabelTableHtml = Buffer.from('<!doctype html><table><tr><td>Color</td><td>Blue</td></tr><tr><td>Year</td><td>2001</td></tr></table><form><div><label>Color:</label><input id="color" type="text"></div><div><label>Year:</label><input id="year" type="text"></div><div><label>Private field:</label><input id="private" type="text" value="hidden-current-value"></div></form>');
     autocompleteHtml = Buffer.from('<!doctype html><style>.suggestion{cursor:pointer}</style><label>Tag <input id="tag" type="text"></label><div><span class="suggestion">Poland</span><span class="suggestion">Portugal</span></div>');
     multipleSelectHtml = Buffer.from('<!doctype html><label for="tags">Tags</label><select id="tags" multiple><option value="alpha" selected>Alpha</option><option value="beta">Beta</option><option value="gamma">Gamma</option></select><p id="status">Not submitted</p>');
     mixedPointerHtml = Buffer.from('<!doctype html><style>.faux-link { cursor: pointer }</style><button>Section</button><span id="target" class="faux-link">Ultrices</span><p id="status">Not clicked</p><script>document.querySelector("#target").addEventListener("click",()=>document.querySelector("#status").textContent="Clicked locally")</script>');
@@ -107,7 +109,7 @@ describe("Playwright browser safety flow", () => {
         response.end(dragAndDropHtml);
         return;
       }
-      response.end(request.url === "/visual-only" ? visualHtml : request.url === "/pointer-text" ? pointerTextHtml : request.url === "/icon-pointer" ? iconPointerHtml : request.url === "/silent-pointer" ? silentPointerHtml : request.url === "/silent-input" ? silentInputHtml : request.url === "/mixed-pointer" ? mixedPointerHtml : request.url === "/checkbox" ? checkboxHtml : request.url === "/submit" ? submitHtml : request.url === "/checkbox-task" ? checkboxTaskHtml : request.url === "/tabs" ? tabHtml : request.url === "/expand" ? expandHtml : request.url === "/native-fields" ? nativeFieldsHtml : request.url === "/copy-fields" ? copyFieldsHtml : request.url === "/slider" ? sliderHtml : request.url === "/aria-slider" ? ariaSliderHtml : request.url === "/jquery-ui-slider" ? jqueryUiSliderHtml : request.url === "/autocomplete" ? autocompleteHtml : request.url === "/multi-select" ? multipleSelectHtml : request.url === "/ambiguous-labels" ? ambiguousLabelsHtml : request.url === "/navigation-label" ? navigationLabelHtml : request.url === "/navigation-targeting" ? navigationTargetingHtml : request.url === "/navigation-orders" ? navigationOrdersHtml : request.url === "/navigation-target" ? navigationTargetHtml : request.url === "/navigation-hidden-target" ? navigationHiddenTargetHtml : request.url === "/duplicate-navigation-labels" ? duplicateNavigationLabelsHtml : request.url === "/editable" ? editableContentHtml : request.url === "/silent-form" ? silentFormHtml : request.url === "/decision-race" ? decisionRaceHtml : request.url === "/replacement-action" ? replacementActionHtml : request.url === "/dynamic-refs" ? dynamicRefsHtml : request.url === "/menu" ? menuHtml : request.url === "/ordinal-fields" ? ordinalFieldsHtml : request.url === "/textareas" ? textareaWidgetsHtml : request.url === "/ordinal-button" ? ordinalButtonHtml : request.url === "/multi-disclosure" ? multiDisclosureHtml : html);
+      response.end(request.url === "/visual-only" ? visualHtml : request.url === "/pointer-text" ? pointerTextHtml : request.url === "/icon-pointer" ? iconPointerHtml : request.url === "/silent-pointer" ? silentPointerHtml : request.url === "/silent-input" ? silentInputHtml : request.url === "/mixed-pointer" ? mixedPointerHtml : request.url === "/checkbox" ? checkboxHtml : request.url === "/submit" ? submitHtml : request.url === "/checkbox-task" ? checkboxTaskHtml : request.url === "/tabs" ? tabHtml : request.url === "/expand" ? expandHtml : request.url === "/native-fields" ? nativeFieldsHtml : request.url === "/copy-fields" ? copyFieldsHtml : request.url === "/slider" ? sliderHtml : request.url === "/aria-slider" ? ariaSliderHtml : request.url === "/jquery-ui-slider" ? jqueryUiSliderHtml : request.url === "/autocomplete" ? autocompleteHtml : request.url === "/multi-select" ? multipleSelectHtml : request.url === "/ambiguous-labels" ? ambiguousLabelsHtml : request.url === "/navigation-label" ? navigationLabelHtml : request.url === "/navigation-targeting" ? navigationTargetingHtml : request.url === "/navigation-orders" ? navigationOrdersHtml : request.url === "/navigation-target" ? navigationTargetHtml : request.url === "/navigation-hidden-target" ? navigationHiddenTargetHtml : request.url === "/duplicate-navigation-labels" ? duplicateNavigationLabelsHtml : request.url === "/editable" ? editableContentHtml : request.url === "/silent-form" ? silentFormHtml : request.url === "/decision-race" ? decisionRaceHtml : request.url === "/replacement-action" ? replacementActionHtml : request.url === "/dynamic-refs" ? dynamicRefsHtml : request.url === "/menu" ? menuHtml : request.url === "/ordinal-fields" ? ordinalFieldsHtml : request.url === "/textareas" ? textareaWidgetsHtml : request.url === "/ordinal-button" ? ordinalButtonHtml : request.url === "/multi-disclosure" ? multiDisclosureHtml : request.url === "/adjacent-label-table" ? adjacentLabelTableHtml : html);
     });
     await new Promise<void>((resolve, reject) => {
       server.once("error", reject);
@@ -232,6 +234,17 @@ describe("Playwright browser safety flow", () => {
 
     const updated = await browser.inspect();
     expect(updated.candidates.some((item) => item.label === "Setup task complete")).toBe(true);
+  }, 45_000);
+
+  it("returns bounded visible table rows and nearby labels without exposing current field values", async () => {
+    profile = await mkdtemp(path.join(os.tmpdir(), "adk-browser-table-test-"));
+    browser = new BrowserManager({ headless: true, profileDir: path.join(profile, "chromium") });
+    await browser.launch(`${baseUrl}adjacent-label-table`);
+
+    const snapshot = await browser.inspect();
+    expect(snapshot.tables).toEqual([{ index: 1, rows: [["Color", "Blue"], ["Year", "2001"]] }]);
+    expect(snapshot.candidates.filter((candidate) => candidate.kind === "text").map((candidate) => candidate.label)).toEqual(["Color:", "Year:", "Private field:"]);
+    expect(JSON.stringify(snapshot)).not.toContain("hidden-current-value");
   }, 45_000);
 
   it("requires a separate approval to drag a native source to a declared drop target", async () => {

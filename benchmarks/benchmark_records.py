@@ -47,8 +47,15 @@ def collect_runtime_metadata(root, *, browser_info=None, playwright_node_version
     except (OSError, subprocess.CalledProcessError):
         agent_commit = "not-reported"
 
+    try:
+        worktree_check = subprocess.run(["git", "diff", "--quiet", "HEAD"], cwd=root, check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        working_tree_modified = worktree_check.returncode != 0 if worktree_check.returncode in {0, 1} else None
+    except OSError:
+        working_tree_modified = None
+
     return {
         "agentDecisionKitCommit": agent_commit,
+        "workingTreeModified": working_tree_modified,
         "browserGymVersion": package_version("browsergym-core"),
         "browserGymPackageCommit": browsergym_package_commit or "not-reported",
         "playwrightPythonVersion": package_version("playwright"),

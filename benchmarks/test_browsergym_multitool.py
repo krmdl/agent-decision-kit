@@ -14,6 +14,37 @@ SUITE_SPEC.loader.exec_module(SUITE)
 
 
 class MultiToolPlanningTests(unittest.TestCase):
+    def test_fills_fields_from_unique_visible_table_rows_and_submits_only_after_all_values(self):
+        fields = [
+            {"ref": "r1", "role": "input", "kind": "text", "label": "Color:"},
+            {"ref": "r2", "role": "input", "kind": "text", "label": "Year:"},
+        ]
+        submit = {"ref": "r3", "role": "button", "kind": "button", "label": "Submit", "risk": "approval-required"}
+        tables = [{"index": 1, "rows": [["Color", "Blue"], ["Year", "2001"]]}]
+        task = "Enter the value that corresponds with each label into the form and submit when done."
+
+        first = RUNNER.multi_tool_action(task, fields + [submit], set(), visible_tables=tables)
+        self.assertEqual(first, ("fill", {"ref": "r1", "text": "Blue"}, {"fieldKind": "visible-table-value", "fieldOrdinal": 1, "characterCount": 4}))
+        self.assertNotIn("Blue", str(first[2]))
+
+        completed = {RUNNER.field_key(fields[0])}
+        second = RUNNER.multi_tool_action(task, fields + [submit], completed, visible_tables=tables)
+        self.assertEqual(second, ("fill", {"ref": "r2", "text": "2001"}, {"fieldKind": "visible-table-value", "fieldOrdinal": 2, "characterCount": 4}))
+
+        completed.update(RUNNER.field_key(field) for field in fields)
+        final = RUNNER.multi_tool_action(task, fields + [submit], completed, visible_tables=tables)
+        self.assertEqual(final, ("act", {"ref": "r3"}, {"fieldKind": "submit-after-visible-table-values"}))
+
+    def test_refuses_ambiguous_or_missing_table_rows(self):
+        field = {"ref": "r1", "role": "input", "kind": "text", "label": "Color:"}
+        task = "Enter the value that corresponds with each label into the form and submit when done."
+        duplicate = [{"index": 1, "rows": [["Color", "Blue"], ["Color", "Red"]]}]
+        self.assertIsNone(RUNNER.multi_tool_action(task, [field], set(), visible_tables=duplicate))
+        self.assertIsNone(RUNNER.multi_tool_action(task, [field], set(), visible_tables=[]))
+        duplicate_fields = [field, dict(field, ref="r2")]
+        unique_row = [{"index": 1, "rows": [["Color", "Blue"]]}]
+        self.assertIsNone(RUNNER.multi_tool_action(task, duplicate_fields, set(), visible_tables=unique_row))
+
     def test_replies_to_only_the_explicit_email_via_unique_search_and_confirmation_steps(self):
         task = 'Find the email by Blisse and reply to them with the text "Vitae ornare lectus.".'
         search_icon = {"ref": "r1", "role": "pointer-target", "kind": "custom-pointer", "label": "search icon", "risk": "approval-required"}
