@@ -54,6 +54,8 @@ describe("MCP server interoperability", () => {
     expect(tools.find((tool) => tool.name === "browser_drag")?.inputSchema).toHaveProperty("properties.targetRef");
     expect(tools.find((tool) => tool.name === "context_prune")?.inputSchema).toHaveProperty("properties.semantic");
     expect(tools.find((tool) => tool.name === "context_prune")?.inputSchema).toHaveProperty("properties.query");
+    expect(tools.find((tool) => tool.name === "completion_verify")?.inputSchema).toHaveProperty("properties.evidence.items.properties.kind");
+    expect(tools.find((tool) => tool.name === "completion_verify")?.inputSchema).toHaveProperty("properties.evidence.items.properties.exitCode");
     const result = await client.callTool({ name: "model_route", arguments: { task: "fix a typo in a label" } });
     const responseText = result.content.find((item) => item.type === "text");
     expect(responseText?.type === "text" ? JSON.parse(responseText.text).complexity : null).toBe("low");
@@ -75,6 +77,10 @@ describe("MCP server interoperability", () => {
     const missingQuery = await client.callTool({ name: "context_prune", arguments: { text: "sample", semantic: true } });
     const missingQueryText = missingQuery.content.find((item) => item.type === "text");
     expect(missingQueryText?.type === "text" ? JSON.parse(missingQueryText.text).error : null).toMatch(/query is required/u);
+
+    const completion = await client.callTool({ name: "completion_verify", arguments: { claim: "All browser tests passed", evidence: [{ path: "npm test", kind: "test-result", exitCode: 0, excerpt: "Browser tests passed" }] } });
+    const completionText = completion.content.find((item) => item.type === "text");
+    expect(completionText?.type === "text" ? JSON.parse(completionText.text) : null).toMatchObject({ status: "text-overlap-only", testClaimStatus: "reported-success" });
 
     await client.close();
     await server.close();

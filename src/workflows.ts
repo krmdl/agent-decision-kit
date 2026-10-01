@@ -39,6 +39,13 @@ export async function findRelevantFiles(root: string, query: string, maxFiles = 
 }
 
 type ContextPlan = { chunks: string[]; retained: Set<number>; budgetChars: number };
+const CONTEXT_QUERY_STOP_WORDS = new Set([
+  "about", "after", "again", "against", "and", "any", "are", "because", "before", "between", "but", "can", "could",
+  "did", "does", "each", "for", "from", "had", "has", "have", "how", "into", "its", "just", "more", "most", "not",
+  "off", "once", "only", "other", "our", "out", "over", "own", "same", "should", "some", "such", "than", "that", "the",
+  "their", "then", "there", "these", "they", "this", "those", "through", "too", "under", "until", "very", "was", "were",
+  "what", "when", "where", "which", "while", "who", "will", "with", "would", "you", "your",
+]);
 
 function prepareContext(input: string, budgetChars: number, retain: string[]): ContextPlan {
   if (!Number.isInteger(budgetChars) || budgetChars < 0) throw new Error("budgetChars must be a non-negative integer");
@@ -116,6 +123,7 @@ export function pruneContext(input: string, budgetChars = 12_000, retain: string
 
 export async function pruneContextWithProvider(input: string, budgetChars: number, retain: string[], query: string, provider: DecisionProvider) {
   if (!query.trim()) throw new Error("A non-empty query is required for semantic context pruning");
+  if (query.length > 2_000) throw new Error("The semantic context query must be at most 2,000 characters");
   const plan = prepareContext(input, budgetChars, retain);
   const heuristicOrder = heuristicContextOrder(plan);
   const baseline = finalizeContext(plan, heuristicOrder);
@@ -123,7 +131,8 @@ export async function pruneContextWithProvider(input: string, budgetChars: numbe
     return { ...baseline, ranking: { method: "not-needed", candidateCount: 0, note: "The full context already fits the budget, so the provider was not called." } };
   }
 
-  const queryTerms = [...new Set(query.toLocaleLowerCase("en-US").match(/[\p{L}\p{N}_./-]{2,}/gu) ?? [])];
+  const queryTerms = [...new Set(query.toLocaleLowerCase("en-US").match(/[\p{L}\p{N}_./-]{2,}/gu) ?? [])]
+    .filter((term) => !CONTEXT_QUERY_STOP_WORDS.has(term));
   const queryOverlap = (text: string) => {
     const lower = text.toLocaleLowerCase("en-US");
     return queryTerms.reduce((score, term) => score + (lower.includes(term) ? 1 : 0), 0);
@@ -188,10 +197,53 @@ export function reviewDiff(diff: string) {
   return { findings: checks.filter((check) => check.pattern.test(diff)).map(({ id, severity, message }) => ({ id, severity, message })), analyzedChars: diff.length, scope: "heuristic pre-review; not a security audit" };
 }
 
-export function verifyCompletion(claim: string, evidence: Array<{ path: string; excerpt: string }>) {
-  const verified = evidence.filter((item) => item.excerpt.trim().length > 0 && claim.toLowerCase().split(/\W+/).some((word) => word.length > 3 && item.excerpt.toLowerCase().includes(word)));
-  const unsupported = evidence.filter((item) => !verified.includes(item));
-  return { verifiedEvidence: verified.map(({ path: file, excerpt }) => ({ path: file, excerpt: excerpt.slice(0, 600) })), unsupportedEvidencePaths: unsupported.map((item) => item.path), status: verified.length ? "partial-evidence" : "unverified", note: "Text overlap is a weak evidence check. It does not establish correctness or prove that tests passed." };
+type CompletionEvidence = {
+  path: string;
+  excerpt: string;
+  kind?: "file" | "diff" | "test-result" | "command-result" | "runtime" | "other" | undefined;
+  exitCode?: number | undefined;
+};
+
+const COMPLETION_STOP_WORDS = new Set([
+  "about", "after", "again", "and", "are", "because", "before", "but", "can", "could", "did", "does", "each", "for",
+  "from", "has", "have", "into", "its", "more", "not", "only", "our", "same", "should", "some", "than", "that", "the",
+  "their", "then", "there", "these", "they", "this", "those", "was", "were", "what", "when", "where", "which", "while",
+  "with", "would", "you", "your",
+]);
+
+function completionTerms(value: string) {
+  return new Set((value.toLocaleLowerCase("en-US").match(/[\p{L}\p{N}_]{4,}/gu) ?? []).filter((word) => !COMPLETION_STOP_WORDS.has(word)));
+}
+
+export function verifyCompletion(claim: string, evidence: CompletionEvidence[]) {
+  const terms = completionTerms(claim);
+  const overlappingEvidenceIndices = new Set<number>();
+  const overlappingEvidence = evidence.flatMap((item, evidenceIndex) => {
+    const excerptTerms = completionTerms(item.excerpt);
+    const matchedTerms = [...terms].filter((term) => excerptTerms.has(term));
+    if (matchedTerms.length === 0) return [];
+    overlappingEvidenceIndices.add(evidenceIndex);
+    return [{ path: item.path, kind: item.kind ?? "unspecified", ...(item.exitCode === undefined ? {} : { exitCode: item.exitCode }), matchedClaimTerms: matchedTerms, excerpt: item.excerpt.slice(0, 600) }];
+  });
+  const overlappingTerms = new Set(overlappingEvidence.flatMap((item) => item.matchedClaimTerms));
+  const testSuccessClaim = /\b(?:tests?|checks?|test suite|ci)\b[\s\S]{0,80}\b(?:pass(?:ed|ing)?|green|succeed(?:ed|ing)?|successful)\b|\b(?:pass(?:ed|ing)?|green|succeed(?:ed|ing)?|successful)\b[\s\S]{0,80}\b(?:tests?|checks?|test suite|ci)\b/i.test(claim);
+  const reportedTestResults = evidence.filter((item) => item.kind === "test-result");
+  const testResultsWithExitCode = reportedTestResults.filter((item) => Number.isInteger(item.exitCode));
+  const testClaimStatus = !testSuccessClaim ? "not-claimed"
+    : reportedTestResults.length === 0 ? "missing-reported-test-result"
+      : testResultsWithExitCode.length === 0 ? "missing-reported-exit-status"
+        : testResultsWithExitCode.some((item) => item.exitCode !== 0) ? "reported-failure"
+          : testResultsWithExitCode.length === reportedTestResults.length ? "reported-success"
+            : "incomplete-reported-exit-status";
+  const noOverlapEvidencePaths = evidence.flatMap((item, evidenceIndex) => overlappingEvidenceIndices.has(evidenceIndex) ? [] : [item.path]);
+  return {
+    status: overlappingEvidence.length ? "text-overlap-only" : "unverified",
+    claimCoverage: { matchedTerms: [...overlappingTerms], totalTerms: terms.size, fraction: terms.size ? overlappingTerms.size / terms.size : 0 },
+    overlappingEvidence,
+    noOverlapEvidencePaths,
+    testClaimStatus,
+    note: "Text overlap is a weak signal. Evidence kinds and exit codes are caller-supplied and unauthenticated; this tool does not run commands or tests, inspect a diff, establish correctness, or prove that reported tests passed.",
+  };
 }
 
 export async function decide(request: unknown, provider: DecisionProvider) {

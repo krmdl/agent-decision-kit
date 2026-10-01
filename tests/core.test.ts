@@ -84,6 +84,23 @@ describe("local workflow helpers", () => {
   it("does not claim completion without overlapping evidence", () => {
     expect(verifyCompletion("The browser action is safe", [{ path: "src/x.ts", excerpt: "export const value = 1" }]).status).toBe("unverified");
   });
+
+  it("distinguishes text overlap from caller-reported test exit status", () => {
+    const passed = verifyCompletion("The browser change is implemented and all tests passed", [
+      { path: "npm test", kind: "test-result", exitCode: 0, excerpt: "66 tests passed" },
+    ]);
+    expect(passed).toMatchObject({ status: "text-overlap-only", testClaimStatus: "reported-success" });
+    expect(passed.overlappingEvidence[0]).toMatchObject({ path: "npm test", kind: "test-result", exitCode: 0, matchedClaimTerms: expect.arrayContaining(["tests", "passed"]) });
+    expect(passed).not.toHaveProperty("verifiedEvidence");
+
+    const missing = verifyCompletion("All browser tests passed", []);
+    expect(missing.testClaimStatus).toBe("missing-reported-test-result");
+
+    const failed = verifyCompletion("All browser tests passed", [
+      { path: "npm test", kind: "test-result", exitCode: 1, excerpt: "test process exited unsuccessfully" },
+    ]);
+    expect(failed.testClaimStatus).toBe("reported-failure");
+  });
 });
 
 class FakeProvider implements DecisionProvider {

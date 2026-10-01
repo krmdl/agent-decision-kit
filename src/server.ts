@@ -65,8 +65,8 @@ export function createServer(options: { provider?: DecisionProvider } = {}) {
 
   server.registerTool("completion_verify", {
     title: "Check completion evidence",
-    description: "Check whether supplied evidence text overlaps a completion claim. Does not run tests or prove correctness.",
-    inputSchema: { claim: z.string().min(1), evidence: z.array(z.object({ path: z.string(), excerpt: z.string() })).max(100) },
+    description: "Report weak claim-text overlap and optional caller-reported test exit codes. Evidence labels are not authenticated. This tool does not run tests, inspect the working-tree diff, or prove correctness.",
+    inputSchema: { claim: z.string().min(1).max(4_000), evidence: z.array(z.object({ path: z.string().min(1).max(500), excerpt: z.string().max(20_000), kind: z.enum(["file", "diff", "test-result", "command-result", "runtime", "other"]).optional(), exitCode: z.number().int().optional() })).max(100) },
   }, async ({ claim, evidence }) => asToolResult(verifyCompletion(claim, evidence)));
 
   server.registerTool("classify_text", {

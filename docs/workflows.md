@@ -18,7 +18,7 @@ Agent Decision Kit follows one narrow pattern: make the model choose from a boun
 | Semantic repository navigation | `code_navigate` | Skips hidden, dependency and build directories; it is a bounded filename/excerpt search, not a complete index |
 | Model routing | `model_route` | Deterministic complexity heuristic; it suggests a route but does not call a model |
 | Diff risk prefilter | `diff_risk_review` | Pattern checks locate review candidates; this is not a code audit |
-| Completion referee | `completion_verify` | Text-overlap signal only; it cannot prove behavior or that a test ran |
+| Completion referee | `completion_verify` | Text-overlap plus optional caller-reported test exit status; it does not execute or authenticate evidence |
 
 ## Preserve context without rewriting it
 
@@ -43,6 +43,12 @@ cat tool-output.txt | node dist/cli.js context-prune --semantic --query "Find th
 ```
 
 Semantic ranking reports provider, model, latency, confidence source, and calibration state. Treat the ranking as fallible; it can omit relevant text. The local heuristic remains useful when provider startup latency or data locality matters more than semantic ordering.
+
+## Check a completion claim
+
+`completion_verify` reports the claim terms that overlap each supplied excerpt. Its top-level status is `text-overlap-only` or `unverified`; neither means the claim has been proven. Evidence can be labeled as a file, diff, test result, command result, runtime observation, or other text. For a test result, pass its reported `exitCode`; the tool returns `testClaimStatus` such as `reported-success`, `reported-failure`, or `missing-reported-test-result` when the claim says tests passed.
+
+These fields are supplied by the caller and are not authenticated. `completion_verify` does not run the test command, inspect the actual diff, or verify that an excerpt came from the named path. Use it to spot missing or conflicting evidence, not as proof that work is correct or complete.
 
 ## A bounded browser loop
 

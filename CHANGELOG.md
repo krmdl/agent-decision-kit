@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add opt-in provider ranking to `context_prune` and `context-prune`; keep the local heuristic as the default and return selected source chunks verbatim.
+- Report completion-claim token overlap without calling it verified evidence, and distinguish caller-reported test-result exit codes from independently verified test runs.
 - Add `browser_drag` for visible native draggable sources and declared drop targets; every move needs a separate approval and is cancelled when the page changes.
 - Resolve role-prefixed labels, ordinal radio/textbox instructions, and revealed menu-item targets locally; track visited disclosures so multi-section searches do not toggle tabs back and forth.
 - Select exact requested options in native lists before proposing submission, set explicit native slider values without returning them, and block submit proposals while task-requested text fields remain empty.
@@ -41,4 +43,4 @@
 - Coding workflows for navigation, exact-retaining context pruning, model routing, diff triage, completion evidence, classification, screening, reranking, and candidate extraction.
 - English Astro site scaffold, agent setup guides, demo page, benchmark protocol, and cross-platform CI workflow.
 
-The checked-in decision and MiniWoB records are small, locally run smoke measurements. They do not establish broad task quality, calibration, cross-provider parity, or the latency target. This alpha has not been released to npm or published to GitHub.
+The checked-in decision and MiniWoB records are small, locally run smoke measurements. They do not establish broad task quality, calibration, cross-provider parity, or the latency target. This alpha has not been released to npm or as a tagged GitHub Release.

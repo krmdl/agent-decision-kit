@@ -91,12 +91,12 @@ export const workflows = [
   },
   {
     slug: "completion-evidence", title: "Completion Claim Evidence Check", short: "Completion referee",
-    description: "Compare an agent's completion statement with supplied diff, tool, or test excerpts and report whether evidence was actually supplied.",
+    description: "Compare completion claims with caller-supplied text overlap and optional reported test exit codes, then call out missing or conflicting evidence.",
     canonicalPath: "workflows/completion-evidence/",
     problem: "An agent can say that a change is finished even when it did not run the test command or inspect the resulting diff. A small referee can ask for the trace behind that claim.",
-    method: "completion_verify checks whether meaningful words from a claim appear in caller-supplied evidence excerpts. It returns matching snippets and labels the result as partial evidence or unverified.",
-    example: `Provide the completion claim, the changed file path, and a redacted test output excerpt to completion_verify.`,
-    caveat: "Text overlap is intentionally described as weak evidence. It cannot prove that a test passed, a code path is correct, or an external side effect occurred. Never mark a task complete solely because this tool returned a match.",
+    method: "completion_verify reports overlapping claim terms with the text-overlap-only or unverified status, then reports optional caller-supplied test-result exit codes separately. It labels a zero exit as reported-success, not as an independently verified test run.",
+    example: `Provide the completion claim and a redacted test-result excerpt with kind=test-result and its reported exitCode.`,
+    caveat: "Evidence fields and exit codes are caller-supplied and unauthenticated. The tool does not execute commands, inspect the actual diff, or prove behavior. Never mark a task complete solely because this tool returned an overlap or reported-success status.",
     related: ["diff-risk-review", "context-pruning"],
   },
 ];
