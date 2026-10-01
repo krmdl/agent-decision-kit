@@ -64,6 +64,7 @@ for (const [client, guide, format] of clients) {
     assert.deepEqual(normalizeCommand(generatedCommand), normalizedGuideCommand, `${client}: CLI-generated command differs from its guide example`);
   }
 
+  if (client === "opencode") verifyOpenCodeV1Example(markdown, generatedCommand, root);
   await verifyMcpCommand(client, generatedCommand[0], generatedCommand.slice(1));
 }
 process.stdout.write(`Agent configuration smoke check passed for ${clients.length} aliases: guide examples validated, generated server commands launched, and model_route called for each. This does not emulate vendor-specific clients.\n`);
@@ -98,6 +99,17 @@ function normalizeArgument(value) {
 
 function normalizeCommand(command) {
   return command.map((argument) => typeof argument === "string" ? normalizeArgument(argument) : argument);
+}
+
+function verifyOpenCodeV1Example(markdown, generatedCommand, root) {
+  const configs = [...markdown.matchAll(/```json\s*([\s\S]*?)```/gi)]
+    .map((match) => JSON.parse(match[1].trim()));
+  const server = configs.find((config) => config.mcp?.["agent-decision-kit"] && !config.mcp.servers)?.mcp?.["agent-decision-kit"];
+  assert.ok(server, "opencode: missing v1 config with a direct server entry under mcp");
+  assert.equal(server.type, "local", "opencode v1: server type must be local");
+  assert.ok(Array.isArray(server.command), "opencode v1: command must be an array");
+  const normalized = server.command.map((argument) => argument.replace("/absolute/path/to/agent-decision-kit", root.replaceAll("\\", "/")));
+  assert.deepEqual(normalizeCommand(normalized), normalizeCommand(generatedCommand), "opencode v1: command must match the generated MCP command");
 }
 
 async function verifyMcpCommand(clientName, command, args) {

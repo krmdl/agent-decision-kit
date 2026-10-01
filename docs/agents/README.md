@@ -14,7 +14,7 @@ These guides cover MCP stdio configuration for nine common coding-agent surfaces
 | VS Code / Copilot Chat | [Guide](vscode.md) | VS Code 1.135.0 `--add-mcp` wrote a valid definition in an isolated profile; Copilot Chat is not installed, so no agent tool call was tested |
 | GitHub Copilot CLI | [Guide](copilot-cli.md) | `mcpServers` shape checked against GitHub docs; SDK stdio subprocess smoke test |
 | Cline | [Guide](cline.md) | CLI path checked against Cline's source resolver; CLI/IDE management workflow linked to first-party docs; SDK stdio subprocess smoke test |
-| OpenCode | [Guide](opencode.md) | Local command array checked against OpenCode docs; SDK stdio subprocess smoke test |
+| OpenCode | [Guide](opencode.md) | `opencode-ai@1.18.34` CLI reported the temporary server `connected` with both v1 and v2 config layouts; no model-backed turn |
 
 Every guide uses a local source checkout. Build once, then use the absolute path to `dist/cli.js`. The `agent-decision config <name>` output now points to the built entry file in this checkout, instead of an unpublished npm package. `agents:verify` validates all nine CLI aliases, parses each guide's JSON or TOML example, launches the generated command for each alias, and calls `model_route` through MCP stdio. This verifies the configuration shape and server command end to end; it does not emulate each vendor's client parser, UI, or agent-model turn. When an npm package is published, its install command can replace the checkout path.
 
