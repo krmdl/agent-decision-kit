@@ -15,6 +15,8 @@ import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
+from benchmark_records import count_executed_actions
+
 ROOT = Path(__file__).resolve().parents[1]
 MARKER = "@@ADK_BROWSERGYM@@"
 
@@ -241,7 +243,7 @@ def main():
             "success": reward >= 1.0,
             "reward": reward,
             "terminated": terminated,
-            "actions": len([entry for entry in trace if entry["status"] in {"action-executed", "action-loop-detected"}]),
+            "actions": count_executed_actions(trace),
             "loopDetected": any(entry["status"] == "action-loop-detected" for entry in trace),
             "trace": trace,
             "initialPage": {"title": initial_title, "path": initial_location[0]},

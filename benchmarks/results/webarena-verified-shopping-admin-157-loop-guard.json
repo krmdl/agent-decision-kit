@@ -10,7 +10,7 @@
   "success": false,
   "reward": 0.5,
   "terminated": true,
-  "actions": 5,
+  "actions": 4,
   "loopDetected": true,
   "trace": [
     {

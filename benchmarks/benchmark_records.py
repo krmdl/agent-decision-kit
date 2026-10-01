@@ -14,6 +14,11 @@ _WINDOWS_USER_PATH = re.compile(r"(?i)\b[A-Z]:[\\/]+Users[\\/]+[^\\/\s\"'<>]+(?:
 _UNIX_USER_PATH = re.compile(r"(?i)(?:/Users|/home)/[^/\s\"'<>]+(?:/[^\s\"'<>]*)?")
 
 
+def count_executed_actions(trace):
+    """Count completed browser actions, excluding proposals blocked before execution."""
+    return sum(1 for entry in trace if entry.get("status") == "action-executed")
+
+
 def collect_runtime_metadata(root, *, browser_info=None, playwright_node_version=None, node_version=None, browsergym_package_commit=None):
     """Collect version and host details for successful and failed browser episodes."""
     root = Path(root)

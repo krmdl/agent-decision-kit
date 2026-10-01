@@ -1,8 +1,9 @@
+import json
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from benchmark_records import attach_runtime_metadata, collect_runtime_metadata, sanitize_record
+from benchmark_records import attach_runtime_metadata, collect_runtime_metadata, count_executed_actions, sanitize_record
 
 
 class SanitizeRecordTests(unittest.TestCase):
@@ -56,6 +57,25 @@ class RuntimeMetadataTests(unittest.TestCase):
         self.assertEqual(enriched["browserGymVersion"], "0.14.3")
         self.assertEqual(enriched["browserVersion"], "HeadlessChrome/125")
         self.assertEqual(enriched["nodeVersion"], "v24.20.0")
+
+
+class BrowserActionCountTests(unittest.TestCase):
+    def test_blocked_loop_proposal_is_not_counted_as_an_executed_action(self):
+        trace = [
+            {"status": "action-executed"},
+            {"status": "action-executed"},
+            {"status": "action-loop-detected"},
+        ]
+
+        self.assertEqual(count_executed_actions(trace), 2)
+
+    def test_published_webarena_record_matches_its_trace(self):
+        record_path = Path(__file__).parent / "results" / "webarena-verified-shopping-admin-157-loop-guard.json"
+        record = json.loads(record_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(record["actions"], count_executed_actions(record["trace"]))
+        self.assertEqual(record["loopDetected"], any(item["status"] == "action-loop-detected" for item in record["trace"]))
+        self.assertEqual(record["success"], record["reward"] >= 1.0)
 
 
 if __name__ == "__main__":
