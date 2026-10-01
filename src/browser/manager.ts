@@ -10,6 +10,24 @@ export type BrowserCandidate = { ref: string; role: string; label: string; kind:
 export type BrowserTable = { index: number; rows: string[][] };
 export type BrowserManagerOptions = { headless?: boolean; profileDir?: string; includeCandidateSnapshot?: boolean };
 
+function browserDebug(message: string) {
+  if (process.env.ADK_BROWSERGYM_DEBUG === "1") console.error(`[browser-manager] ${message}`);
+}
+
+async function withTimeout<T>(operation: Promise<T>, timeoutMs: number, message: string): Promise<T> {
+  let timer: NodeJS.Timeout | undefined;
+  try {
+    return await Promise.race([
+      operation,
+      new Promise<T>((_resolve, reject) => {
+        timer = setTimeout(() => reject(new Error(message)), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 type ViewportMetrics = { width: number; height: number; devicePixelRatio: number };
 type ScreenshotPixels = { width: number; height: number };
 type VisualMatchSource = "automatic" | "sparse-text-pass" | "sparse-text-fallback";
@@ -36,6 +54,7 @@ export class BrowserManager {
   private context: BrowserContext | undefined;
   private page: Page | undefined;
   private candidates = new Map<string, BrowserCandidate>();
+  private privateActionTargets = new Map<string, { href: string; target: string }>();
   private pending = new Map<string, PendingBrowserApproval>();
   private privateFieldValuePresence = new Map<string, boolean>();
   private privateRangeValues = new Map<string, number>();
@@ -117,8 +136,9 @@ export class BrowserManager {
 
   async inspect() {
     const page = this.requirePage();
+    browserDebug("inspect started");
     const before = performance.now();
-    const result = await page.evaluate((referenceAttributeName) => {
+    const result = await withTimeout(page.evaluate((referenceAttributeName) => {
       // Remove only this manager's prior refs before assigning the current snapshot.
       // A page can hide or replace controls between inspections while old DOM nodes remain.
       for (const element of document.querySelectorAll(`[${referenceAttributeName}]`)) {
@@ -378,10 +398,17 @@ export class BrowserManager {
         };
       });
       return { title: document.title, url: location.href, headings: heading, textExcerpt: body, tables, candidates, privateFormState, privateActionState };
-    }, this.referenceAttributeName);
+    }, this.referenceAttributeName), 15_000, "Browser page inspection timed out after 15 seconds.");
     const { privateFormState, privateActionState, candidates: rawCandidates, ...snapshot } = result;
     this.privateFieldValuePresence.clear();
     this.privateRangeValues.clear();
+    this.privateActionTargets.clear();
+    rawCandidates.forEach(({ ref }, index) => {
+      const actionState = privateActionState[index];
+      if (actionState?.href || actionState?.target) {
+        this.privateActionTargets.set(ref, { href: actionState.href, target: actionState.target });
+      }
+    });
     const candidates = rawCandidates.map(({ privateRangeValue, privateValuePresent, ...candidate }) => {
       if (privateRangeValue !== undefined) this.privateRangeValues.set(candidate.ref, privateRangeValue);
       if (privateValuePresent !== undefined) this.privateFieldValuePresence.set(candidate.ref, privateValuePresent);
@@ -392,11 +419,14 @@ export class BrowserManager {
     const privateStateFingerprint = createHash("sha256").update(JSON.stringify({ privateFormState, privateActionState, privateRangeState })).digest("hex");
     const safeSnapshot = { ...snapshot, candidates };
     this.lastInspectionFingerprint = snapshotFingerprint({ ...safeSnapshot, privateStateFingerprint });
+    browserDebug(`inspect finished with ${candidates.length} candidates`);
     return { ...safeSnapshot, url: redactBrowserUrl(snapshot.url), candidates: candidates.map(({ ref, role, label, kind, risk, checked, expanded, selected, readOnly, dragSource, dropTarget, optionLabels, selectedOptionLabels, min, max, step }) => ({ ref, role, label, kind, risk, ...(checked === undefined ? {} : { checked }), ...(expanded === undefined ? {} : { expanded }), ...(selected === undefined ? {} : { selected }), ...(readOnly === undefined ? {} : { readOnly }), ...(dragSource === undefined ? {} : { dragSource }), ...(dropTarget === undefined ? {} : { dropTarget }), ...(optionLabels === undefined ? {} : { optionLabels }), ...(selectedOptionLabels === undefined ? {} : { selectedOptionLabels }), ...(min === undefined ? {} : { min }), ...(max === undefined ? {} : { max }), ...(step === undefined ? {} : { step }) })), inspectMs: Math.round(performance.now() - before), candidateLimit: 80, note: "Bounded visible DOM/accessibility snapshot. It includes up to three visible HTML tables with six rows and six cells each, and adjacent explicit labels for otherwise unassociated form fields. Alongside semantic controls, it scans keyboard-operated jQuery UI slider handles with a linked visible numeric readout, native drag sources and declared drop targets, and clear CSS pointer-only text or icon targets within the same 80-candidate limit. Distinct labeled child targets are exposed separately; CSS image filenames may provide a fallback label for icon-only controls. Custom targets have no semantic role and always require a separate approval. Native select options are limited to 12 enabled labels; current editable values, passwords, cookies and storage are not returned. Editable values, slider readings and action destinations are hashed locally only to invalidate stale approvals. URL credentials, query and hash are redacted." };
   }
 
   async decideAndAct(task: string, provider: DecisionProvider) {
+    browserDebug("decide-and-act started");
     const snapshot = await this.inspect();
+    browserDebug(`initial snapshot ready with ${snapshot.candidates.length} candidates`);
     const visibleCollectionHeading = findVisibleAllCollectionHeading(task, snapshot.headings);
     if (visibleCollectionHeading) {
       return { status: "navigation-target-visible", taskTargetVisible: visibleCollectionHeading, candidateCount: snapshot.candidates.length, note: "A visible page heading exactly matches the requested all/every collection. No additional navigation action is needed." };
@@ -504,6 +534,7 @@ export class BrowserManager {
       return { status: "prerequisite-fields-required", candidateCount: snapshot.candidates.length, requiredFields: missingFields, note: "The task asks for form entry before submission, and these visible fields are still empty. No submit action was sent to the decision provider or proposed. Fill or select the requested values, inspect again, then ask to submit; submission will still require separate approval." };
     }
     if (localMatch) {
+      browserDebug(`deterministic action selected by ${localMatch.rule}: ${localMatch.candidate.role} ${localMatch.candidate.label.slice(0, 80)}`);
       if (localMatch.rule === "unique-mentioned-navigation-label") {
         const taskKey = normalizeLabel(task);
         const labelKey = normalizeLabel(labelParts(localMatch.candidate)[0] ?? localMatch.candidate.label);
@@ -517,6 +548,7 @@ export class BrowserManager {
         return { status: "repeated-action-blocked", action: localMatch.candidate, note: repeatedActionNote(localMatch.candidate) };
       }
       const result = await this.applyLocalMatch(localMatch.candidate, snapshot, localMatch.rule, localMatch.note, task, localMatch.optionLabel, localMatch.rangeValue);
+      browserDebug(`deterministic action finished with status ${result.status}`);
       if (localMatch.rule === "unique-mentioned-navigation-label" && ["action-executed", "action-loop-detected"].includes(result.status)) {
         const taskKey = normalizeLabel(task);
         const labelKey = normalizeLabel(labelParts(localMatch.candidate)[0] ?? localMatch.candidate.label);
@@ -534,10 +566,12 @@ export class BrowserManager {
     const availableCandidates = snapshot.candidates.filter((candidate) => !this.nonProgressingActions.has(nonProgressingActionKey(this.lastInspectionFingerprint, candidate)));
     if (!availableCandidates.length) return { status: "repeated-action-blocked", candidateCount: snapshot.candidates.length, note: "Every visible action in this page state has already run once without changing the inspected state. No automatic action was repeated." };
     const decisionContextFingerprint = this.lastInspectionFingerprint;
+    browserDebug(`provider decision started with ${availableCandidates.length} candidates`);
     const decision = await provider.decide({
       state: { url: snapshot.url, title: snapshot.title, headings: snapshot.headings, textExcerpt: snapshot.textExcerpt, candidates: availableCandidates.map(({ ref, role, label, kind, risk, checked, expanded, selected, readOnly, optionLabels, selectedOptionLabels, min, max, step }) => ({ ref, role, label, kind, risk, ...(checked === undefined ? {} : { checked }), ...(expanded === undefined ? {} : { expanded }), ...(selected === undefined ? {} : { selected }), ...(readOnly === undefined ? {} : { readOnly }), ...(optionLabels === undefined ? {} : { optionLabels }), ...(selectedOptionLabels === undefined ? {} : { selectedOptionLabels }), ...(min === undefined ? {} : { min }), ...(max === undefined ? {} : { max }), ...(step === undefined ? {} : { step }) })) },
       questions: { action: { type: "choice", instructions: task, criteria: Object.fromEntries(availableCandidates.map(({ ref, role, label, kind }) => [ref, `${role} (${kind}): ${label}`])) } },
     });
+    browserDebug("provider decision finished");
     const refreshed = await this.inspect();
     if (this.lastInspectionFingerprint !== decisionContextFingerprint) {
       return { status: "page-changed-during-decision", candidateCount: refreshed.candidates.length, candidates: refreshed.candidates, note: "The page changed while the decision provider was working. No action was performed; inspect the current page and request a new decision." };
@@ -559,7 +593,9 @@ export class BrowserManager {
       return { status: "ambiguous-selection", decision: decision.answers.action, candidateCount: snapshot.candidates.length, provider: decision.provider, model: decision.model, decisionLatencyMs: Math.round(decision.latencyMs), candidates: snapshot.candidates, note: "The uncalibrated semantic scores are too close to choose a browser action automatically. Call browser_action with the ref you want." };
     }
     const beforeActionFingerprint = this.lastInspectionFingerprint;
+    browserDebug(`provider action selected ${selected.role}; performing`);
     const effect = await this.perform(selected);
+    browserDebug("provider action finished");
     const afterActionSnapshot = await this.inspect();
     const visibleStateChanged = this.lastInspectionFingerprint !== beforeActionFingerprint;
     const targetHeadingAfterAction = findVisibleAllCollectionHeading(task, afterActionSnapshot.headings);
@@ -1184,7 +1220,7 @@ export class BrowserManager {
     if (this.context && this.ownsContext) await this.context.close().catch(() => undefined);
     if (this.browser) await this.browser.close().catch(() => undefined);
     await closeOcrWorker().catch(() => undefined);
-    this.context = undefined; this.browser = undefined; this.page = undefined; this.ownsContext = false; this.lastInspectionFingerprint = ""; this.candidates.clear(); this.pending.clear(); this.privateFieldValuePresence.clear(); this.privateRangeValues.clear(); this.nonProgressingActions.clear(); this.automaticActionTrajectories.clear(); this.navigationActionsByTask.clear(); this.completedDisclosureIntent = undefined; this.disclosureSearchIntent = undefined; this.hierarchicalMenuIntent = undefined; this.lastVisualSnapshot = undefined;
+    this.context = undefined; this.browser = undefined; this.page = undefined; this.ownsContext = false; this.lastInspectionFingerprint = ""; this.candidates.clear(); this.privateActionTargets.clear(); this.pending.clear(); this.privateFieldValuePresence.clear(); this.privateRangeValues.clear(); this.nonProgressingActions.clear(); this.automaticActionTrajectories.clear(); this.navigationActionsByTask.clear(); this.completedDisclosureIntent = undefined; this.disclosureSearchIntent = undefined; this.hierarchicalMenuIntent = undefined; this.lastVisualSnapshot = undefined;
     return { closed: true };
   }
 
@@ -1218,7 +1254,29 @@ export class BrowserManager {
       return { focused: true, note: "Text entry is deliberately separate; no user-provided text was entered." };
     }
     const before = await page.locator("body").innerText({ timeout: 3_000 }).catch(() => "");
-    await locator.click({ timeout: 5_000 });
+    const target = this.privateActionTargets.get(candidate.ref);
+    let expectsNavigation = false;
+    if (candidate.role === "link" && target?.href && (!target.target || target.target === "_self")) {
+      try {
+        const current = new URL(page.url());
+        const destination = new URL(target.href, current);
+        expectsNavigation = ["http:", "https:"].includes(destination.protocol)
+          && (destination.origin !== current.origin || destination.pathname !== current.pathname || destination.search !== current.search);
+      } catch {
+        expectsNavigation = false;
+      }
+    }
+    const navigation = expectsNavigation
+      ? page.waitForNavigation({ waitUntil: "domcontentloaded", timeout: 10_000 }).catch(() => undefined)
+      : undefined;
+    browserDebug(`click started for ${candidate.role} ${candidate.label.slice(0, 80)}`);
+    await locator.click({ timeout: 5_000, noWaitAfter: true });
+    browserDebug(`click returned for ${candidate.role}`);
+    // Do not make every click wait for the browser's full load event. For a
+    // link, wait only until the destination DOM is ready; slow images or
+    // analytics must not turn a successful navigation into a click error.
+    if (navigation) await navigation;
+    if (navigation) browserDebug(`navigation wait finished for ${candidate.role}`);
     await page.waitForTimeout(150);
     const after = await page.locator("body").innerText({ timeout: 3_000 }).catch(() => "");
     return { url: redactBrowserUrl(page.url()), title: await page.title().catch(() => ""), textDelta: diffExcerpt(before, after) };

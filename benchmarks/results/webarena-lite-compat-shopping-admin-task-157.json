@@ -1,0 +1,53 @@
+{
+  "benchmark": "browsergym-webarenalite-cross-backend-compat",
+  "taskId": 157,
+  "intentTemplateId": 255,
+  "taskType": "read-only-navigation",
+  "taskPrompt": "Show all customers",
+  "runnerMode": "bounded-cross-backend-browsergym-lite-compatibility-smoke",
+  "canonicalBenchmark": false,
+  "seed": 7,
+  "maxActions": 8,
+  "status": "runner-error",
+  "success": false,
+  "reward": null,
+  "errorType": "RuntimeError",
+  "errorCode": "browser-inspection-timeout",
+  "failureStage": "browser decision/action step 2",
+  "actions": 1,
+  "trace": [
+    {
+      "step": 1,
+      "status": "action-executed",
+      "action": {
+        "role": "link",
+        "label": "Customers",
+        "kind": "a",
+        "risk": "low"
+      },
+      "candidateCount": 31,
+      "provider": "local-literal-match",
+      "model": "unique-mentioned-navigation-label",
+      "selectionRule": "unique-mentioned-navigation-label",
+      "decisionLatencyMs": 0,
+      "elapsedMs": 468,
+      "confidenceSource": "not-applicable-rule",
+      "calibration": "not-applicable-rule",
+      "taskTargetVisible": null
+    }
+  ],
+  "resetLatencyMs": 11034,
+  "decisionCallLatenciesMs": [
+    468
+  ],
+  "latencyMs": 41461,
+  "agentDecisionKitCommit": "cb7e5b533157048df247721d7180bded2ac3d4b2",
+  "browserVersion": "HeadlessChrome/125.0.6422.26",
+  "pythonVersion": "3.12.13",
+  "accelerator": "CPU",
+  "backendImage": "am1n3e/webarena-verified-shopping_admin",
+  "backendImageDigest": "sha256:d0531dd27ed98d0c459ff9e88118bf2ed8b660b0ed99c38837db46c065a5be13",
+  "backendBaseUrl": "http://localhost:7780/admin",
+  "timestampUtc": "2026-10-01T11:05:30.217635+00:00",
+  "note": "The compatibility runner stopped before BrowserGym returned a task reward. This is a harness or browser operation error, not a scored task failure. Expected evaluator URLs and reference answers are omitted."
+}

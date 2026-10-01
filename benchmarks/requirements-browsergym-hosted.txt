@@ -1,4 +1,5 @@
 browsergym-webarena==0.14.3
 browsergym-webarena-verified==0.14.3
+browsergym-webarenalite==0.14.3
 browsergym-visualwebarena==0.14.3
 webarena-verified==1.2.3

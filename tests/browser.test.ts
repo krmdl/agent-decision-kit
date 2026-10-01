@@ -69,6 +69,7 @@ describe("Playwright browser safety flow", () => {
   let copyFieldsHtml: Buffer;
   let ambiguousLabelsHtml: Buffer;
   let navigationLabelHtml: Buffer;
+  let slowNavigationHtml: Buffer;
   let navigationTargetingHtml: Buffer;
   let navigationOrdersHtml: Buffer;
   let navigationTargetHtml: Buffer;
@@ -114,6 +115,7 @@ describe("Playwright browser safety flow", () => {
     mixedPointerHtml = Buffer.from('<!doctype html><style>.faux-link { cursor: pointer }</style><button>Section</button><span id="target" class="faux-link">Ultrices</span><p id="status">Not clicked</p><script>document.querySelector("#target").addEventListener("click",()=>document.querySelector("#status").textContent="Clicked locally")</script>');
     ambiguousLabelsHtml = Buffer.from('<!doctype html><button type="button">Continue</button><a href="#next">Continue</a><p id="status">No action</p>');
     navigationLabelHtml = Buffer.from('<!doctype html><h1 id="heading">Dashboard</h1><a href="#customers" onclick="document.querySelector(\'#heading\').textContent=\'Customers\';document.querySelector(\'#status\').textContent=\'Customers opened\'">Customers</a><p id="status">Dashboard</p>');
+    slowNavigationHtml = Buffer.from('<!doctype html><h1>Dashboard</h1><a href="/slow-navigation-target">Customers</a>');
     navigationTargetingHtml = Buffer.from('<!doctype html><h1>Dashboard</h1><a href="#magento">Magento</a><a href="#sales">Sales</a><a href="#reports" onclick="document.querySelector(\'h1\').textContent=\'Reports menu opened\'">Reports</a>');
     navigationOrdersHtml = Buffer.from('<!doctype html><h1>Dashboard</h1><a href="#sales">Sales</a><a href="#orders">Orders</a>');
     navigationTargetHtml = Buffer.from('<!doctype html><h1>Customers</h1><a href="#customers">Customers</a>');
@@ -148,6 +150,14 @@ describe("Playwright browser safety flow", () => {
         response.end(JSON.stringify({ webSocketDebuggerUrl: cdpWebSocketUrl }));
         return;
       }
+      if (request.url === "/slow-navigation-target") {
+        setTimeout(() => {
+          if (response.destroyed) return;
+          response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+          response.end('<!doctype html><h1>Customers</h1>');
+        }, 6_000);
+        return;
+      }
       response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
       if (request.url === "/drag-and-drop") {
         response.end(dragAndDropHtml);
@@ -157,7 +167,7 @@ describe("Playwright browser safety flow", () => {
         response.end(hierarchicalMenuHtml);
         return;
       }
-      response.end(request.url === "/visual-only" ? visualHtml : request.url === "/visual-gestures" ? visualGesturesHtml : request.url === "/visual-scroll" ? visualScrollHtml : request.url === "/pointer-text" ? pointerTextHtml : request.url === "/icon-pointer" ? iconPointerHtml : request.url === "/silent-pointer" ? silentPointerHtml : request.url === "/silent-input" ? silentInputHtml : request.url === "/mixed-pointer" ? mixedPointerHtml : request.url === "/checkbox" ? checkboxHtml : request.url === "/submit" ? submitHtml : request.url === "/checkbox-task" ? checkboxTaskHtml : request.url === "/tabs" ? tabHtml : request.url === "/expand" ? expandHtml : request.url === "/native-fields" ? nativeFieldsHtml : request.url === "/copy-fields" ? copyFieldsHtml : request.url === "/slider" ? sliderHtml : request.url === "/aria-slider" ? ariaSliderHtml : request.url === "/jquery-ui-slider" ? jqueryUiSliderHtml : request.url === "/autocomplete" ? autocompleteHtml : request.url === "/multi-select" ? multipleSelectHtml : request.url === "/ambiguous-labels" ? ambiguousLabelsHtml : request.url === "/navigation-label" ? navigationLabelHtml : request.url === "/navigation-targeting" ? navigationTargetingHtml : request.url === "/navigation-orders" ? navigationOrdersHtml : request.url === "/navigation-target" ? navigationTargetHtml : request.url === "/navigation-hidden-target" ? navigationHiddenTargetHtml : request.url === "/duplicate-navigation-labels" ? duplicateNavigationLabelsHtml : request.url === "/editable" ? editableContentHtml : request.url === "/silent-form" ? silentFormHtml : request.url === "/decision-race" ? decisionRaceHtml : request.url === "/replacement-action" ? replacementActionHtml : request.url === "/dynamic-refs" ? dynamicRefsHtml : request.url === "/menu" ? menuHtml : request.url === "/ordinal-fields" ? ordinalFieldsHtml : request.url === "/textareas" ? textareaWidgetsHtml : request.url === "/ordinal-button" ? ordinalButtonHtml : request.url === "/multi-disclosure" ? multiDisclosureHtml : request.url === "/adjacent-label-table" ? adjacentLabelTableHtml : html);
+      response.end(request.url === "/visual-only" ? visualHtml : request.url === "/visual-gestures" ? visualGesturesHtml : request.url === "/visual-scroll" ? visualScrollHtml : request.url === "/pointer-text" ? pointerTextHtml : request.url === "/icon-pointer" ? iconPointerHtml : request.url === "/silent-pointer" ? silentPointerHtml : request.url === "/silent-input" ? silentInputHtml : request.url === "/mixed-pointer" ? mixedPointerHtml : request.url === "/checkbox" ? checkboxHtml : request.url === "/submit" ? submitHtml : request.url === "/checkbox-task" ? checkboxTaskHtml : request.url === "/tabs" ? tabHtml : request.url === "/expand" ? expandHtml : request.url === "/native-fields" ? nativeFieldsHtml : request.url === "/copy-fields" ? copyFieldsHtml : request.url === "/slider" ? sliderHtml : request.url === "/aria-slider" ? ariaSliderHtml : request.url === "/jquery-ui-slider" ? jqueryUiSliderHtml : request.url === "/autocomplete" ? autocompleteHtml : request.url === "/multi-select" ? multipleSelectHtml : request.url === "/ambiguous-labels" ? ambiguousLabelsHtml : request.url === "/navigation-label" ? navigationLabelHtml : request.url === "/slow-navigation" ? slowNavigationHtml : request.url === "/navigation-targeting" ? navigationTargetingHtml : request.url === "/navigation-orders" ? navigationOrdersHtml : request.url === "/navigation-target" ? navigationTargetHtml : request.url === "/navigation-hidden-target" ? navigationHiddenTargetHtml : request.url === "/duplicate-navigation-labels" ? duplicateNavigationLabelsHtml : request.url === "/editable" ? editableContentHtml : request.url === "/silent-form" ? silentFormHtml : request.url === "/decision-race" ? decisionRaceHtml : request.url === "/replacement-action" ? replacementActionHtml : request.url === "/dynamic-refs" ? dynamicRefsHtml : request.url === "/menu" ? menuHtml : request.url === "/ordinal-fields" ? ordinalFieldsHtml : request.url === "/textareas" ? textareaWidgetsHtml : request.url === "/ordinal-button" ? ordinalButtonHtml : request.url === "/multi-disclosure" ? multiDisclosureHtml : request.url === "/adjacent-label-table" ? adjacentLabelTableHtml : html);
     });
     await new Promise<void>((resolve, reject) => {
       server.once("error", reject);
@@ -879,6 +889,22 @@ describe("Playwright browser safety flow", () => {
     const result = await browser.decideAndAct("View the details of all customers", provider);
     expect(result).toMatchObject({ status: "action-executed", selectionRule: "unique-mentioned-navigation-label", action: { label: "Customers" }, taskTargetVisible: "Customers" });
     expect(result.effect.textDelta.excerpt).toContain("Customers opened");
+  }, 45_000);
+
+  it("keeps same-origin navigation usable when the destination takes longer than the click timeout", async () => {
+    profile = await mkdtemp(path.join(os.tmpdir(), "adk-browser-slow-navigation-test-"));
+    browser = new BrowserManager({ headless: true, profileDir: path.join(profile, "chromium") });
+    await browser.launch(`${baseUrl}slow-navigation`);
+    const provider: DecisionProvider = {
+      id: "remote-test-provider",
+      model: "unused-test-provider",
+      decide: async () => { throw new Error("A unique visible navigation label should resolve locally"); },
+    };
+
+    const result = await browser.decideAndAct("View all customers", provider);
+
+    expect(result).toMatchObject({ status: "action-executed", selectionRule: "unique-mentioned-navigation-label", taskTargetVisible: "Customers" });
+    expect((await browser.inspect()).url).toContain("/slow-navigation-target");
   }, 45_000);
 
   it("does not mistake a brand name for a requested settings destination", async () => {

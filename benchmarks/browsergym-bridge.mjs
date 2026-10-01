@@ -22,6 +22,8 @@ for await (const line of input) {
   let request;
   try {
     request = JSON.parse(line);
+    const debug = process.env.ADK_BROWSERGYM_DEBUG === "1";
+    if (debug) console.error(`[bridge] ${request.op} started`);
     let result;
     switch (request.op) {
       case "versions":
@@ -83,6 +85,7 @@ for await (const line of input) {
       default:
         throw new Error(`Unknown operation '${request.op}'`);
     }
+    if (debug) console.error(`[bridge] ${request.op} finished`);
     respond(request.id, result);
   } catch (error) {
     respond(request?.id, undefined, error instanceof Error ? error.message : String(error));
