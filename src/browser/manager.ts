@@ -527,7 +527,7 @@ export class BrowserManager {
       if (rangePlan?.error) return { status: "no-safe-selection", candidateCount: snapshot.candidates.length, candidates: snapshot.candidates, note: rangePlan.error };
       if (rangePlan?.allSet && !/\b(?:submit|send|publish|post)\b/i.test(task)) return { status: "target-values-already-set", candidateCount: snapshot.candidates.length, note: "Every explicitly named visible slider already has its requested value. No control was changed." };
       if (rangePlan?.match) localMatch ??= rangePlan.match;
-      localMatch ??= findDeterministicMatch(task, snapshot.candidates, this.privateRangeValues);
+      localMatch ??= findDeterministicMatch(task, snapshot.candidates, this.privateRangeValues, snapshot.headings);
     }
     const missingFields = findUnfilledTaskFields(task, snapshot.candidates, this.privateFieldValuePresence);
     if (missingFields.length && (!localMatch || isSubmitCandidate(localMatch.candidate))) {
@@ -1412,7 +1412,7 @@ function parseHierarchicalMenuPath(task: string) {
   return path;
 }
 
-function findDeterministicMatch(task: string, candidates: BrowserCandidate[], rangeValues: Map<string, number>): DeterministicBrowserMatch | undefined {
+function findDeterministicMatch(task: string, candidates: BrowserCandidate[], rangeValues: Map<string, number>, headings: string[] = []): DeterministicBrowserMatch | undefined {
   const normalized = normalizeLabel(task);
   const taskCandidates = findOrdinalTaskCandidate(task, candidates);
   if (taskCandidates) return taskCandidates;
@@ -1426,7 +1426,7 @@ function findDeterministicMatch(task: string, candidates: BrowserCandidate[], ra
     if (matches.length === 1) return { candidate: matches[0]!, rule: "explicit-tab-number", note: "The task names one tab number that matches one visible tab label." };
   }
 
-  const navigationLabel = findUniqueMentionedNavigationLabel(task, candidates);
+  const navigationLabel = findUniqueMentionedNavigationLabel(task, candidates, headings);
   if (navigationLabel) return navigationLabel;
 
   const optionIntent = task.match(/\b(?:select|choose|pick)\s+(.+?)\s+(?:from|in)\s+(?:the\s+)?(?:scroll\s+)?(?:list|dropdown|select(?:\s+box)?|menu)\b/i)?.[1]
@@ -1512,11 +1512,11 @@ function findDeterministicMatch(task: string, candidates: BrowserCandidate[], ra
   return undefined;
 }
 
-function findUniqueMentionedNavigationLabel(task: string, candidates: BrowserCandidate[]) {
+function findUniqueMentionedNavigationLabel(task: string, candidates: BrowserCandidate[], headings: string[] = []) {
   if (!/\b(?:go|navigate|view|show|open|visit|browse|display)\b/i.test(task)) return undefined;
   const normalizedTask = normalizeLabel(task);
   const command = normalizedTask.match(/\b(?:go|navigate|view|show|open|visit|browse|display)\b(?:\s+to)?\s+(.+)/u)?.[1] ?? normalizedTask;
-  const ignored = new Set(["a", "an", "and", "are", "at", "being", "details", "detail", "display", "for", "from", "go", "in", "information", "is", "list", "navigate", "of", "on", "open", "page", "screen", "section", "show", "the", "to", "view", "visit", "was", "were", "with"]);
+  const ignored = new Set(["a", "an", "and", "are", "at", "being", "details", "detail", "display", "for", "from", "go", "in", "information", "is", "list", "navigate", "of", "on", "open", "page", "screen", "section", "settings", "show", "the", "to", "view", "visit", "was", "were", "with"]);
   const normalizedWords = (value: string) => value.split(/\s+/u).filter((word) => word && !ignored.has(word)).map(normalizeNavigationWord);
   const collection = normalizedTask.match(/\b((?:all|every)\s+.+?)(?:\s+(?:in|on|from|for|at|with)\b|$)/u)?.[1];
   let targetWords: string[] = [];
@@ -1567,7 +1567,15 @@ function findUniqueMentionedNavigationLabel(task: string, candidates: BrowserCan
       return score ? [{ candidate, specificity: score }] : [];
     });
   }
-  if (!matches.length) return undefined;
+  if (!matches.length) {
+    const parent = reportIntent ? undefined : findRelatedParentNavigationCandidate(task, candidates, headings);
+    if (!parent) return undefined;
+    return {
+      candidate: parent,
+      rule: "unique-related-parent-navigation-label",
+      note: "The requested child destination is not visible yet, but the task identifies one unique visible parent navigation section. Open that low-risk section to reveal its child links; this step does not claim the destination has been reached.",
+    };
+  }
   const mostSpecific = Math.max(...matches.map(({ specificity }) => specificity));
   const best = matches.filter(({ specificity }) => specificity === mostSpecific);
   if (best.length !== 1) return undefined;
@@ -1576,6 +1584,34 @@ function findUniqueMentionedNavigationLabel(task: string, candidates: BrowserCan
     rule: "unique-mentioned-navigation-label",
     note: "The navigation request names one unique visible interactive label. Only that exact label is selected; consequential actions still require the normal separate approval.",
   };
+}
+
+function findRelatedParentNavigationCandidate(task: string, candidates: BrowserCandidate[], headings: string[]) {
+  const prompt = normalizeLabel(task);
+  const parents = new Set<string>();
+  const childTerms = new Set<string>();
+  if (/\b(?:orders?|invoices?|shipments?|credit memos?|billing agreements?|transactions?)\b/u.test(prompt)) {
+    parents.add("sales");
+    for (const term of prompt.match(/\borders?|invoices?|shipments?|credit memos?|billing agreements?|transactions?\b/gu) ?? []) {
+      childTerms.add(normalizeNavigationWord(term.split(" ").at(-1)!));
+    }
+  }
+  if (/\bthemes?\b/u.test(prompt)) {
+    parents.add("content");
+    childTerms.add("theme");
+  }
+  if (parents.size !== 1) return undefined;
+  if (headings.some((heading) =>
+    normalizeLabel(heading).split(/\s+/u).map(normalizeNavigationWord).some((word) => childTerms.has(word)),
+  )) return undefined;
+
+  const parent = [...parents][0]!;
+  const matches = candidates.filter((candidate) =>
+    ["link", "menuitem"].includes(candidate.role)
+    && candidate.risk === "low"
+    && labelParts(candidate).includes(parent),
+  );
+  return matches.length === 1 ? matches[0] : undefined;
 }
 
 function normalizeNavigationWord(word: string) {

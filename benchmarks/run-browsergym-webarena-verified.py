@@ -82,7 +82,7 @@ def free_port():
         return sock.getsockname()[1]
 
 
-def print_debug_snapshot(phase, step, snapshot):
+def print_debug_snapshot(phase, step, snapshot, include_page_content=False):
     url = urllib.parse.urlsplit(snapshot.get("url", ""))
     candidates = []
     for item in snapshot.get("candidates", [])[:40]:
@@ -93,12 +93,36 @@ def print_debug_snapshot(phase, step, snapshot):
             "kind": item.get("kind"),
             "risk": item.get("risk"),
         })
-    print(json.dumps({
+    record = {
         "debugSnapshot": phase,
         "step": step,
         "title": snapshot.get("title"),
         "path": url.path,
         "headings": snapshot.get("headings", []),
+        "candidates": candidates,
+    }
+    if include_page_content:
+        record["textExcerpt"] = str(snapshot.get("textExcerpt", ""))[:2_000]
+        record["tables"] = (snapshot.get("tables") or [])[:3]
+    print(json.dumps(record, ensure_ascii=False), file=sys.stderr)
+
+
+def print_debug_decision(step, result):
+    candidates = []
+    for item in result.get("candidates", [])[:40]:
+        candidates.append({
+            "role": item.get("role"),
+            "label": str(item.get("label", ""))[:100],
+            "kind": item.get("kind"),
+            "risk": item.get("risk"),
+        })
+    print(json.dumps({
+        "debugDecision": step,
+        "status": result.get("status"),
+        "provider": result.get("provider"),
+        "model": result.get("model"),
+        "decision": result.get("decision"),
+        "selectedAction": result.get("action") or result.get("proposedAction"),
         "candidates": candidates,
     }, ensure_ascii=False), file=sys.stderr)
 
@@ -127,10 +151,19 @@ def main():
     parser.add_argument("--seed", type=int, default=7)
     parser.add_argument("--max-actions", type=int, default=12)
     parser.add_argument("--debug-candidates", action="store_true", help="Print bounded visible candidates before and after every action to stderr")
+    parser.add_argument("--debug-page-content", action="store_true", help="Include bounded visible text and table cells in debug output; this may contain page data")
+    parser.add_argument("--debug-open-navigation", nargs="+", help="Debug only: follow exact visible low-risk link/menu labels, print the resulting snapshots, and exit without scoring")
+    parser.add_argument("--debug-score-navigation", action="store_true", help="With --debug-open-navigation, ask BrowserGym for a diagnostic reward after the manual path; never writes a benchmark record")
     parser.add_argument("--output", type=Path, help="Optional JSON path for the sanitized episode record")
     args = parser.parse_args()
     if not 1 <= args.max_actions <= 20:
         raise SystemExit("--max-actions must be between 1 and 20")
+    if args.debug_open_navigation and not args.debug_candidates:
+        raise SystemExit("--debug-open-navigation requires --debug-candidates")
+    if args.debug_page_content and not args.debug_candidates:
+        raise SystemExit("--debug-page-content requires --debug-candidates")
+    if args.debug_score_navigation and not args.debug_open_navigation:
+        raise SystemExit("--debug-score-navigation requires --debug-open-navigation")
 
     service_url = urllib.parse.urlsplit(args.shopping_admin_url)
     if service_url.scheme not in {"http", "https"} or not service_url.netloc:
@@ -197,15 +230,54 @@ def main():
         if browsergym_initial_url.path != initial_url.path:
             raise RuntimeError("The selected browser tab does not match BrowserGym's task page")
 
+        if args.debug_open_navigation:
+            for path_step, label in enumerate(args.debug_open_navigation, start=1):
+                snapshot = bridge.call("inspect")
+                matches = [
+                    candidate for candidate in snapshot.get("candidates", [])
+                    if candidate.get("role") in {"link", "menuitem"}
+                    and str(candidate.get("label", "")).strip().casefold() == label.strip().casefold()
+                ]
+                if len(matches) != 1 or matches[0].get("risk") != "low":
+                    raise RuntimeError(f"Debug navigation label must match exactly one visible low-risk link/menu item: {label}")
+                result = bridge.call("act", ref=matches[0]["ref"])
+                if result.get("status") != "action-executed":
+                    raise RuntimeError("Debug navigation stopped because the requested menu action was not executed")
+                print_debug_snapshot("debug-open-navigation", path_step, bridge.call("inspect"), args.debug_page_content)
+            debug_result = {
+                "debugNavigationInspection": "complete",
+                "manualNavigationSteps": len(args.debug_open_navigation),
+                "scored": False,
+            }
+            if args.debug_score_navigation:
+                current_url = urllib.parse.urlsplit(env.unwrapped.page.url)
+                moved = (current_url.path, current_url.query) != initial_location
+                response_text = json.dumps({
+                    "task_type": "NAVIGATE",
+                    "status": "SUCCESS" if moved else "UNKNOWN_ERROR",
+                    "retrieved_data": None,
+                    "error_details": None,
+                })
+                _, debug_reward, _, _, _ = env.step(f"send_msg_to_user({json.dumps(response_text)})")
+                debug_result.update({
+                    "scored": True,
+                    "reward": debug_reward,
+                    "success": debug_reward >= 1.0,
+                })
+            print(json.dumps(debug_result), file=sys.stderr)
+            return 0
+
         for step in range(1, args.max_actions + 1):
             if args.debug_candidates:
-                print_debug_snapshot("before", step, bridge.call("inspect"))
+                print_debug_snapshot("before", step, bridge.call("inspect"), args.debug_page_content)
             decision_started = time.perf_counter()
             result = bridge.call("decide-and-act", task=task)
             elapsed_ms = round((time.perf_counter() - decision_started) * 1000)
             bridge_ms.append(elapsed_ms)
             if args.debug_candidates:
-                print_debug_snapshot("after", step, bridge.call("inspect"))
+                print_debug_decision(step, result)
+            if args.debug_candidates:
+                print_debug_snapshot("after", step, bridge.call("inspect"), args.debug_page_content)
                 browsergym_url = urllib.parse.urlsplit(env.unwrapped.page.url)
                 print(json.dumps({
                     "debugBrowserGymPage": step,

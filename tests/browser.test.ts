@@ -72,6 +72,8 @@ describe("Playwright browser safety flow", () => {
   let slowNavigationHtml: Buffer;
   let navigationTargetingHtml: Buffer;
   let navigationOrdersHtml: Buffer;
+  let hierarchicalNavigationOrdersHtml: Buffer;
+  let hierarchicalNavigationThemesHtml: Buffer;
   let navigationTargetHtml: Buffer;
   let navigationHiddenTargetHtml: Buffer;
   let duplicateNavigationLabelsHtml: Buffer;
@@ -118,6 +120,8 @@ describe("Playwright browser safety flow", () => {
     slowNavigationHtml = Buffer.from('<!doctype html><h1>Dashboard</h1><a href="/slow-navigation-target">Customers</a>');
     navigationTargetingHtml = Buffer.from('<!doctype html><h1>Dashboard</h1><a href="#magento">Magento</a><a href="#sales">Sales</a><a href="#reports" onclick="document.querySelector(\'h1\').textContent=\'Reports menu opened\'">Reports</a>');
     navigationOrdersHtml = Buffer.from('<!doctype html><h1>Dashboard</h1><a href="#sales">Sales</a><a href="#orders">Orders</a>');
+    hierarchicalNavigationOrdersHtml = Buffer.from('<!doctype html><h1>Dashboard</h1><a id="sales" href="#sales">Sales</a><div id="sales-menu" hidden><a href="#orders" onclick="document.querySelector(\'h1\').textContent=\'Orders list\';document.querySelector(\'#sales-menu\').hidden=true">Orders</a></div><script>document.querySelector("#sales").addEventListener("click",()=>document.querySelector("#sales-menu").hidden=false)</script>');
+    hierarchicalNavigationThemesHtml = Buffer.from('<!doctype html><h1>Dashboard</h1><a id="content" href="#content">Content</a><div id="content-menu" hidden><a href="#themes" onclick="document.querySelector(\'h1\').textContent=\'Themes\';document.querySelector(\'#content-menu\').hidden=true">Themes</a><a href="#configuration">Configuration</a></div><script>document.querySelector("#content").addEventListener("click",()=>document.querySelector("#content-menu").hidden=false)</script>');
     navigationTargetHtml = Buffer.from('<!doctype html><h1>Customers</h1><a href="#customers">Customers</a>');
     navigationHiddenTargetHtml = Buffer.from('<!doctype html><h1 style="display:none">Customers</h1><h1>Dashboard</h1><a href="#customers">Customers</a>');
     duplicateNavigationLabelsHtml = Buffer.from('<!doctype html><a href="#customers-one" onclick="document.querySelector(\'#status\').textContent=\'First customers opened\'">Customers</a><a href="#customers-two" onclick="document.querySelector(\'#status\').textContent=\'Second customers opened\'">Customers</a><p id="status">Dashboard</p>');
@@ -167,7 +171,7 @@ describe("Playwright browser safety flow", () => {
         response.end(hierarchicalMenuHtml);
         return;
       }
-      response.end(request.url === "/visual-only" ? visualHtml : request.url === "/visual-gestures" ? visualGesturesHtml : request.url === "/visual-scroll" ? visualScrollHtml : request.url === "/pointer-text" ? pointerTextHtml : request.url === "/icon-pointer" ? iconPointerHtml : request.url === "/silent-pointer" ? silentPointerHtml : request.url === "/silent-input" ? silentInputHtml : request.url === "/mixed-pointer" ? mixedPointerHtml : request.url === "/checkbox" ? checkboxHtml : request.url === "/submit" ? submitHtml : request.url === "/checkbox-task" ? checkboxTaskHtml : request.url === "/tabs" ? tabHtml : request.url === "/expand" ? expandHtml : request.url === "/native-fields" ? nativeFieldsHtml : request.url === "/copy-fields" ? copyFieldsHtml : request.url === "/slider" ? sliderHtml : request.url === "/aria-slider" ? ariaSliderHtml : request.url === "/jquery-ui-slider" ? jqueryUiSliderHtml : request.url === "/autocomplete" ? autocompleteHtml : request.url === "/multi-select" ? multipleSelectHtml : request.url === "/ambiguous-labels" ? ambiguousLabelsHtml : request.url === "/navigation-label" ? navigationLabelHtml : request.url === "/slow-navigation" ? slowNavigationHtml : request.url === "/navigation-targeting" ? navigationTargetingHtml : request.url === "/navigation-orders" ? navigationOrdersHtml : request.url === "/navigation-target" ? navigationTargetHtml : request.url === "/navigation-hidden-target" ? navigationHiddenTargetHtml : request.url === "/duplicate-navigation-labels" ? duplicateNavigationLabelsHtml : request.url === "/editable" ? editableContentHtml : request.url === "/silent-form" ? silentFormHtml : request.url === "/decision-race" ? decisionRaceHtml : request.url === "/replacement-action" ? replacementActionHtml : request.url === "/dynamic-refs" ? dynamicRefsHtml : request.url === "/menu" ? menuHtml : request.url === "/ordinal-fields" ? ordinalFieldsHtml : request.url === "/textareas" ? textareaWidgetsHtml : request.url === "/ordinal-button" ? ordinalButtonHtml : request.url === "/multi-disclosure" ? multiDisclosureHtml : request.url === "/adjacent-label-table" ? adjacentLabelTableHtml : html);
+      response.end(request.url === "/visual-only" ? visualHtml : request.url === "/visual-gestures" ? visualGesturesHtml : request.url === "/visual-scroll" ? visualScrollHtml : request.url === "/pointer-text" ? pointerTextHtml : request.url === "/icon-pointer" ? iconPointerHtml : request.url === "/silent-pointer" ? silentPointerHtml : request.url === "/silent-input" ? silentInputHtml : request.url === "/mixed-pointer" ? mixedPointerHtml : request.url === "/checkbox" ? checkboxHtml : request.url === "/submit" ? submitHtml : request.url === "/checkbox-task" ? checkboxTaskHtml : request.url === "/tabs" ? tabHtml : request.url === "/expand" ? expandHtml : request.url === "/native-fields" ? nativeFieldsHtml : request.url === "/copy-fields" ? copyFieldsHtml : request.url === "/slider" ? sliderHtml : request.url === "/aria-slider" ? ariaSliderHtml : request.url === "/jquery-ui-slider" ? jqueryUiSliderHtml : request.url === "/autocomplete" ? autocompleteHtml : request.url === "/multi-select" ? multipleSelectHtml : request.url === "/ambiguous-labels" ? ambiguousLabelsHtml : request.url === "/navigation-label" ? navigationLabelHtml : request.url === "/slow-navigation" ? slowNavigationHtml : request.url === "/navigation-targeting" ? navigationTargetingHtml : request.url === "/navigation-orders" ? navigationOrdersHtml : request.url === "/hierarchical-navigation-orders" ? hierarchicalNavigationOrdersHtml : request.url === "/hierarchical-navigation-themes" ? hierarchicalNavigationThemesHtml : request.url === "/navigation-target" ? navigationTargetHtml : request.url === "/navigation-hidden-target" ? navigationHiddenTargetHtml : request.url === "/duplicate-navigation-labels" ? duplicateNavigationLabelsHtml : request.url === "/editable" ? editableContentHtml : request.url === "/silent-form" ? silentFormHtml : request.url === "/decision-race" ? decisionRaceHtml : request.url === "/replacement-action" ? replacementActionHtml : request.url === "/dynamic-refs" ? dynamicRefsHtml : request.url === "/menu" ? menuHtml : request.url === "/ordinal-fields" ? ordinalFieldsHtml : request.url === "/textareas" ? textareaWidgetsHtml : request.url === "/ordinal-button" ? ordinalButtonHtml : request.url === "/multi-disclosure" ? multiDisclosureHtml : request.url === "/adjacent-label-table" ? adjacentLabelTableHtml : html);
     });
     await new Promise<void>((resolve, reject) => {
       server.once("error", reject);
@@ -954,6 +958,46 @@ describe("Playwright browser safety flow", () => {
     const result = await browser.decideAndAct("Go to the list of orders that are processing", provider);
 
     expect(result).toMatchObject({ status: "action-executed", selectionRule: "unique-mentioned-navigation-label", action: { label: "Orders" } });
+  }, 45_000);
+
+  it("opens one unique low-risk parent menu before selecting a hidden order destination", async () => {
+    profile = await mkdtemp(path.join(os.tmpdir(), "adk-browser-navigation-hidden-orders-test-"));
+    browser = new BrowserManager({ headless: true, profileDir: path.join(profile, "chromium") });
+    await browser.launch(`${baseUrl}hierarchical-navigation-orders`);
+    const provider: DecisionProvider = {
+      id: "remote-test-provider",
+      model: "unused-test-provider",
+      decide: async () => { throw new Error("Visible parent and child navigation labels should resolve locally"); },
+    };
+
+    const parent = await browser.decideAndAct("Go to the list of orders that are processing", provider);
+    const child = await browser.decideAndAct("Go to the list of orders that are processing", provider);
+    const headingVisible = await browser.decideAndAct("Go to the list of orders that are processing", provider);
+
+    expect(parent).toMatchObject({ status: "action-executed", selectionRule: "unique-related-parent-navigation-label", action: { label: "Sales" } });
+    expect(child).toMatchObject({ status: "action-executed", selectionRule: "unique-mentioned-navigation-label", action: { label: "Orders" } });
+    expect(headingVisible.status).toBe("remote-provider-blocked-for-browser-privacy");
+    expect((await browser.inspect()).headings).toEqual(["Orders list"]);
+  }, 45_000);
+
+  it("opens the unique Content parent then matches a visible theme destination despite task filler words", async () => {
+    profile = await mkdtemp(path.join(os.tmpdir(), "adk-browser-navigation-hidden-themes-test-"));
+    browser = new BrowserManager({ headless: true, profileDir: path.join(profile, "chromium") });
+    await browser.launch(`${baseUrl}hierarchical-navigation-themes`);
+    const provider: DecisionProvider = {
+      id: "remote-test-provider",
+      model: "unused-test-provider",
+      decide: async () => { throw new Error("Visible parent and child navigation labels should resolve locally"); },
+    };
+
+    const parent = await browser.decideAndAct("Go to the Magento Blank theme settings page", provider);
+    const child = await browser.decideAndAct("Go to the Magento Blank theme settings page", provider);
+    const headingVisible = await browser.decideAndAct("Go to the Magento Blank theme settings page", provider);
+
+    expect(parent).toMatchObject({ status: "action-executed", selectionRule: "unique-related-parent-navigation-label", action: { label: "Content" } });
+    expect(child).toMatchObject({ status: "action-executed", selectionRule: "unique-mentioned-navigation-label", action: { label: "Themes" } });
+    expect(headingVisible.status).toBe("remote-provider-blocked-for-browser-privacy");
+    expect((await browser.inspect()).headings).toEqual(["Themes"]);
   }, 45_000);
 
   it("stops when the visible heading already names the requested all-items page", async () => {
