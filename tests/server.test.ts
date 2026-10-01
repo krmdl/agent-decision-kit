@@ -43,7 +43,16 @@ describe("MCP server interoperability", () => {
     expect(tools.map((tool) => tool.name)).toContain("provider_warmup");
     expect(tools.find((tool) => tool.name === "browser_visual_inspect")?.inputSchema).toHaveProperty("properties.question");
     expect(tools.find((tool) => tool.name === "browser_visual_text")?.inputSchema).toHaveProperty("properties.maxLines");
+    expect(tools.find((tool) => tool.name === "browser_visual_text")?.inputSchema).toHaveProperty("properties.segmentationMode");
+    expect(tools.find((tool) => tool.name === "browser_visual_text")?.inputSchema).toHaveProperty("properties.contentMode");
     expect(tools.find((tool) => tool.name === "browser_visual_action")?.inputSchema).toHaveProperty("properties.text");
+    expect(tools.find((tool) => tool.name === "browser_visual_click")?.inputSchema).toHaveProperty("properties.x");
+    expect(tools.find((tool) => tool.name === "browser_visual_click")?.inputSchema).toHaveProperty("properties.y");
+    expect(tools.find((tool) => tool.name === "browser_visual_drag")?.inputSchema).toHaveProperty("properties.startX");
+    expect(tools.find((tool) => tool.name === "browser_visual_drag")?.inputSchema).toHaveProperty("properties.endY");
+    expect(tools.find((tool) => tool.name === "browser_visual_drag")?.inputSchema).toHaveProperty("properties.steps");
+    expect(tools.find((tool) => tool.name === "browser_visual_scroll")?.inputSchema).toHaveProperty("properties.deltaY");
+    expect(tools.find((tool) => tool.name === "browser_visual_scroll")?.inputSchema).toHaveProperty("properties.contentMode");
     expect(tools.find((tool) => tool.name === "browser_select_option")?.inputSchema).toHaveProperty("properties.optionLabel");
     expect(tools.find((tool) => tool.name === "browser_set_range")?.inputSchema).toHaveProperty("properties.value");
     expect(tools.find((tool) => tool.name === "browser_copy_field")?.inputSchema).toHaveProperty("properties.sourceRef");

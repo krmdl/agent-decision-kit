@@ -42,6 +42,23 @@ describe("bounded local OCR output", () => {
     expect(formattedWords.reduce((total, word) => total + word.text.length, 0)).toBeLessThanOrEqual(6_000);
   });
 
+  it("returns per-character boxes in digit-only mode", () => {
+    const lines = formatOcrLines([{ paragraphs: [{ lines: [
+      { text: "51", confidence: 0, bbox: { x0: 20, y0: 30, x1: 100, y1: 55 }, words: [{
+        text: "51", confidence: 0, bbox: { x0: 20, y0: 30, x1: 100, y1: 55 }, symbols: [
+          { text: "3", confidence: 84, bbox: { x0: 35, y0: 32, x1: 102, y1: 60 } },
+          { text: "5", confidence: 99, bbox: { x0: 20, y0: 30, x1: 30, y1: 45 } },
+          { text: "1", confidence: 82, bbox: { x0: 90, y0: 32, x1: 100, y1: 47 } },
+        ],
+      }] },
+    ] }] }], 40, "digits");
+
+    expect(lines[0]?.words).toEqual([
+      { text: "5", confidence: 99, box: { x0: 20, y0: 30, x1: 30, y1: 45 } },
+      { text: "1", confidence: 82, box: { x0: 90, y0: 32, x1: 100, y1: 47 } },
+    ]);
+  });
+
   it("matches exact OCR word sequences, bounds the target, and preserves duplicates as ambiguous", () => {
     const lines = formatOcrLines([{ paragraphs: [{ lines: [
       { text: "Save draft", confidence: 92, bbox: { x0: 20, y0: 30, x1: 150, y1: 60 }, words: [

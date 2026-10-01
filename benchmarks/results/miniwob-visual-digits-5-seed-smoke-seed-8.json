@@ -1,0 +1,248 @@
+{
+  "benchmark": "miniwob",
+  "task": "ascending-numbers",
+  "taskPrompt": "Click on the numbers in ascending order.",
+  "runnerMode": "bounded-visual-ocr-approval-smoke",
+  "toolCoverage": [
+    "browser_confirm",
+    "browser_connect",
+    "browser_visual_click",
+    "browser_visual_text"
+  ],
+  "notExercisedTools": [
+    "browser_action",
+    "browser_copy_field",
+    "browser_decide_and_act",
+    "browser_fill",
+    "browser_select_option",
+    "browser_set_checkboxes",
+    "browser_set_range",
+    "browser_visual_action",
+    "browser_visual_drag",
+    "browser_visual_inspect",
+    "browser_visual_scroll"
+  ],
+  "toolActionTrace": [
+    {
+      "step": 1,
+      "pageTextExcerpt": "1 2 3 4 5",
+      "domCandidateLabels": [],
+      "tool": "browser_visual_text",
+      "status": "read",
+      "engine": "tesseract.js",
+      "contentMode": "digits",
+      "cropRetryCount": 0,
+      "title": "Ascending Numbers Task",
+      "url": "file://[local file]",
+      "viewport": {
+        "width": 332,
+        "height": 214,
+        "devicePixelRatio": 1
+      },
+      "screenshotPixels": {
+        "width": 332,
+        "height": 214
+      },
+      "lineCount": 3,
+      "latencyMs": 237,
+      "recognizedLines": [
+        {
+          "text": "3 2",
+          "confidence": 96
+        },
+        {
+          "text": "4",
+          "confidence": 96
+        },
+        {
+          "text": "51",
+          "confidence": 0
+        }
+      ],
+      "recognizedWords": [
+        {
+          "text": "3",
+          "confidence": 99,
+          "box": {
+            "x0": 26,
+            "y0": 103,
+            "x1": 35,
+            "y1": 118
+          }
+        },
+        {
+          "text": "2",
+          "confidence": 99,
+          "box": {
+            "x0": 74,
+            "y0": 90,
+            "x1": 83,
+            "y1": 105
+          }
+        },
+        {
+          "text": "4",
+          "confidence": 99,
+          "box": {
+            "x0": 101,
+            "y0": 130,
+            "x1": 111,
+            "y1": 145
+          }
+        },
+        {
+          "text": "5",
+          "confidence": 99,
+          "box": {
+            "x0": 35,
+            "y0": 156,
+            "x1": 45,
+            "y1": 171
+          }
+        },
+        {
+          "text": "1",
+          "confidence": 82,
+          "box": {
+            "x0": 74,
+            "y0": 149,
+            "x1": 79,
+            "y1": 164
+          }
+        }
+      ]
+    },
+    {
+      "step": 1,
+      "tool": "browser_visual_click",
+      "status": "awaiting-user-approval",
+      "targetOrdinal": 1,
+      "pointCss": {
+        "x": 76,
+        "y": 156
+      },
+      "ocrConfidence": 82,
+      "executionStatus": "action-executed-after-approval"
+    },
+    {
+      "step": 2,
+      "tool": "browser_visual_click",
+      "status": "awaiting-user-approval",
+      "targetOrdinal": 2,
+      "pointCss": {
+        "x": 78,
+        "y": 98
+      },
+      "ocrConfidence": 99,
+      "executionStatus": "action-executed-after-approval"
+    },
+    {
+      "step": 3,
+      "tool": "browser_visual_click",
+      "status": "awaiting-user-approval",
+      "targetOrdinal": 3,
+      "pointCss": {
+        "x": 30,
+        "y": 110
+      },
+      "ocrConfidence": 99,
+      "executionStatus": "action-executed-after-approval"
+    },
+    {
+      "step": 4,
+      "tool": "browser_visual_click",
+      "status": "awaiting-user-approval",
+      "targetOrdinal": 4,
+      "pointCss": {
+        "x": 106,
+        "y": 138
+      },
+      "ocrConfidence": 99,
+      "executionStatus": "action-executed-after-approval"
+    },
+    {
+      "step": 5,
+      "tool": "browser_visual_click",
+      "status": "awaiting-user-approval",
+      "targetOrdinal": 5,
+      "pointCss": {
+        "x": 40,
+        "y": 164
+      },
+      "ocrConfidence": 99,
+      "executionStatus": "action-executed-after-approval"
+    }
+  ],
+  "success": true,
+  "timeout": false,
+  "failureReason": null,
+  "actions": 5,
+  "selectedAction": {
+    "kind": "visual-point-click",
+    "pointCss": {
+      "x": 40,
+      "y": 164
+    },
+    "screenshotPixels": {
+      "width": 332,
+      "height": 214
+    },
+    "viewport": {
+      "width": 332,
+      "height": 214,
+      "devicePixelRatio": 1
+    },
+    "source": "ocr"
+  },
+  "decisionConfidence": null,
+  "decisionCalibration": null,
+  "decisionLatencyMs": 0,
+  "decisionCallLatenciesMs": [],
+  "decisionSnapshot": null,
+  "availableCandidates": null,
+  "decisionTrace": [],
+  "candidateCount": 0,
+  "selectionRule": null,
+  "syntheticApprovalCount": 5,
+  "latencyMs": 2554,
+  "environmentResetLatencyMs": 1296,
+  "agentActionLatencyMs": 1258,
+  "reward": 1.0,
+  "rawTaskReward": 1,
+  "successCriterion": "full task reward required (RAW_REWARD_GLOBAL >= 1.0; use wrapper reward only if raw reward is absent)",
+  "terminated": true,
+  "decisionStatus": "action-executed-after-approval",
+  "decisionProvider": "local-ocr-ordered-numbers",
+  "decisionModel": "tesseract.js",
+  "agentDecisionKitCommit": "5cb6bacb45396ff4f73a3fb2d71bdbee6f5168bf",
+  "workingTreeModified": true,
+  "browserGymVersion": "0.14.3",
+  "browserGymPackageCommit": "0a785fbed075224ae81ca9c1fe924f66050696fe",
+  "playwrightPythonVersion": "1.44.0",
+  "playwrightNodeVersion": "1.63.0",
+  "browserVersion": "HeadlessChrome/125.0.6422.26",
+  "pythonVersion": "3.10.0",
+  "nodeVersion": "v22.14.0",
+  "operatingSystem": "Windows-10-10.0.19045-SP0",
+  "cpu": "AMD64 Family 25 Model 80 Stepping 0, AuthenticAMD",
+  "accelerator": "CPU",
+  "modelCacheState": "not-used: the OCR visual path does not invoke the semantic model",
+  "ocrLanguageCacheExistedBeforeEpisode": true,
+  "decisionWarmState": "no semantic decision-provider inference occurred; explicit browser/OCR tools handled this episode",
+  "miniWobCommit": "7fd85d71a4b60325c6585396ec4f48377d049838",
+  "browserStillOpenAfterDisconnect": true,
+  "rawTaskInfo": {
+    "REWARD_GLOBAL": 0.997731,
+    "RAW_REWARD_GLOBAL": 1,
+    "REWARD_REASON": null,
+    "DONE_GLOBAL": true,
+    "EPISODE_ID": 1,
+    "TASK_READY": true
+  },
+  "timestampUtc": "2026-10-01T07:34:21.165781+00:00",
+  "maxActions": 8,
+  "note": "A curated MiniWoB integration smoke check, not a representative BrowserGym benchmark or a full autonomous agent. Multi-tool mode extracts only explicit task values, unique matches from bounded visible tables, and visible native options; field values are omitted from action traces. The optional visual path reads a quoted link with general OCR or ascending-number labels with digits-only OCR; each coordinate click remains behind the standard one-use approval gate. Synthetic approval is possible only for the exact local MiniWoB file URL.",
+  "visualOcrActionsEnabled": true,
+  "visualQuestion": null,
+  "runnerExitCode": 0
+}

@@ -2,6 +2,7 @@
 """Run Agent Decision Kit on one BrowserGym MiniWoB task through Chrome CDP."""
 import argparse
 import json
+import math
 import os
 import queue
 import re
@@ -31,6 +32,45 @@ def extract_visual_click_target(task):
     match = re.search(r'"([^"\r\n]+)"|“([^”\r\n]+)”', task)
     target = (match.group(1) or match.group(2)).strip() if match else ""
     return target or None
+
+
+def extract_ascending_number_targets(ocr_result):
+    """Read MiniWoB's five visible number labels and convert their OCR boxes to CSS points."""
+    viewport = ocr_result.get("viewport") or {}
+    screenshot = ocr_result.get("screenshotPixels") or {}
+    if not all(isinstance(viewport.get(key), (int, float)) and viewport[key] > 0 for key in ("width", "height")):
+        return None
+    if not all(isinstance(screenshot.get(key), (int, float)) and screenshot[key] > 0 for key in ("width", "height")):
+        return None
+
+    detections = []
+    for line in ocr_result.get("lines", []):
+        words = line.get("words") or [line]
+        for word in words:
+            raw = re.sub(r"^[^\d]+|[^\d]+$", "", str(word.get("text", "")))
+            confidence = word.get("confidence", line.get("confidence", 0))
+            if not re.fullmatch(r"\d{1,2}", raw) or not isinstance(confidence, (int, float)) or not 40 <= confidence <= 100:
+                continue
+            box = word.get("box") or line.get("box")
+            if not isinstance(box, dict) or not all(isinstance(box.get(key), (int, float)) and math.isfinite(box[key]) for key in ("x0", "y0", "x1", "y1")):
+                return None
+            if not 0 <= box["x0"] < box["x1"] <= screenshot["width"] or not 0 <= box["y0"] < box["y1"] <= screenshot["height"]:
+                return None
+            number = int(raw)
+            x = round(((box["x0"] + box["x1"]) / 2) * viewport["width"] / screenshot["width"])
+            y = round(((box["y0"] + box["y1"]) / 2) * viewport["height"] / screenshot["height"])
+            if not 0 <= x < viewport["width"] or not 0 <= y < viewport["height"]:
+                return None
+            detections.append({"number": number, "x": x, "y": y, "confidence": confidence})
+
+    by_number = {}
+    for detection in detections:
+        if detection["number"] in by_number:
+            return None
+        by_number[detection["number"]] = detection
+    if sorted(by_number) != [1, 2, 3, 4, 5]:
+        return None
+    return [by_number[number] for number in range(1, 6)]
 
 
 def is_expected_local_task_url(current_url, base_url, task):
@@ -364,7 +404,9 @@ def main():
     parser.add_argument("--max-actions", type=int, default=5, help="Maximum BrowserManager decision/action rounds for this task")
     parser.add_argument("--approve-synthetic-actions", action="store_true", help="Confirm approval-gated actions only when the benchmark page uses a local file:// URL")
     parser.add_argument("--multi-tool", action="store_true", help="Exercise explicit text/date/select tool flows and optional local visual tools; this is a tool-integration harness, not an autonomous agent")
-    parser.add_argument("--visual-ocr-actions", action="store_true", help="On visual-only pages, try only a quoted link target with local OCR and the mandatory approval gate")
+    parser.add_argument("--visual-ocr-actions", action="store_true", help="On visual-only pages, try a quoted link or ascending-number target with local OCR and the mandatory approval gate")
+    parser.add_argument("--visual-question", help="Optional bounded question for browser_visual_inspect")
+    parser.add_argument("--capture-screenshot", type=Path, help="Optional local screenshot path for one synthetic task's initial state")
     parser.add_argument("--output", type=Path, help="Optional path for one raw JSON episode record")
     args = parser.parse_args()
     if args.max_actions < 1 or args.max_actions > 20:
@@ -434,6 +476,9 @@ def main():
     try:
         observation, _ = env.reset(seed=args.seed)
         reset_latency_ms = round((time.perf_counter() - reset_start) * 1000)
+        if args.capture_screenshot:
+            args.capture_screenshot.parent.mkdir(parents=True, exist_ok=True)
+            env.unwrapped.page.screenshot(path=str(args.capture_screenshot), animations="disabled")
         task = args.task_prompt or observation["goal"]
         with urllib.request.urlopen(f"http://127.0.0.1:{port}/json/version", timeout=5) as response:
             browser_info = json.load(response)
@@ -539,6 +584,71 @@ def main():
                     continue
 
                 if not inspected.get("candidates"):
+                    if args.visual_ocr_actions and args.task == "ascending-numbers" and re.search(r"\bclick\s+on\s+the\s+numbers\s+in\s+ascending\s+order\b", task, re.IGNORECASE):
+                        visual_ocr_used = True
+                        ocr_result = bridge.call("visual-text", maxLines=40, contentMode="digits")
+                        tool_coverage.add("browser_visual_text")
+                        tool_action_trace.append({
+                            "step": step_index + 1,
+                            "pageTextExcerpt": inspected.get("textExcerpt"),
+                            "domCandidateLabels": [candidate.get("label") for candidate in inspected.get("candidates", [])],
+                            "tool": "browser_visual_text",
+                            "status": ocr_result.get("status", "read"),
+                            "engine": ocr_result.get("engine"),
+                            "contentMode": ocr_result.get("contentMode"),
+                            "cropRetryCount": ocr_result.get("cropRetryCount", 0),
+                            "title": ocr_result.get("title"),
+                            "url": ocr_result.get("url"),
+                            "viewport": ocr_result.get("viewport"),
+                            "screenshotPixels": ocr_result.get("screenshotPixels"),
+                            "lineCount": len(ocr_result.get("lines", [])),
+                            "latencyMs": ocr_result.get("latencyMs"),
+                            "recognizedLines": [{"text": line.get("text", ""), "confidence": line.get("confidence")} for line in ocr_result.get("lines", [])],
+                            "recognizedWords": [{"text": word.get("text", ""), "confidence": word.get("confidence"), "box": word.get("box")} for line in ocr_result.get("lines", []) for word in line.get("words", [])],
+                        })
+                        targets = extract_ascending_number_targets(ocr_result)
+                        decision_provider = "local-ocr-ordered-numbers"
+                        decision_model = ocr_result.get("engine", "tesseract.js")
+                        candidate_count = 0
+                        if targets is None:
+                            decision = {"status": "visual-targets-ambiguous", "note": "OCR did not find exactly one confident visible target for each expected number. No visual click was proposed."}
+                        else:
+                            decision = {"status": "visual-number-sequence-ready"}
+                            for number_ordinal, target in enumerate(targets, start=1):
+                                if number_ordinal > 1:
+                                    refreshed = bridge.call("visual-text", maxLines=40)
+                                    tool_coverage.add("browser_visual_text")
+                                    if refreshed.get("status") == "page-changed-during-ocr":
+                                        decision = {"status": "page-changed-during-ocr"}
+                                        break
+                                proposed = bridge.call("visual-click", x=target["x"], y=target["y"])
+                                tool_coverage.add("browser_visual_click")
+                                action_count += int(proposed.get("status") == "awaiting-user-approval")
+                                decision = proposed
+                                selected_action = proposed.get("proposedAction")
+                                proposal_trace = {
+                                    "step": step_index + number_ordinal,
+                                    "tool": "browser_visual_click",
+                                    "status": proposed.get("status"),
+                                    "targetOrdinal": number_ordinal,
+                                    "pointCss": proposed.get("proposedAction", {}).get("pointCss"),
+                                    "ocrConfidence": target["confidence"],
+                                }
+                                if proposed.get("status") == "awaiting-user-approval":
+                                    if args.approve_synthetic_actions and is_expected_local_task_url(env.unwrapped.page.url, base_url, args.task):
+                                        decision = bridge.call("confirm", approvalToken=proposed["approvalToken"], approve=True)
+                                        synthetic_approval_count += 1
+                                        tool_coverage.add("browser_confirm")
+                                        proposal_trace["executionStatus"] = decision.get("status")
+                                    else:
+                                        proposal_trace["executionStatus"] = "awaiting-explicit-local-benchmark-approval"
+                                tool_action_trace.append(proposal_trace)
+                                reward, terminated, _, task_info = env.unwrapped.task.validate(env.unwrapped.page, env.unwrapped.chat.messages)
+                                if decision.get("status") != "action-executed-after-approval" or has_full_task_reward(reward, task_info) or terminated:
+                                    break
+                        reward, terminated, _, task_info = env.unwrapped.task.validate(env.unwrapped.page, env.unwrapped.chat.messages)
+                        break
+
                     visual_target = extract_visual_click_target(task) if args.visual_ocr_actions else None
                     if visual_target:
                         visual_ocr_used = True
@@ -586,11 +696,12 @@ def main():
                         reward, terminated, _, task_info = env.unwrapped.task.validate(env.unwrapped.page, env.unwrapped.chat.messages)
                         break
 
-                    decision = bridge.call("visual-inspect", question=task)
+                    visual_question = (args.visual_question or task)[:1_000]
+                    decision = bridge.call("visual-inspect", question=visual_question)
                     decision_provider = decision.get("provider", decision_provider)
                     decision_model = decision.get("model", decision_model)
                     tool_coverage.add("browser_visual_inspect")
-                    tool_action_trace.append({"step": step_index + 1, "tool": "browser_visual_inspect", "status": decision.get("status", "described"), "latencyMs": decision.get("latencyMs"), "descriptionReturned": bool(decision.get("description"))})
+                    tool_action_trace.append({"step": step_index + 1, "tool": "browser_visual_inspect", "status": decision.get("status", "described"), "latencyMs": decision.get("latencyMs"), "question": visual_question, "description": decision.get("description", "")[:2_000], "descriptionReturned": bool(decision.get("description"))})
                     reward, terminated, _, task_info = env.unwrapped.task.validate(env.unwrapped.page, env.unwrapped.chat.messages)
                     break
 
@@ -653,7 +764,7 @@ def main():
             "taskPrompt": task,
             "runnerMode": "bounded-visual-ocr-approval-smoke" if visual_ocr_used else ("bounded-multi-tool-integration-smoke" if args.multi_tool else "bounded-repeated-browser-decide-and-act"),
             "toolCoverage": sorted(tool_coverage),
-            "notExercisedTools": sorted({"browser_connect", "browser_decide_and_act", "browser_confirm", "browser_action", "browser_fill", "browser_copy_field", "browser_set_checkboxes", "browser_select_option", "browser_set_range", "browser_visual_inspect", "browser_visual_text", "browser_visual_action"} - tool_coverage),
+            "notExercisedTools": sorted({"browser_connect", "browser_decide_and_act", "browser_confirm", "browser_action", "browser_fill", "browser_copy_field", "browser_set_checkboxes", "browser_select_option", "browser_set_range", "browser_visual_inspect", "browser_visual_text", "browser_visual_action", "browser_visual_click", "browser_visual_drag", "browser_visual_scroll"} - tool_coverage),
             "toolActionTrace": tool_action_trace,
             "success": has_full_task_reward(reward, task_info),
             "timeout": False,
@@ -689,8 +800,9 @@ def main():
             "rawTaskInfo": task_info,
             "timestampUtc": datetime.now(timezone.utc).isoformat(),
             "maxActions": args.max_actions,
-            "note": "A curated MiniWoB integration smoke check, not a representative BrowserGym benchmark or a full autonomous agent. Multi-tool mode extracts only explicit task values, unique matches from bounded visible tables, and visible native options; field values are omitted from action traces. The optional OCR path attempts only the quoted link target and its coordinate click remains behind the standard one-use approval gate; synthetic approval is possible only for the exact local MiniWoB file URL.",
+            "note": "A curated MiniWoB integration smoke check, not a representative BrowserGym benchmark or a full autonomous agent. Multi-tool mode extracts only explicit task values, unique matches from bounded visible tables, and visible native options; field values are omitted from action traces. The optional visual path reads a quoted link with general OCR or ascending-number labels with digits-only OCR; each coordinate click remains behind the standard one-use approval gate. Synthetic approval is possible only for the exact local MiniWoB file URL.",
             "visualOcrActionsEnabled": args.visual_ocr_actions,
+            "visualQuestion": args.visual_question[:1_000] if args.visual_question else None,
         }
         if args.output:
             args.output.parent.mkdir(parents=True, exist_ok=True)
@@ -709,7 +821,7 @@ def main():
                 "taskPrompt": task,
                 "runnerMode": "bounded-visual-ocr-approval-smoke" if visual_ocr_used else ("bounded-multi-tool-integration-smoke" if args.multi_tool else "bounded-repeated-browser-decide-and-act"),
                 "toolCoverage": sorted(tool_coverage),
-                "notExercisedTools": sorted({"browser_connect", "browser_decide_and_act", "browser_confirm", "browser_action", "browser_fill", "browser_copy_field", "browser_set_checkboxes", "browser_select_option", "browser_set_range", "browser_visual_inspect", "browser_visual_text", "browser_visual_action"} - tool_coverage),
+                "notExercisedTools": sorted({"browser_connect", "browser_decide_and_act", "browser_confirm", "browser_action", "browser_fill", "browser_copy_field", "browser_set_checkboxes", "browser_select_option", "browser_set_range", "browser_visual_inspect", "browser_visual_text", "browser_visual_action", "browser_visual_click", "browser_visual_drag", "browser_visual_scroll"} - tool_coverage),
                 "toolActionTrace": tool_action_trace,
                 "success": False,
                 "timeout": timed_out,
@@ -739,6 +851,7 @@ def main():
                 "miniWobCommit": MINIWOB_COMMIT,
                 "timestampUtc": datetime.now(timezone.utc).isoformat(),
                 "visualOcrActionsEnabled": args.visual_ocr_actions,
+                "visualQuestion": args.visual_question[:1_000] if args.visual_question else None,
                 "note": "Failed episode record from the bounded BrowserGym integration runner, not a full autonomous agent. Timeout is detected from the harness deadline or a reported timeout; inspect failureReason for the source.",
             }
             if args.output:

@@ -68,7 +68,8 @@ def main():
     parser.add_argument("--timeout-seconds", type=int, default=120, help="Outer time limit per task process")
     parser.add_argument("--approve-synthetic-actions", action="store_true", help="Allow gated actions only when the runner confirms the exact local file:// task URL")
     parser.add_argument("--multi-tool", action="store_true", help="Run the explicit value extraction and local visual tool-integration smoke path")
-    parser.add_argument("--visual-ocr-actions", action="store_true", help="In multi-tool mode, try an exact quoted visual target with local OCR and the mandatory approval gate")
+    parser.add_argument("--visual-ocr-actions", action="store_true", help="In multi-tool mode, try a quoted visual link or ascending-number target with local OCR and the mandatory approval gate")
+    parser.add_argument("--visual-question", help="Optional bounded question for browser_visual_inspect")
     args = parser.parse_args()
 
     miniwob_root = args.miniwob_root.resolve()
@@ -103,6 +104,8 @@ def main():
             command.append("--multi-tool")
         if args.visual_ocr_actions:
             command.append("--visual-ocr-actions")
+        if args.visual_question:
+            command.extend(["--visual-question", args.visual_question])
 
         start = time.perf_counter()
         try:
@@ -161,7 +164,7 @@ def main():
 
     summary = load_aggregator().summarize(records)
     exercised_tools = sorted({tool for record in records for tool in record.get("toolCoverage", [])})
-    supported_tools = {"browser_connect", "browser_decide_and_act", "browser_confirm", "browser_action", "browser_fill", "browser_copy_field", "browser_set_checkboxes", "browser_select_option", "browser_set_range", "browser_visual_inspect", "browser_visual_text", "browser_visual_action"}
+    supported_tools = {"browser_connect", "browser_decide_and_act", "browser_confirm", "browser_action", "browser_fill", "browser_copy_field", "browser_set_checkboxes", "browser_select_option", "browser_set_range", "browser_visual_inspect", "browser_visual_text", "browser_visual_action", "browser_visual_click", "browser_visual_drag", "browser_visual_scroll"}
     suite_name, runner_mode = suite_identity(records)
     summary["suite"] = {
         "name": suite_name,
@@ -169,7 +172,7 @@ def main():
         "agentDecisionKitCommit": suite_environment["agentDecisionKitCommit"],
         "toolCoverage": exercised_tools,
         "notExercisedTools": sorted(supported_tools - set(exercised_tools)),
-        "limitation": "This is a curated integration harness, not a full autonomous agent or representative BrowserGym benchmark. In multi-tool mode, it extracts only explicit values from synthetic task instructions, uses unique matches from bounded visible table rows, selects exact visible options, and sets explicit keyboard-slider targets. When enabled, synthetic approval is limited to an explicitly requested action on the exact local file:// task page. The optional visual OCR path tries only an explicitly quoted link label.",
+        "limitation": "This is a curated integration harness, not a full autonomous agent or representative BrowserGym benchmark. In multi-tool mode, it extracts only explicit values from synthetic task instructions, uses unique matches from bounded visible table rows, selects exact visible options, and sets explicit keyboard-slider targets. When enabled, synthetic approval is limited to an explicitly requested action on the exact local file:// task page. The optional visual OCR path reads an explicitly quoted link label or, for ascending-numbers, requires one confident 1–5 character box per numeral before any coordinate click is proposed.",
         "seed": args.seed,
         "maxActionsPerTask": args.max_actions,
         "timeoutSecondsPerTask": args.timeout_seconds,

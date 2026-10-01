@@ -6,7 +6,10 @@ import { createWorker, PSM } from "tesseract.js";
 export type OcrBox = { x0: number; y0: number; x1: number; y1: number };
 export type OcrWord = { text: string; confidence: number; box: OcrBox };
 export type OcrLine = { text: string; confidence: number; box: OcrBox; words: OcrWord[] };
-type OcrBlock = { paragraphs?: Array<{ lines?: Array<{ text: string; confidence: number; bbox: OcrBox; words?: Array<{ text: string; confidence: number; bbox: OcrBox }> }> }> };
+export type OcrContentMode = "general" | "digits";
+type OcrSymbol = { text: string; confidence: number; bbox: OcrBox };
+type OcrBlock = { paragraphs?: Array<{ lines?: Array<{ text: string; confidence: number; bbox: OcrBox; words?: Array<{ text: string; confidence: number; bbox: OcrBox; symbols?: OcrSymbol[] }> }> }> };
+type ScreenshotPixels = { width: number; height: number };
 type OcrWorker = Awaited<ReturnType<typeof createWorker>>;
 
 let workerLanguage = "";
@@ -49,20 +52,22 @@ function serialize<T>(run: () => Promise<T>): Promise<T> {
   return current;
 }
 
-export function formatOcrLines(blocks: readonly OcrBlock[] | null | undefined, maxLines = 40) {
+export function formatOcrLines(blocks: readonly OcrBlock[] | null | undefined, maxLines = 40, contentMode: OcrContentMode = "general") {
   if (!Number.isInteger(maxLines) || maxLines < 1 || maxLines > 80) throw new Error("maxLines must be an integer from 1 to 80.");
   const lines = (blocks ?? []).flatMap((block) => (block.paragraphs ?? []).flatMap((paragraph) => paragraph.lines ?? []))
     .map((line) => ({
       text: line.text.replace(/\s+/g, " ").trim().slice(0, 240),
       confidence: Math.max(0, Math.min(100, Math.round(line.confidence))),
       box: { x0: Math.max(0, Math.round(line.bbox.x0)), y0: Math.max(0, Math.round(line.bbox.y0)), x1: Math.max(0, Math.round(line.bbox.x1)), y1: Math.max(0, Math.round(line.bbox.y1)) },
-      words: (line.words ?? []).slice(0, 80).map((word) => ({
+      words: (contentMode === "digits"
+        ? (line.words ?? []).flatMap((word) => word.symbols?.length ? word.symbols : [word])
+        : line.words ?? []).filter((word) => contentMode !== "digits" || !isWideDigitSymbol(word)).slice(0, 80).map((word) => ({
         text: word.text.replace(/\s+/g, " ").trim().slice(0, 100),
         confidence: Math.max(0, Math.min(100, Math.round(word.confidence))),
         box: { x0: Math.max(0, Math.round(word.bbox.x0)), y0: Math.max(0, Math.round(word.bbox.y0)), x1: Math.max(0, Math.round(word.bbox.x1)), y1: Math.max(0, Math.round(word.bbox.y1)) },
       })).filter((word) => word.text.length > 0),
     }))
-    .filter((line) => line.text.length > 0 && line.confidence >= 20)
+    .filter((line) => line.text.length > 0 && (line.confidence >= 20 || contentMode === "digits" && line.words.some((word) => word.confidence >= 40)))
     .sort((left, right) => left.box.y0 - right.box.y0 || left.box.x0 - right.box.x0);
 
   const result: OcrLine[] = [];
@@ -123,27 +128,70 @@ function normalizeOcrTokens(value: string) {
   return value.normalize("NFKC").toLocaleLowerCase("en-US").replace(/[^\p{L}\p{N}]+/gu, " ").trim().split(/\s+/u).filter(Boolean);
 }
 
-export function recognizeScreenshotText(png: Buffer, maxLines = 40, segmentationMode: "automatic" | "sparse-text" = "automatic") {
+export function recognizeScreenshotText(png: Buffer, maxLines = 40, segmentationMode: "automatic" | "sparse-text" = "automatic", contentMode: OcrContentMode = "general", screenshotPixels?: ScreenshotPixels) {
   return serialize(async () => {
     const startedAt = performance.now();
     const languages = parseLanguages();
     const workerStartedAt = performance.now();
     const worker = await getWorker(languages);
     const initializationMs = Math.round(performance.now() - workerStartedAt);
-    await worker.setParameters({ tessedit_pageseg_mode: segmentationMode === "sparse-text" ? PSM.SPARSE_TEXT : PSM.AUTO });
+    await worker.setParameters({
+      tessedit_pageseg_mode: contentMode === "digits" ? PSM.SINGLE_BLOCK : segmentationMode === "sparse-text" ? PSM.SPARSE_TEXT : PSM.AUTO,
+      tessedit_char_whitelist: contentMode === "digits" ? "0123456789" : "",
+      classify_bln_numeric_mode: contentMode === "digits" ? "1" : "0",
+    });
     const recognitionStartedAt = performance.now();
     const { data } = await worker.recognize(png, {}, { blocks: true });
+    const blocks = [...(data.blocks ?? [])];
+    let cropRetryCount = 0;
+    if (contentMode === "digits" && screenshotPixels && screenshotPixels.width > 0 && screenshotPixels.height > 0) {
+      const wideSymbols = findWideDigitSymbols(blocks).slice(0, 4);
+      for (const symbol of wideSymbols) {
+        for (const rectangle of splitSymbolIntoRegions(symbol, screenshotPixels)) {
+          const retry = await worker.recognize(png, { rectangle }, { blocks: true });
+          blocks.push(...(retry.data.blocks ?? []));
+          cropRetryCount += 1;
+        }
+      }
+    }
     const recognitionMs = Math.round(performance.now() - recognitionStartedAt);
     return {
       engine: "tesseract.js",
       language: languages.join("+"),
       segmentationMode,
+      contentMode,
+      cropRetryCount,
       initializationMs,
       recognitionMs,
       latencyMs: Math.round(performance.now() - startedAt),
-      lines: formatOcrLines(data.blocks, maxLines),
+      lines: formatOcrLines(blocks, maxLines, contentMode),
     };
   });
+}
+
+function isWideDigitSymbol(symbol: { text: string; bbox: OcrBox }) {
+  const width = symbol.bbox.x1 - symbol.bbox.x0;
+  const height = symbol.bbox.y1 - symbol.bbox.y0;
+  return /^\d$/.test(symbol.text.trim()) && height >= 4 && width > Math.max(22, height * 1.8);
+}
+
+function findWideDigitSymbols(blocks: readonly OcrBlock[]) {
+  return blocks.flatMap((block) => (block.paragraphs ?? []).flatMap((paragraph) => (paragraph.lines ?? []).flatMap((line) => (line.words ?? []).flatMap((word) => (word.symbols ?? []).filter(isWideDigitSymbol)))));
+}
+
+function splitSymbolIntoRegions(symbol: OcrSymbol, screenshotPixels: ScreenshotPixels) {
+  const height = Math.max(1, symbol.bbox.y1 - symbol.bbox.y0);
+  const horizontalPadding = Math.max(3, Math.ceil(height * 0.2));
+  const verticalPadding = Math.max(3, Math.ceil(height * 0.2));
+  const splitX = Math.floor((symbol.bbox.x0 + symbol.bbox.x1) / 2);
+  const left = Math.max(0, Math.floor(symbol.bbox.x0 - horizontalPadding));
+  const right = Math.min(screenshotPixels.width, Math.ceil(symbol.bbox.x1 + horizontalPadding));
+  const top = Math.max(0, Math.floor(symbol.bbox.y0 - verticalPadding));
+  const bottom = Math.min(screenshotPixels.height, Math.ceil(symbol.bbox.y1 + verticalPadding));
+  return [
+    { left, top, width: Math.max(1, Math.min(right, splitX + horizontalPadding) - left), height: Math.max(1, bottom - top) },
+    { left: Math.max(0, splitX - horizontalPadding), top, width: Math.max(1, right - Math.max(0, splitX - horizontalPadding)), height: Math.max(1, bottom - top) },
+  ];
 }
 
 export async function closeOcrWorker() {

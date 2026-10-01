@@ -5,8 +5,46 @@ import os from "node:os";
 import path from "node:path";
 import { chromium, type Browser, type BrowserContext, type Page } from "playwright";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { recognizeScreenshotText } from "../src/browser/ocr.js";
+import { describeScreenshot } from "../src/browser/vision.js";
 import { BrowserManager } from "../src/browser/manager.js";
 import type { DecisionProvider } from "../src/core/types.js";
+
+vi.mock("../src/browser/ocr.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../src/browser/ocr.js")>();
+  return {
+    ...actual,
+    recognizeScreenshotText: vi.fn(async (_image: Buffer, maxLines = 40) => ({
+      engine: "tesseract.js",
+      language: "eng",
+      segmentationMode: "automatic" as const,
+      initializationMs: 0,
+      recognitionMs: 0,
+      latencyMs: 0,
+      lines: [{
+        text: "Open task",
+        confidence: 92,
+        box: { x0: 80, y0: 80, x1: 160, y1: 110 },
+        words: [
+          { text: "Open", confidence: 92, box: { x0: 80, y0: 80, x1: 115, y1: 110 } },
+          { text: "task", confidence: 92, box: { x0: 120, y0: 80, x1: 160, y1: 110 } },
+        ],
+      }].slice(0, maxLines),
+    })),
+  };
+});
+
+vi.mock("../src/browser/vision.js", () => ({
+  describeScreenshot: vi.fn(async (_image: Buffer, question?: string) => ({
+    description: "A local synthetic page with a visual target.",
+    model: "fixture-vision",
+    latencyMs: 0,
+    provider: "local-vision",
+    confidence: null,
+    question,
+    note: "The mocked model does not perform actions.",
+  })),
+}));
 
 describe("Playwright browser safety flow", () => {
   let server: Server;
@@ -17,6 +55,8 @@ describe("Playwright browser safety flow", () => {
   let browser: BrowserManager;
   let debugContext: BrowserContext | undefined;
   let visualHtml: Buffer;
+  let visualGesturesHtml: Buffer;
+  let visualScrollHtml: Buffer;
   let pointerTextHtml: Buffer;
   let iconPointerHtml: Buffer;
   let mixedPointerHtml: Buffer;
@@ -57,6 +97,8 @@ describe("Playwright browser safety flow", () => {
   beforeAll(async () => {
     const html = await readFile(path.resolve("examples/browser-demo.html"));
     visualHtml = await readFile(path.resolve("examples/visual-only-demo.html"));
+    visualGesturesHtml = Buffer.from('<!doctype html><style>body{margin:0}#plane{position:absolute;left:20px;top:140px;width:440px;height:280px;background:#dce8f5}#secret{position:absolute;left:15px;top:15px;width:220px}</style><input id="secret" value="private-visual-value"><div id="plane"></div><p id="status" style="position:absolute;top:450px">Not clicked</p><script>let startX=null;const status=document.querySelector("#status");const plane=document.querySelector("#plane");plane.addEventListener("click",event=>{if(event.clientX>=90&&event.clientX<=150&&event.clientY>=160&&event.clientY<=210)status.textContent="Clicked locally"});plane.addEventListener("mousedown",event=>{startX=event.clientX});plane.addEventListener("mouseup",event=>{if(startX!==null&&startX<180&&event.clientX>240)status.textContent="Dragged locally";startX=null})</script>');
+    visualScrollHtml = Buffer.from('<!doctype html><style>body{margin:0}.scrollbox{position:absolute;left:20px;top:20px;width:300px;height:140px;overflow:auto;border:1px solid #333}.content{height:900px;background:linear-gradient(#fff,#ddd)}#bottom{margin-top:820px}</style><div class="scrollbox" id="scrollbox"><div class="content"><p>Top marker</p><p id="bottom">Bottom marker</p></div></div>');
     pointerTextHtml = Buffer.from('<!doctype html><style>.faux-link { cursor: pointer; color: blue; text-decoration: underline }</style><span id="target" class="faux-link">adipiscing.</span><p id="status">Not clicked</p><script>document.querySelector("#target").addEventListener("click",()=>document.querySelector("#status").textContent="Clicked locally")</script>');
     iconPointerHtml = Buffer.from('<!doctype html><style>#controls{cursor:pointer}.icon{display:inline-block;width:18px;height:18px;content:url("/icons/reply-message.png")}#search{display:inline-block;width:18px;height:18px;cursor:pointer;background-image:url("/icons/search.png")}</style><div id="controls"><span id="reply"><span class="icon"></span><span>Reply</span></span><span id="forward">Forward</span></div><span id="search" aria-hidden="true"></span>');
     silentPointerHtml = Buffer.from('<!doctype html><style>.faux-link{cursor:pointer}</style><span class="faux-link">Open item</span>');
@@ -109,7 +151,7 @@ describe("Playwright browser safety flow", () => {
         response.end(dragAndDropHtml);
         return;
       }
-      response.end(request.url === "/visual-only" ? visualHtml : request.url === "/pointer-text" ? pointerTextHtml : request.url === "/icon-pointer" ? iconPointerHtml : request.url === "/silent-pointer" ? silentPointerHtml : request.url === "/silent-input" ? silentInputHtml : request.url === "/mixed-pointer" ? mixedPointerHtml : request.url === "/checkbox" ? checkboxHtml : request.url === "/submit" ? submitHtml : request.url === "/checkbox-task" ? checkboxTaskHtml : request.url === "/tabs" ? tabHtml : request.url === "/expand" ? expandHtml : request.url === "/native-fields" ? nativeFieldsHtml : request.url === "/copy-fields" ? copyFieldsHtml : request.url === "/slider" ? sliderHtml : request.url === "/aria-slider" ? ariaSliderHtml : request.url === "/jquery-ui-slider" ? jqueryUiSliderHtml : request.url === "/autocomplete" ? autocompleteHtml : request.url === "/multi-select" ? multipleSelectHtml : request.url === "/ambiguous-labels" ? ambiguousLabelsHtml : request.url === "/navigation-label" ? navigationLabelHtml : request.url === "/navigation-targeting" ? navigationTargetingHtml : request.url === "/navigation-orders" ? navigationOrdersHtml : request.url === "/navigation-target" ? navigationTargetHtml : request.url === "/navigation-hidden-target" ? navigationHiddenTargetHtml : request.url === "/duplicate-navigation-labels" ? duplicateNavigationLabelsHtml : request.url === "/editable" ? editableContentHtml : request.url === "/silent-form" ? silentFormHtml : request.url === "/decision-race" ? decisionRaceHtml : request.url === "/replacement-action" ? replacementActionHtml : request.url === "/dynamic-refs" ? dynamicRefsHtml : request.url === "/menu" ? menuHtml : request.url === "/ordinal-fields" ? ordinalFieldsHtml : request.url === "/textareas" ? textareaWidgetsHtml : request.url === "/ordinal-button" ? ordinalButtonHtml : request.url === "/multi-disclosure" ? multiDisclosureHtml : request.url === "/adjacent-label-table" ? adjacentLabelTableHtml : html);
+      response.end(request.url === "/visual-only" ? visualHtml : request.url === "/visual-gestures" ? visualGesturesHtml : request.url === "/visual-scroll" ? visualScrollHtml : request.url === "/pointer-text" ? pointerTextHtml : request.url === "/icon-pointer" ? iconPointerHtml : request.url === "/silent-pointer" ? silentPointerHtml : request.url === "/silent-input" ? silentInputHtml : request.url === "/mixed-pointer" ? mixedPointerHtml : request.url === "/checkbox" ? checkboxHtml : request.url === "/submit" ? submitHtml : request.url === "/checkbox-task" ? checkboxTaskHtml : request.url === "/tabs" ? tabHtml : request.url === "/expand" ? expandHtml : request.url === "/native-fields" ? nativeFieldsHtml : request.url === "/copy-fields" ? copyFieldsHtml : request.url === "/slider" ? sliderHtml : request.url === "/aria-slider" ? ariaSliderHtml : request.url === "/jquery-ui-slider" ? jqueryUiSliderHtml : request.url === "/autocomplete" ? autocompleteHtml : request.url === "/multi-select" ? multipleSelectHtml : request.url === "/ambiguous-labels" ? ambiguousLabelsHtml : request.url === "/navigation-label" ? navigationLabelHtml : request.url === "/navigation-targeting" ? navigationTargetingHtml : request.url === "/navigation-orders" ? navigationOrdersHtml : request.url === "/navigation-target" ? navigationTargetHtml : request.url === "/navigation-hidden-target" ? navigationHiddenTargetHtml : request.url === "/duplicate-navigation-labels" ? duplicateNavigationLabelsHtml : request.url === "/editable" ? editableContentHtml : request.url === "/silent-form" ? silentFormHtml : request.url === "/decision-race" ? decisionRaceHtml : request.url === "/replacement-action" ? replacementActionHtml : request.url === "/dynamic-refs" ? dynamicRefsHtml : request.url === "/menu" ? menuHtml : request.url === "/ordinal-fields" ? ordinalFieldsHtml : request.url === "/textareas" ? textareaWidgetsHtml : request.url === "/ordinal-button" ? ordinalButtonHtml : request.url === "/multi-disclosure" ? multiDisclosureHtml : request.url === "/adjacent-label-table" ? adjacentLabelTableHtml : html);
     });
     await new Promise<void>((resolve, reject) => {
       server.once("error", reject);
@@ -396,6 +438,66 @@ describe("Playwright browser safety flow", () => {
     expect(result.suggestedTool).toBe("browser_visual_text");
     expect(result.descriptionTool).toBe("browser_visual_inspect");
     expect("visual" in result).toBe(false);
+  }, 45_000);
+
+  it("masks vision screenshots and requires approval for caller-selected visual clicks and drags", async () => {
+    profile = await mkdtemp(path.join(os.tmpdir(), "adk-browser-visual-gesture-test-"));
+    browser = new BrowserManager({ headless: true, profileDir: path.join(profile, "chromium") });
+    await browser.launch(`${baseUrl}visual-gestures`);
+    const page = (browser as unknown as { page: Page }).page;
+    const unmaskedScreenshot = await page.screenshot({ type: "png", animations: "disabled" });
+
+    const visual = await browser.visualInspect("Estimate the center of the blue rectangle in screenshot pixels.");
+    expect(visual).toMatchObject({ status: "described", provider: "local-vision", viewport: { width: 1280, height: 800 }, screenshotPixels: { width: 1280, height: 800 } });
+    expect(visual.note).toContain("masked");
+    const visionCall = vi.mocked(describeScreenshot).mock.calls.at(-1);
+    expect(visionCall?.[1]).toContain("Screenshot pixel size: 1280 by 800");
+    expect(Buffer.compare(visionCall?.[0] ?? Buffer.alloc(0), unmaskedScreenshot)).not.toBe(0);
+
+    const clickProposal = await browser.visualClick(120, 180);
+    expect(clickProposal).toMatchObject({ status: "awaiting-user-approval", proposedAction: { kind: "visual-point-click", pointCss: { x: 120, y: 180 }, source: "local-vision" } });
+    const clickToken = "approvalToken" in clickProposal ? clickProposal.approvalToken : "";
+    expect(await browser.confirm(clickToken, false)).toMatchObject({ status: "cancelled", proposedPointCss: { x: 120, y: 180 } });
+    expect(await page.locator("#status").innerText()).toBe("Not clicked");
+    await expect(browser.visualClick(1280, 180)).rejects.toThrow("inside the current 1280×800 viewport");
+
+    await browser.visualText();
+    const privateStateProposal = await browser.visualClick(120, 180);
+    const privateStateToken = "approvalToken" in privateStateProposal ? privateStateProposal.approvalToken : "";
+    const maskedSelector = 'input:not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="image"]), textarea, select, [contenteditable]:not([contenteditable="false"])';
+    const maskedBeforeValueChange = await page.screenshot({ type: "png", animations: "disabled", mask: [page.locator(maskedSelector)], maskColor: "#000000" });
+    await page.locator("#secret").evaluate((element) => { (element as HTMLInputElement).value = "changed while masked"; });
+    const maskedAfterValueChange = await page.screenshot({ type: "png", animations: "disabled", mask: [page.locator(maskedSelector)], maskColor: "#000000" });
+    expect(Buffer.compare(maskedBeforeValueChange, maskedAfterValueChange)).toBe(0);
+    await expect(browser.confirm(privateStateToken, true)).rejects.toThrow("visual page changed after the action was proposed");
+
+    await browser.visualText();
+    const staleDrag = await browser.visualDrag(120, 210, 320, 210);
+    const staleToken = "approvalToken" in staleDrag ? staleDrag.approvalToken : "";
+    await page.locator("#status").evaluate((element) => { element.textContent = "Changed after screenshot"; });
+    await expect(browser.confirm(staleToken, true)).rejects.toThrow("visual page changed after the action was proposed");
+
+    await browser.visualText();
+    const dragProposal = await browser.visualDrag(120, 210, 320, 210);
+    expect(dragProposal).toMatchObject({ status: "awaiting-user-approval", proposedAction: { kind: "visual-point-drag", startCss: { x: 120, y: 210 }, endCss: { x: 320, y: 210 }, source: "ocr" } });
+    const dragToken = "approvalToken" in dragProposal ? dragProposal.approvalToken : "";
+    expect(await browser.confirm(dragToken, true)).toMatchObject({ status: "action-executed-after-approval", action: { kind: "visual-point-drag" } });
+    expect(await page.locator("#status").innerText()).toBe("Dragged locally");
+  }, 45_000);
+
+  it("scrolls a nested visual viewport and returns fresh OCR context", async () => {
+    profile = await mkdtemp(path.join(os.tmpdir(), "adk-browser-visual-scroll-test-"));
+    browser = new BrowserManager({ headless: true, profileDir: path.join(profile, "chromium") });
+    await browser.launch(`${baseUrl}visual-scroll`);
+
+    const result = await browser.visualScroll(100, 80, 120);
+    expect(result).toMatchObject({ scroll: { atCss: { x: 100, y: 80 }, deltaY: 120 }, screenshotPixels: { width: 1280, height: 800 } });
+    expect(await (browser as unknown as { page: Page }).page.locator("#scrollbox").evaluate((element) => (element as HTMLElement).scrollTop)).toBeGreaterThan(0);
+    await browser.visualText(40, "sparse-text");
+    expect(vi.mocked(recognizeScreenshotText).mock.calls.at(-1)?.[2]).toBe("sparse-text");
+    expect(vi.mocked(recognizeScreenshotText).mock.calls.at(-1)?.[3]).toBe("general");
+    expect(vi.mocked(recognizeScreenshotText).mock.calls.at(-1)?.[4]).toEqual({ width: 1280, height: 800 });
+    await expect(browser.visualScroll(100, 80, 1_700)).rejects.toThrow("deltaY must be between -1600 and 1600");
   }, 45_000);
 
   it("finds non-semantic CSS pointer targets but requires explicit approval", async () => {

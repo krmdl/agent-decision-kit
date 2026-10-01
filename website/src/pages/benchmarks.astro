@@ -4,6 +4,7 @@ import { siteBase } from "../utils/site.js";
 import latestRun from "../../../benchmarks/results/miniwob-dom-table-24-5b52abc-utf8.json";
 import previousFullRun from "../../../benchmarks/results/miniwob-expanded-multi-tool-8ffc709.json";
 import focusedRun from "../../../benchmarks/results/miniwob-targeted-browser-fixes-8490bd7.json";
+import visualDigitsRun from "../../../benchmarks/results/miniwob-visual-digits-5-seed-smoke.json";
 import cpuDecisionRun from "../../../benchmarks/results/decision-cases-independent-ryzen5600h-cpu-smoke.json";
 import dmlDecisionRun from "../../../benchmarks/results/decision-cases-independent-ryzen5600h-dml-smoke.json";
 import verifiedNavigationRun from "../../../benchmarks/results/webarena-verified-shopping-admin-ad6e1b3-summary.json";
@@ -167,6 +168,11 @@ const decisionRows = [
           <div><strong>3/3</strong><span>Full-reward tool smoke</span></div>
           <p>Three explicitly selected tasks reached raw reward 1.0. The bounded, deterministic harness exercised checkbox batching, local field copy, and keyboard sliders. Browser-loop p50 927 ms / p95 1,005 ms; there were no semantic model calls. Synthetic submit approvals were limited to the local benchmark page. This is a small integration check, not a representative success estimate.</p>
           <a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/miniwob-post-reward-fix-smoke.json">Raw run ↗</a>
+        </article>
+        <article>
+          <div><strong>{visualDigitsRun.successCount}/{visualDigitsRun.episodeCount}</strong><span>Visual digit OCR · five seeds</span></div>
+          <p>One visual-only MiniWoB task, repeated with seeds 7–11. Seed 11 stopped with zero clicks after OCR misread a visible <code>1</code> as <code>4</code>. Across all five episodes, end-to-end latency including reset was p50 {visualDigitsRun.latencyMs.p50} ms / p95 {visualDigitsRun.latencyMs.p95} ms; the browser/OCR action loop was p50 {visualDigitsRun.agentActionLatencyMs.p50} ms / p95 {visualDigitsRun.agentActionLatencyMs.p95} ms. This is not representative BrowserGym coverage, OCR reliability, or a speed claim.</p>
+          <a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/miniwob-visual-digits-5-seed-smoke.json">Summary and five raw episodes ↗</a>
         </article>
         <article>
           <div><strong>3/26</strong><span>Decision/action only</span></div>

@@ -190,6 +190,64 @@ class MultiToolPlanningTests(unittest.TestCase):
         self.assertIsNone(RUNNER.extract_visual_click_target("Click on the link adipiscing."))
         self.assertIsNone(RUNNER.extract_visual_click_target('Click the button "Continue".'))
 
+    def test_orders_five_unique_confident_visual_numbers_and_converts_screenshot_boxes(self):
+        lines = []
+        for number, x in [(4, 120), (1, 30), (5, 240), (2, 70), (3, 100)]:
+            lines.append({
+                "text": str(number),
+                "confidence": 90,
+                "box": {"x0": x, "y0": 20, "x1": x + 12, "y1": 40},
+                "words": [{"text": str(number), "confidence": 90, "box": {"x0": x, "y0": 20, "x1": x + 12, "y1": 40}}],
+            })
+        result = RUNNER.extract_ascending_number_targets({
+            "viewport": {"width": 332, "height": 214},
+            "screenshotPixels": {"width": 664, "height": 428},
+            "lines": lines,
+        })
+        self.assertEqual([target["number"] for target in result], [1, 2, 3, 4, 5])
+        self.assertEqual([target["x"] for target in result], [18, 38, 53, 63, 123])
+        self.assertTrue(all(target["y"] == 15 for target in result))
+
+    def test_orders_per_character_symbols_when_ocr_groups_adjacent_digits(self):
+        lines = [{
+            "text": "345",
+            "confidence": 31,
+            "box": {"x0": 20, "y0": 20, "x1": 100, "y1": 40},
+            "words": [
+                {"text": "3", "confidence": 99, "box": {"x0": 20, "y0": 20, "x1": 30, "y1": 40}},
+                {"text": "4", "confidence": 90, "box": {"x0": 50, "y0": 20, "x1": 60, "y1": 40}},
+                {"text": "5", "confidence": 99, "box": {"x0": 90, "y0": 20, "x1": 100, "y1": 40}},
+                {"text": "1", "confidence": 99, "box": {"x0": 20, "y0": 80, "x1": 30, "y1": 100}},
+                {"text": "2", "confidence": 99, "box": {"x0": 80, "y0": 110, "x1": 90, "y1": 130}},
+            ],
+        }]
+
+        result = RUNNER.extract_ascending_number_targets({
+            "viewport": {"width": 120, "height": 140},
+            "screenshotPixels": {"width": 120, "height": 140},
+            "lines": lines,
+        })
+
+        self.assertEqual([target["number"] for target in result], [1, 2, 3, 4, 5])
+        self.assertEqual([(target["x"], target["y"]) for target in result], [(25, 90), (85, 120), (25, 30), (55, 30), (95, 30)])
+
+    def test_refuses_duplicate_missing_low_confidence_or_unscaled_visual_number_targets(self):
+        def word(number, x, confidence=90):
+            return {"text": str(number), "confidence": confidence, "box": {"x0": x, "y0": 20, "x1": x + 12, "y1": 40}}
+
+        base = {
+            "viewport": {"width": 332, "height": 214},
+            "screenshotPixels": {"width": 332, "height": 214},
+            "lines": [{"text": str(number), "confidence": 90, "box": word(number, number * 10)["box"], "words": [word(number, number * 10)]} for number in range(1, 6)],
+        }
+        duplicate = {**base, "lines": [*base["lines"], base["lines"][0]]}
+        missing = {**base, "lines": base["lines"][:-1]}
+        low_confidence = {**base, "lines": [*base["lines"][:4], {"text": "5", "confidence": 20, "box": word(5, 50, 20)["box"], "words": [word(5, 50, 20)]}]}
+        invalid_dimensions = {**base, "screenshotPixels": {"width": 0, "height": 214}}
+        for value in (duplicate, missing, low_confidence, invalid_dimensions):
+            with self.subTest(value=value):
+                self.assertIsNone(RUNNER.extract_ascending_number_targets(value))
+
     def test_synthetic_visual_approval_requires_the_exact_local_task_url(self):
         base_url = "file:///MINIWOB/"
         self.assertTrue(RUNNER.is_expected_local_task_url("file:///MINIWOB/click-link.html", base_url, "click-link"))

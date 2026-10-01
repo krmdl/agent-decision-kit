@@ -55,10 +55,19 @@ for await (const line of input) {
         result = await browser.visualInspect(request.question);
         break;
       case "visual-text":
-        result = await browser.visualText(request.maxLines ?? 40);
+        result = await browser.visualText(request.maxLines ?? 40, request.segmentationMode ?? "automatic", request.contentMode ?? "general");
         break;
       case "visual-action":
         result = await browser.visualAction(request.text);
+        break;
+      case "visual-click":
+        result = await browser.visualClick(request.x, request.y);
+        break;
+      case "visual-drag":
+        result = await browser.visualDrag(request.startX, request.startY, request.endX, request.endY, request.steps ?? 8);
+        break;
+      case "visual-scroll":
+        result = await browser.visualScroll(request.x, request.y, request.deltaY, request.segmentationMode ?? "automatic", request.contentMode ?? "general");
         break;
       case "decide-and-act":
         result = await browser.decideAndAct(request.task, provider);
