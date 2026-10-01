@@ -77,6 +77,16 @@ class BrowserActionCountTests(unittest.TestCase):
         self.assertEqual(record["loopDetected"], any(item["status"] == "action-loop-detected" for item in record["trace"]))
         self.assertEqual(record["success"], record["reward"] >= 1.0)
 
+    def test_target_visible_webarena_record_is_full_reward_and_matches_its_trace(self):
+        record_path = Path(__file__).parent / "results" / "webarena-verified-shopping-admin-157-target-visible.json"
+        record = json.loads(record_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(record["actions"], count_executed_actions(record["trace"]))
+        self.assertEqual(record["loopDetected"], any(item["status"] == "action-loop-detected" for item in record["trace"]))
+        self.assertEqual(record["success"], record["reward"] >= 1.0)
+        self.assertEqual(record["reward"], 1.0)
+        self.assertEqual(record["trace"][-1]["taskTargetVisible"], "Customers")
+
 
 class WebArenaReproductionDocsTests(unittest.TestCase):
     def test_reproduction_matches_the_site_default_ports_and_image(self):
