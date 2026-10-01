@@ -5,6 +5,7 @@ import latestRun from "../../../benchmarks/results/miniwob-dom-table-24-5b52abc-
 import previousFullRun from "../../../benchmarks/results/miniwob-expanded-multi-tool-8ffc709.json";
 import focusedRun from "../../../benchmarks/results/miniwob-targeted-browser-fixes-8490bd7.json";
 import visualDigitsRun from "../../../benchmarks/results/miniwob-visual-digits-5-seed-smoke.json";
+import visualDigitsRetryRun from "../../../benchmarks/results/miniwob-visual-digits-single-char-retry-5-seed-smoke.json";
 import currentEightTaskRun from "../../../benchmarks/results/miniwob-main-8-seed7-smoke.json";
 import repeatedEightTaskRun from "../../../benchmarks/results/miniwob-main-8-seed7-11-post-menu-fix-40.json";
 import cpuDecisionRun from "../../../benchmarks/results/decision-cases-independent-ryzen5600h-cpu-smoke.json";
@@ -186,9 +187,10 @@ const decisionRows = [
           <a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/miniwob-post-reward-fix-smoke.json">Raw run ↗</a>
         </article>
         <article>
-          <div><strong>{visualDigitsRun.successCount}/{visualDigitsRun.episodeCount}</strong><span>Visual digit OCR · five seeds</span></div>
-          <p>One visual-only MiniWoB task, repeated with seeds 7–11. Seed 11 stopped with zero clicks after OCR misread a visible <code>1</code> as <code>4</code>. Across all five episodes, end-to-end latency including reset was p50 {visualDigitsRun.latencyMs.p50} ms / p95 {visualDigitsRun.latencyMs.p95} ms; the browser/OCR action loop was p50 {visualDigitsRun.agentActionLatencyMs.p50} ms / p95 {visualDigitsRun.agentActionLatencyMs.p95} ms. This is not representative BrowserGym coverage, OCR reliability, or a speed claim.</p>
-          <a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/miniwob-visual-digits-5-seed-smoke.json">Summary and five raw episodes ↗</a>
+          <div><strong>{visualDigitsRetryRun.successCount}/{visualDigitsRetryRun.episodeCount}</strong><span>Visual digit OCR · five seeds</span></div>
+          <p>One visual-only MiniWoB task, repeated with seeds 7–11 after bounded single-character retries were added for repeated digit glyphs. All five episodes reached full raw reward with five separately approved local clicks; seed 11 used two OCR retries to distinguish duplicate <code>4</code> readings. The pre-retry run reached {visualDigitsRun.successCount}/{visualDigitsRun.episodeCount}, so this is a narrow same-seed regression observation rather than a general OCR claim. End-to-end latency including reset was p50 {visualDigitsRetryRun.latencyMs.p50} ms / p95 {visualDigitsRetryRun.latencyMs.p95} ms; the browser/OCR action loop was p50 {visualDigitsRetryRun.agentActionLatencyMs.p50} ms / p95 {visualDigitsRetryRun.agentActionLatencyMs.p95} ms. This is one task on one Windows CPU machine, not representative BrowserGym coverage or a speed claim.</p>
+          <a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/miniwob-visual-digits-single-char-retry-5-seed-smoke.json">Retry run summary and five raw episodes ↗</a>
+          <a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/miniwob-visual-digits-5-seed-smoke.json">Pre-retry 4/5 baseline ↗</a>
         </article>
         <article>
           <div><strong>3/26</strong><span>Decision/action only</span></div>

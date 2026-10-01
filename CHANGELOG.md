@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Recheck up to eight repeated digit glyphs with local single-character OCR and record the five-seed visual-only MiniWoB retry run.
 - Stop after a visible page heading exactly matches a requested all/every collection; return the matched destination and avoid reopening its navigation menu.
 - Add opt-in provider ranking to `context_prune` and `context-prune`; keep the local heuristic as the default and return selected source chunks verbatim.
 - Report completion-claim token overlap without calling it verified evidence, and distinguish caller-reported test-result exit codes from independently verified test runs.
