@@ -32,6 +32,17 @@ for await (const line of input) {
       case "connect":
         result = await browser.connect(request.endpoint, request.pageIndex ?? 0);
         break;
+      case "matches-task-location": {
+        const expected = new URL(request.expectedUrl);
+        const current = new URL(browser.page.url());
+        result = {
+          matches: expected.origin === current.origin
+            && expected.pathname === current.pathname
+            && expected.search === current.search
+            && expected.hash === current.hash,
+        };
+        break;
+      }
       case "inspect":
         result = await browser.inspect();
         break;
