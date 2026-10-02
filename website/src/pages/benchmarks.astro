@@ -23,6 +23,17 @@ import dmlDecisionRepeat3 from "../../../benchmarks/results/decision-cases-indep
 import dmlDecisionRepeat4 from "../../../benchmarks/results/decision-cases-independent-ryzen5600h-dml-repeat-4-20261002.json";
 import dmlDecisionRepeat5 from "../../../benchmarks/results/decision-cases-independent-ryzen5600h-dml-repeat-5-20261002.json";
 import dmlNodeProfile from "../../../benchmarks/results/decision-cases-independent-ryzen5600h-dml-node-profile-20261002.json";
+import nliCpuRepeat1 from "../../../benchmarks/results/decisions-confirmation-nli-cpu-repeat-20261002-1.json";
+import nliCpuRepeat2 from "../../../benchmarks/results/decisions-confirmation-nli-cpu-repeat-20261002-2.json";
+import nliCpuRepeat3 from "../../../benchmarks/results/decisions-confirmation-nli-cpu-repeat-20261002-3.json";
+import nliCpuRepeat4 from "../../../benchmarks/results/decisions-confirmation-nli-cpu-repeat-20261002-4.json";
+import nliCpuRepeat5 from "../../../benchmarks/results/decisions-confirmation-nli-cpu-repeat-20261002-5.json";
+import nliDmlRepeat1 from "../../../benchmarks/results/decisions-confirmation-nli-dml-repeat-20261002-1.json";
+import nliDmlRepeat2 from "../../../benchmarks/results/decisions-confirmation-nli-dml-repeat-20261002-2.json";
+import nliDmlRepeat3 from "../../../benchmarks/results/decisions-confirmation-nli-dml-repeat-20261002-3.json";
+import nliDmlRepeat4 from "../../../benchmarks/results/decisions-confirmation-nli-dml-repeat-20261002-4.json";
+import nliDmlRepeat5 from "../../../benchmarks/results/decisions-confirmation-nli-dml-repeat-20261002-5.json";
+import nliDmlNodeProfile from "../../../benchmarks/results/decisions-confirmation-nli-dml-node-profile-20261002.json";
 import verifiedNavigationPreviousRun from "../../../benchmarks/results/webarena-verified-docker-b-localhost-18-20261002-summary.json";
 import verifiedNavigationRun from "../../../benchmarks/results/webarena-verified-docker-b-page-settle-18-20261002-summary.json";
 import verifiedNavigationBaseline from "../../../benchmarks/results/webarena-verified-shopping-admin-initial-18-task-baseline.json";
@@ -45,6 +56,8 @@ const remoteVerifiedNavigationCount = remoteVerifiedNavigationRun.episodeCount;
 const remoteVerifiedNavigationDecisionP95 = remoteVerifiedNavigationRun.decisionCallLatencyMs.p95;
 const cpuDecisionRuns = [cpuDecisionRepeat1, cpuDecisionRepeat2, cpuDecisionRepeat3, cpuDecisionRepeat4, cpuDecisionRepeat5];
 const dmlDecisionRuns = [dmlDecisionRepeat1, dmlDecisionRepeat2, dmlDecisionRepeat3, dmlDecisionRepeat4, dmlDecisionRepeat5];
+const nliCpuRuns = [nliCpuRepeat1, nliCpuRepeat2, nliCpuRepeat3, nliCpuRepeat4, nliCpuRepeat5];
+const nliDmlRuns = [nliDmlRepeat1, nliDmlRepeat2, nliDmlRepeat3, nliDmlRepeat4, nliDmlRepeat5];
 const median = (values: number[]) => {
   const ordered = [...values].sort((left, right) => left - right);
   const middle = Math.floor(ordered.length / 2);
@@ -70,12 +83,42 @@ const summarizeDecisionRuns = (reports: typeof cpuDecisionRuns) => {
 };
 const cpuDecisionSummary = summarizeDecisionRuns(cpuDecisionRuns);
 const dmlDecisionSummary = summarizeDecisionRuns(dmlDecisionRuns);
+const nliCpuSummary = summarizeDecisionRuns(nliCpuRuns);
+const nliDmlSummary = summarizeDecisionRuns(nliDmlRuns);
 const dmlSlowerInEveryPair = dmlDecisionRuns.every((report, index) =>
   report.latencyMs.withinProcessSteadyState.p95 > cpuDecisionRuns[index]!.latencyMs.withinProcessSteadyState.p95);
 const allWarmP95Under500 = [...cpuDecisionRuns, ...dmlDecisionRuns]
   .every((report) => report.latencyMs.withinProcessSteadyState.p95 < 500);
 const dmlProviderCounts = dmlNodeProfile.runtime.onnxExecutionProviderNodeCounts;
 const dmlProviderCallCount = dmlNodeProfile.sampleCount;
+const nliDmlProviderCounts = nliDmlNodeProfile.runtime.onnxExecutionProviderNodeCounts;
+const nliDmlProviderEventCount = Object.values(nliDmlProviderCounts).reduce((total, count) => total + count, 0);
+const nliCpuOutputsStable = nliCpuRuns.every((report) => report.records.every((record, index) =>
+  record.id === nliCpuRuns[0]!.records[index]!.id && JSON.stringify(record.prediction) === JSON.stringify(nliCpuRuns[0]!.records[index]!.prediction)));
+const nliDmlOutputsStable = nliDmlRuns.every((report) => report.records.every((record, index) =>
+  record.id === nliDmlRuns[0]!.records[index]!.id && JSON.stringify(record.prediction) === JSON.stringify(nliDmlRuns[0]!.records[index]!.prediction)));
+const nliCrossDeviceDisagreements = nliCpuRuns[0]!.records.filter((record, index) =>
+  JSON.stringify(record.prediction) !== JSON.stringify(nliDmlRuns[0]!.records[index]!.prediction)).length;
+const nliDecisionRows = [
+  { device: "CPU", runs: nliCpuRuns, summary: nliCpuSummary },
+  { device: "DirectML + CPU fallback", runs: nliDmlRuns, summary: nliDmlSummary },
+].map(({ device, runs, summary }) => {
+  const report = runs[0]!;
+  return {
+    device,
+    firstCall: summary.firstCall,
+    firstCallMax: summary.firstCallMax,
+    allCallP95: summary.allCallP95,
+    allCallCount: summary.allCallCount,
+    p50: summary.p50,
+    p95: summary.p95,
+    p95Min: summary.p95Min,
+    p95Max: summary.p95Max,
+    choice: `${Math.round(report.byQuestionType.choice.accuracy * report.byQuestionType.choice.sampleCount)}/${report.byQuestionType.choice.sampleCount}`,
+    yesNo: `${Math.round(report.byQuestionType.noul.accuracy * report.byQuestionType.noul.sampleCount)}/${report.byQuestionType.noul.sampleCount}`,
+    scoreMae: report.byQuestionType.score.meanAbsoluteError,
+  };
+});
 const decisionRows = [
   { device: "CPU", report: cpuDecisionRuns[0], summary: cpuDecisionSummary },
   { device: "DirectML + CPU fallback", report: dmlDecisionRuns[0], summary: dmlDecisionSummary },
@@ -223,6 +266,43 @@ const decisionRows = [
       </div>
       <p class="comparison-note">Across these five pairs, CPU warm p95 had a {cpuDecisionSummary.p95} ms median ({cpuDecisionSummary.p95Min}–{cpuDecisionSummary.p95Max} ms across run p95s); DirectML had a {dmlDecisionSummary.p95} ms median ({dmlDecisionSummary.p95Min}–{dmlDecisionSummary.p95Max} ms){dmlSlowerInEveryPair ? " and was slower in every pair" : ""}. The nearest-rank p95 across all {cpuDecisionSummary.allCallCount} CPU calls was {cpuDecisionSummary.allCallP95} ms; across all {dmlDecisionSummary.allCallCount} DirectML-requested calls it was {dmlDecisionSummary.allCallP95} ms. A separate {dmlProviderCallCount}-call ONNX profile observed {dmlProviderCounts.DmlExecutionProvider.toLocaleString("en-US")} <code>DmlExecutionProvider</code> node events and {dmlProviderCounts.CPUExecutionProvider.toLocaleString("en-US")} <code>CPUExecutionProvider</code> events ({Math.round(dmlProviderCounts.DmlExecutionProvider / dmlProviderCallCount)} and {Math.round(dmlProviderCounts.CPUExecutionProvider / dmlProviderCallCount)} per call). This verifies DirectML execution with some CPU fallback, but node counts do not measure compute share. {allWarmP95Under500 ? "Every warm p95 in these runs stayed below 500 ms" : "At least one warm p95 in these runs reached 500 ms"}; DirectML first-call latency included initialization, with a {dmlDecisionSummary.firstCall} ms median and {dmlDecisionSummary.firstCallMax} ms maximum. This one machine and non-held-out fixture do not establish a general speed guarantee, full browser latency target, or GPU advantage. Confidence estimates remain uncalibrated; ECE is descriptive only.</p>
       <div class="decision-raw-links"><a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/decision-cases-independent-ryzen5600h-cpu-repeat-20261002.json">CPU raw run 1 ↗</a><a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/decision-cases-independent-ryzen5600h-dml-repeat-20261002.json">DirectML raw run 1 ↗</a><a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/decision-cases-independent-ryzen5600h-dml-node-profile-20261002.json">Node profile report ↗</a><a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/decision-cases-independent-ryzen5600h-dml-node-profile-20261002.onnx-profile.json.gz">Compressed ONNX trace ↗</a><a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/fixtures/decision-cases-independent.jsonl">30 labeled examples ↗</a></div>
+    </section>
+
+    <section class="decision-runs" aria-labelledby="nli-device-title">
+      <p class="eyebrow">NLI DEVICE REPEATS · WINDOWS CPU AND DIRECTML</p>
+      <h2 id="nli-device-title">DirectML was slower for this NLI workload.</h2>
+      <p class="comparison-note">Five separate Node processes per device ran the same 30 project-authored confirmation labels with <code>Xenova/nli-deberta-v3-small</code>. The cache directory existed before each process, though individual files were not checked. The host was Windows 10, Node 22.14.0, Ryzen 5 5600H, and an operator-reported GTX 1650 (4,096 MiB shown by <code>nvidia-smi</code>). Reports identify commit <code>c3449c3</code> and an unmodified tracked tree.</p>
+      <div class="decision-table-wrap">
+        <table>
+          <caption>Five process runs per device · 30 repeated labels per run · latency uses 150 calls per device; quality is one 30-answer output set</caption>
+          <thead><tr><th scope="col">Requested device</th><th scope="col">First call median (max)</th><th scope="col">All-call p95</th><th scope="col">Warm p50 / p95 medians</th><th scope="col">Choice</th><th scope="col">Yes/no</th><th scope="col">Score MAE</th></tr></thead>
+          <tbody>
+            {nliDecisionRows.map((row) => <tr>
+              <th scope="row">{row.device}</th>
+              <td>{row.firstCall} ({row.firstCallMax}) ms</td>
+              <td>{row.allCallP95} ms (n={row.allCallCount})</td>
+              <td>{row.p50} / {row.p95} ms (p95 range {row.p95Min}–{row.p95Max})</td>
+              <td>{row.choice}</td>
+              <td>{row.yesNo}</td>
+              <td>{row.scoreMae.toFixed(3)}</td>
+            </tr>)}
+          </tbody>
+        </table>
+      </div>
+      <figure class="provider-chart">
+        <img src={`${siteBase}images/semantic-nli-directml-latency-20261002.svg`} alt="Five repeated NLI runs on one Windows laptop: median warm p95 was 83 milliseconds on CPU, range 81 to 102, and 654 milliseconds with DirectML requested, range 646 to 657." width="960" height="390" loading="lazy" />
+        <figcaption>Median of five per-process warm p95 values; whiskers show the five-run range. Each run handled the same 30 labels.</figcaption>
+      </figure>
+      <p class="comparison-note">CPU was faster in all five matched pairs. Its median warm p95 was {nliCpuSummary.p95} ms; with DirectML requested it was {nliDmlSummary.p95} ms, about {(nliDmlSummary.p95 / nliCpuSummary.p95).toFixed(1)}× slower. First calls include pipeline initialization. {nliCpuOutputsStable && nliDmlOutputsStable ? "CPU and DirectML outputs were stable across their five repeated processes" : "At least one device produced different outputs across repeated processes"}; the two device settings disagreed on {nliCrossDeviceDisagreements} of 30 predictions in the paired outputs. Choice was {nliDecisionRows[0]!.choice} on CPU and {nliDecisionRows[1]!.choice} with DirectML; yes/no was {nliDecisionRows[0]!.yesNo} for each, and Score MAE was {nliDecisionRows[0]!.scoreMae.toFixed(3)} vs {nliDecisionRows[1]!.scoreMae.toFixed(3)}. Repeating these same project-authored labels does not create independent quality examples; this is not a held-out quality estimate.</p>
+      <p class="comparison-note">A separate instrumented 30-example DirectML run recorded {nliDmlProviderCounts.DmlExecutionProvider.toLocaleString("en-US")} <code>DmlExecutionProvider</code> and {nliDmlProviderCounts.CPUExecutionProvider.toLocaleString("en-US")} <code>CPUExecutionProvider</code> node-execution events ({nliDmlProviderEventCount.toLocaleString("en-US")} total). That verifies mixed DirectML and CPU execution; event counts do not measure compute share. Profiling adds overhead and is excluded from the latency table. The run demonstrates neither a general GPU speed advantage nor performance parity across machines.</p>
+      <div class="decision-raw-links">
+        {nliCpuRuns.map((_, index) => <a href={`https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/decisions-confirmation-nli-cpu-repeat-20261002-${index + 1}.json`}>CPU repeat {index + 1} ↗</a>)}
+        {nliDmlRuns.map((_, index) => <a href={`https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/decisions-confirmation-nli-dml-repeat-20261002-${index + 1}.json`}>DirectML repeat {index + 1} ↗</a>)}
+        <a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/decisions-confirmation-nli-dml-node-profile-20261002.json">Provider-count report ↗</a>
+        <a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/decisions-confirmation-nli-dml-node-profile-20261002.onnx-profile.json.gz">Compressed ONNX trace ↗</a>
+        <a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/decision-comparison-confirmation-nli-cpu-vs-dml-20261002.json">Paired first-run summary ↗</a>
+        <a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/fixtures/decision-cases-confirmation-20261002.jsonl">30 labeled examples ↗</a>
+      </div>
     </section>
 
     <section class="other-runs" aria-labelledby="other-runs-title">

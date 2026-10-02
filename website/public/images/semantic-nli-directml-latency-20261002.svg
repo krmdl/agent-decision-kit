@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 390" role="img" aria-labelledby="title description">
+  <title id="title">NLI warm decision latency with CPU and DirectML requested</title>
+  <desc id="description">Five runs of the same 30 confirmation labels on one Windows 10 laptop. Median per-run warm p95 was 83 milliseconds on CPU, with a range from 81 to 102 milliseconds; DirectML requested had a median of 654 milliseconds, with a range from 646 to 657 milliseconds.</desc>
+  <rect width="960" height="390" rx="24" fill="#0d1b2b"/>
+  <text x="40" y="48" fill="#f3f8ff" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="25" font-weight="700">NLI decision latency · CPU vs DirectML request</text>
+  <text x="40" y="76" fill="#9fb3c9" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="14">Median warm nearest-rank p95 across five runs · same 30 labels per run</text>
+
+  <g stroke="#28445d" stroke-width="1">
+    <line x1="240" y1="101" x2="240" y2="294"/>
+    <line x1="400" y1="101" x2="400" y2="294"/>
+    <line x1="560" y1="101" x2="560" y2="294"/>
+    <line x1="720" y1="101" x2="720" y2="294"/>
+    <line x1="800" y1="101" x2="800" y2="294"/>
+  </g>
+  <g fill="#9fb3c9" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="12" text-anchor="middle">
+    <text x="240" y="315">0</text>
+    <text x="400" y="315">200</text>
+    <text x="560" y="315">400</text>
+    <text x="720" y="315">600</text>
+    <text x="800" y="315">700 ms</text>
+  </g>
+
+  <g font-family="Inter,Segoe UI,Arial,sans-serif">
+    <text x="40" y="145" fill="#75e2c2" font-size="17" font-weight="700">CPU</text>
+    <text x="40" y="170" fill="#9fb3c9" font-size="13">semantic-nli</text>
+    <rect x="240" y="126" width="66.4" height="26" rx="8" fill="#75e2c2"/>
+    <line x1="304.8" y1="139" x2="321.6" y2="139" stroke="#e6fff6" stroke-width="3"/>
+    <line x1="304.8" y1="132" x2="304.8" y2="146" stroke="#e6fff6" stroke-width="2"/>
+    <line x1="321.6" y1="132" x2="321.6" y2="146" stroke="#e6fff6" stroke-width="2"/>
+    <text x="335" y="145" fill="#e6fff6" font-size="14" font-weight="700">83 ms (range 81–102)</text>
+
+    <text x="40" y="245" fill="#8dbdff" font-size="17" font-weight="700">DirectML</text>
+    <text x="40" y="270" fill="#9fb3c9" font-size="13">requested · CPU fallback observed</text>
+    <rect x="240" y="226" width="523.2" height="26" rx="8" fill="#8dbdff"/>
+    <line x1="756.8" y1="239" x2="765.6" y2="239" stroke="#e9f2ff" stroke-width="3"/>
+    <line x1="756.8" y1="232" x2="756.8" y2="246" stroke="#e9f2ff" stroke-width="2"/>
+    <line x1="765.6" y1="232" x2="765.6" y2="246" stroke="#e9f2ff" stroke-width="2"/>
+    <text x="775" y="245" fill="#e9f2ff" font-size="14" font-weight="700">654 ms (646–657)</text>
+  </g>
+
+  <line x1="40" y1="337" x2="920" y2="337" stroke="#28445d"/>
+  <text x="40" y="362" fill="#9fb3c9" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="12">Same project-authored fixture repeated; not a held-out quality set or a general GPU performance claim.</text>
+</svg>

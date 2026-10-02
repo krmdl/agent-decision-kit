@@ -142,6 +142,40 @@ The five paired repeat records `results/decision-cases-independent-ryzen5600h-{c
 
 The separate `results/decision-cases-independent-ryzen5600h-dml-node-profile-20261002.json` and adjacent compressed ONNX trace include per-node provider counts. In this profile DirectML handled most recorded node executions while some nodes fell back to CPU; event counts are not weighted by compute cost. The benchmark page reports warm calls, initialization-including first calls, and p95 over the full set of per-call records. This single host and fixture do not establish the plan's general consumer-GPU latency target or full browser-loop latency.
 
+### NLI CPU and DirectML device repeats
+
+The ten reports `results/decisions-confirmation-nli-{cpu,dml}-repeat-20261002-{1..5}.json` compare `semantic-nli` on CPU and with DirectML requested. Each of five fresh Node processes per device ran the same 30 project-authored confirmation labels on the Windows 10 Ryzen 5 5600H laptop; its GTX 1650 was operator-reported and `nvidia-smi` showed 4,096 MiB. Node was 22.14.0, the model-cache directory existed before every process (individual files were not checked), and every report records clean tracked files at commit `c3449c3f126b03cbcec10357cfa406a5e0f15906`.
+
+| Measure | CPU | DirectML requested |
+| --- | ---: | ---: |
+| First call median (max), initialization included | 923 (941) ms | 1,650 (1,671) ms |
+| p95 over all 150 calls | 92 ms | 657 ms |
+| Warm p50 median across runs | 43 ms | 362 ms |
+| Warm p95 median (range across five per-run p95s) | 83 (81–102) ms | 654 (646–657) ms |
+| Choice accuracy on the 30 labels | 6/10 | 7/10 |
+| Yes/no accuracy on the 30 labels | 8/10 | 8/10 |
+| Score MAE on the 30 labels | 1.146 | 1.089 |
+
+CPU was faster in every matched pair; DirectML's median warm p95 was about 7.9× CPU's. The CPU and DirectML answers were each stable across their five repeated processes, but the requested device changed 11 of the 30 paired outputs. The quality values describe one small, project-authored label set; repeating it five times does not make 50 independent examples or a held-out accuracy estimate. Confidence remains uncalibrated. The all-call p95 exceeds the plan's 500 ms decision target for this DirectML NLI setup; these results do not imply general GPU performance or full browser latency.
+
+The separate [`semantic-nli` DirectML profile report](results/decisions-confirmation-nli-dml-node-profile-20261002.json) and [compressed ONNX trace](results/decisions-confirmation-nli-dml-node-profile-20261002.onnx-profile.json.gz) come from an instrumented run on the same 30 labels. ONNX Runtime recorded 43,500 `DmlExecutionProvider` and 43,800 `CPUExecutionProvider` node-execution events. This verifies mixed DirectML/CPU execution; event counts are not weighted by compute cost. Profiling adds overhead and was not used for the latency results.
+
+The [CPU reports](results/decisions-confirmation-nli-cpu-repeat-20261002-1.json), [DirectML reports](results/decisions-confirmation-nli-dml-repeat-20261002-1.json), [paired first-run summary](results/decision-comparison-confirmation-nli-cpu-vs-dml-20261002.json), and [confirmation fixture](fixtures/decision-cases-confirmation-20261002.jsonl) are committed with every per-case output and latency. Repeat files: CPU [1](results/decisions-confirmation-nli-cpu-repeat-20261002-1.json), [2](results/decisions-confirmation-nli-cpu-repeat-20261002-2.json), [3](results/decisions-confirmation-nli-cpu-repeat-20261002-3.json), [4](results/decisions-confirmation-nli-cpu-repeat-20261002-4.json), [5](results/decisions-confirmation-nli-cpu-repeat-20261002-5.json); DirectML [1](results/decisions-confirmation-nli-dml-repeat-20261002-1.json), [2](results/decisions-confirmation-nli-dml-repeat-20261002-2.json), [3](results/decisions-confirmation-nli-dml-repeat-20261002-3.json), [4](results/decisions-confirmation-nli-dml-repeat-20261002-4.json), [5](results/decisions-confirmation-nli-dml-repeat-20261002-5.json). Reproduce on Windows PowerShell with:
+
+```powershell
+npm run build
+$env:AGENT_DECISION_PROVIDER = 'semantic-nli'
+$env:AGENT_DECISION_BENCHMARK_ACCELERATOR = 'NVIDIA GeForce GTX 1650 (4 GB VRAM; manually reported)'
+foreach ($device in @('cpu', 'dml')) {
+  $env:AGENT_DECISION_DEVICE = $device
+  foreach ($repeat in 1..5) {
+    $output = Join-Path $env:TEMP "adk-confirmation-nli-$device-$repeat.json"
+    node benchmarks/run-decisions.mjs --fixtures benchmarks/fixtures/decision-cases-confirmation-20261002.jsonl --output $output
+    if ($LASTEXITCODE -ne 0) { throw "Benchmark failed: $device repeat $repeat" }
+  }
+}
+```
+
 ## Browser task success
 
 `results/miniwob-smoke-suite.json` contains a reproducible eight-task MiniWoB smoke suite with one raw JSON episode file per task. The runner attaches the real Agent Decision Kit `BrowserManager` to BrowserGym's live Chromium page through loopback CDP, calls the task validator after each bounded decision/action round, and confirms that detaching does not close BrowserGym's browser. The suite keeps failures, ambiguous choices, and visual-only pages as results instead of omitting them. It is a small smoke suite, not a representative BrowserGym benchmark, model-quality estimate, or speed claim. `latencyMs` includes environment reset; `agentActionLatencyMs` measures the bounded browser decision/action loop; `decisionCallLatencyMs` aggregates model-call latency separately. Synthetic approvals are allowed only for the exact local MiniWoB `file://` task URL.

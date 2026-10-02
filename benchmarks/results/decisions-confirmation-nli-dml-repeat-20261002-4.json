@@ -1,0 +1,708 @@
+{
+  "provider": "semantic-nli",
+  "model": "Xenova/nli-deberta-v3-small",
+  "sampleCount": 30,
+  "byQuestionType": {
+    "choice": {
+      "sampleCount": 10,
+      "accuracy": 0.7,
+      "meanBrierScore": 0.44856142723506787
+    },
+    "noul": {
+      "sampleCount": 10,
+      "accuracy": 0.8,
+      "meanBrierScore": 0.40381423854966003
+    },
+    "score": {
+      "sampleCount": 10,
+      "meanAbsoluteError": 1.0885217554026334,
+      "withinHalfPointRate": 0.1,
+      "exactMatchRate": 0.1,
+      "meanBrierScore": 0.7238148082122976
+    }
+  },
+  "runtime": {
+    "timestampUtc": "2026-10-02T09:29:23.887Z",
+    "agentDecisionKitCommit": "c3449c3f126b03cbcec10357cfa406a5e0f15906",
+    "trackedWorkingTreeModified": false,
+    "node": "v22.14.0",
+    "platform": "win32",
+    "architecture": "x64",
+    "osVersion": "10.0.19045",
+    "cpuModel": "AMD Ryzen 5 5600H with Radeon Graphics         ",
+    "requestedDevice": "dml",
+    "reportedAccelerator": "NVIDIA GeForce GTX 1650 (4 GB VRAM; manually reported)",
+    "reportedAcceleratorSource": "provided by the benchmark operator; this script does not independently detect GPU hardware",
+    "accelerator": "dml requested; actual per-node execution provider and fallback were not inspected",
+    "onnxProfilingEnabled": false,
+    "onnxExecutionProviderNodeCounts": null,
+    "modelCacheDirectoryPresentBeforeRun": true,
+    "modelCacheState": "model cache directory existed before this process; required files were not individually verified"
+  },
+  "classificationAccuracy": 0.75,
+  "scoreMeanAbsoluteError": 1.0885217554026334,
+  "scoreWithinHalfPointRate": 0.1,
+  "meanBrierScore": 0.5253968246656753,
+  "confidenceReliability": [
+    {
+      "confidenceSource": "maximum-probability",
+      "calibration": "uncalibrated-estimate",
+      "outcome": "predicted choice/yes-no correctness",
+      "sampleCount": 20,
+      "expectedCalibrationError": 0.19744876624130253,
+      "bins": [
+        {
+          "lowerBound": 0,
+          "upperBound": 0.1,
+          "sampleCount": 0,
+          "meanConfidence": null,
+          "accuracy": null
+        },
+        {
+          "lowerBound": 0.1,
+          "upperBound": 0.2,
+          "sampleCount": 0,
+          "meanConfidence": null,
+          "accuracy": null
+        },
+        {
+          "lowerBound": 0.2,
+          "upperBound": 0.3,
+          "sampleCount": 0,
+          "meanConfidence": null,
+          "accuracy": null
+        },
+        {
+          "lowerBound": 0.3,
+          "upperBound": 0.4,
+          "sampleCount": 0,
+          "meanConfidence": null,
+          "accuracy": null
+        },
+        {
+          "lowerBound": 0.4,
+          "upperBound": 0.5,
+          "sampleCount": 4,
+          "meanConfidence": 0.4707172512552007,
+          "accuracy": 0.75
+        },
+        {
+          "lowerBound": 0.5,
+          "upperBound": 0.6,
+          "sampleCount": 8,
+          "meanConfidence": 0.5459111723450563,
+          "accuracy": 0.75
+        },
+        {
+          "lowerBound": 0.6,
+          "upperBound": 0.7,
+          "sampleCount": 4,
+          "meanConfidence": 0.6358172003478834,
+          "accuracy": 0.5
+        },
+        {
+          "lowerBound": 0.7,
+          "upperBound": 0.8,
+          "sampleCount": 1,
+          "meanConfidence": 0.723864321693836,
+          "accuracy": 1
+        },
+        {
+          "lowerBound": 0.8,
+          "upperBound": 0.9,
+          "sampleCount": 2,
+          "meanConfidence": 0.8196728447698514,
+          "accuracy": 1
+        },
+        {
+          "lowerBound": 0.9,
+          "upperBound": 1,
+          "sampleCount": 1,
+          "meanConfidence": 0.9809250815506919,
+          "accuracy": 1
+        }
+      ]
+    }
+  ],
+  "latencyMs": {
+    "firstCallIncludingInitialization": 1667,
+    "withinProcessSteadyState": {
+      "sampleCount": 29,
+      "p50": 355,
+      "p95": 657
+    }
+  },
+  "records": [
+    {
+      "id": "confirm-selected-invoice-tab",
+      "questionType": "choice",
+      "expected": "selected-invoice",
+      "prediction": "selected-invoice",
+      "correct": true,
+      "confidence": 0.4598468276306636,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "selected-invoice": 0.4598468276306636,
+        "most-recent": 0.2647570336171232,
+        "first-invoices": 0.2753961387522133
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": false,
+      "latencyMs": 1667,
+      "brierScore": 0.4377047697100249
+    },
+    {
+      "id": "confirm-local-vision-fallback",
+      "questionType": "choice",
+      "expected": "local-vision",
+      "prediction": "remote-vision",
+      "correct": false,
+      "confidence": 0.4451708058203549,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "local-vision": 0.39230540991588675,
+        "remote-vision": 0.4451708058203549,
+        "dom-repeat": 0.16252378426375844
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 392,
+      "brierScore": 0.5938837416236553
+    },
+    {
+      "id": "confirm-review-before-send",
+      "questionType": "choice",
+      "expected": "inspect-draft",
+      "prediction": "ask-send",
+      "correct": false,
+      "confidence": 0.6279452253516131,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "inspect-draft": 0.0694456859224443,
+        "send": 0.3026090887259427,
+        "ask-send": 0.6279452253516131
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 355,
+      "brierScore": 1.3518187980697838
+    },
+    {
+      "id": "confirm-duplicate-table-row",
+      "questionType": "choice",
+      "expected": "row-id",
+      "prediction": "row-id",
+      "correct": true,
+      "confidence": 0.8101324064880462,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "row-id": 0.8101324064880462,
+        "first-customer": 0.12165364136608584,
+        "guess": 0.068213952145868
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 354,
+      "brierScore": 0.05550245479100753
+    },
+    {
+      "id": "confirm-user-selected-chrome-page",
+      "questionType": "choice",
+      "expected": "index-one",
+      "prediction": "index-one",
+      "correct": true,
+      "confidence": 0.9809250815506919,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "index-one": 0.9809250815506919,
+        "active-tab": 0.013021982269141938,
+        "retry-list": 0.00605293618016611
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 343,
+      "brierScore": 0.0005700625724667649
+    },
+    {
+      "id": "confirm-readonly-date-field",
+      "questionType": "choice",
+      "expected": "choose-day",
+      "prediction": "choose-day",
+      "correct": true,
+      "confidence": 0.8292132830516564,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "choose-day": 0.8292132830516564,
+        "fill-date": 0.064624818868528,
+        "approximate": 0.10616189807981558
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 358,
+      "brierScore": 0.04461481850369283
+    },
+    {
+      "id": "confirm-checkbox-batch",
+      "questionType": "choice",
+      "expected": "batch-only",
+      "prediction": "batch-only",
+      "correct": true,
+      "confidence": 0.47911663421656925,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "batch-only": 0.47911663421656925,
+        "all-checks": 0.4241225321863969,
+        "single-guess": 0.09676083359703391
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 377,
+      "brierScore": 0.4605620619764695
+    },
+    {
+      "id": "confirm-unique-visible-link",
+      "questionType": "choice",
+      "expected": "exact-link",
+      "prediction": "exact-link",
+      "correct": true,
+      "confidence": 0.723864321693836,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "exact-link": 0.723864321693836,
+        "model-ask": 0.1719662685664803,
+        "guess-point": 0.10416940973968378
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 351,
+      "brierScore": 0.11667457628379828
+    },
+    {
+      "id": "confirm-code-navigation",
+      "questionType": "choice",
+      "expected": "search-source",
+      "prediction": "search-source",
+      "correct": true,
+      "confidence": 0.4987347373532152,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "search-source": 0.4987347373532152,
+        "claim-from-name": 0.27199788145929726,
+        "publish-answer": 0.2292673811874875
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 351,
+      "brierScore": 0.37781324313126485
+    },
+    {
+      "id": "confirm-sensitive-destination-change",
+      "questionType": "choice",
+      "expected": "cancel-refresh",
+      "prediction": "nearest-target",
+      "correct": false,
+      "confidence": 0.6389401427299628,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "cancel-refresh": 0.21464207372740435,
+        "reuse-token": 0.1464177835426328,
+        "nearest-target": 0.6389401427299628
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 375,
+      "brierScore": 1.0464697456885141
+    },
+    {
+      "id": "confirm-local-default",
+      "questionType": "noul",
+      "expected": false,
+      "prediction": false,
+      "correct": true,
+      "confidence": 0.5719033730152624,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "true": 0.4280966269847376,
+        "false": 0.5719033730152624
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 230,
+      "brierScore": 0.36653344407141913
+    },
+    {
+      "id": "confirm-exact-select",
+      "questionType": "noul",
+      "expected": true,
+      "prediction": true,
+      "correct": true,
+      "confidence": 0.5746441824754297,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "true": 0.5746441824754297,
+        "false": 0.4253558175245703
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 231,
+      "brierScore": 0.3618551430039911
+    },
+    {
+      "id": "confirm-payment-gate",
+      "questionType": "noul",
+      "expected": false,
+      "prediction": true,
+      "correct": false,
+      "confidence": 0.509553104230296,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "true": 0.509553104230296,
+        "false": 0.490446895769704
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 235,
+      "brierScore": 0.5192887320614618
+    },
+    {
+      "id": "confirm-unsubmitted-form",
+      "questionType": "noul",
+      "expected": false,
+      "prediction": false,
+      "correct": true,
+      "confidence": 0.6610267571350713,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "true": 0.33897324286492864,
+        "false": 0.6610267571350714
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 249,
+      "brierScore": 0.22980571875673172
+    },
+    {
+      "id": "confirm-deletion-token",
+      "questionType": "noul",
+      "expected": false,
+      "prediction": false,
+      "correct": true,
+      "confidence": 0.5180520595389524,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "true": 0.48194794046104766,
+        "false": 0.5180520595389524
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 224,
+      "brierScore": 0.46454763462929105
+    },
+    {
+      "id": "confirm-confidence-description",
+      "questionType": "noul",
+      "expected": true,
+      "prediction": false,
+      "correct": false,
+      "confidence": 0.5405555334164474,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "true": 0.4594444665835526,
+        "false": 0.5405555334164474
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 244,
+      "brierScore": 0.5844005694142799
+    },
+    {
+      "id": "confirm-provider-privacy",
+      "questionType": "noul",
+      "expected": false,
+      "prediction": false,
+      "correct": true,
+      "confidence": 0.5736084918255985,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "true": 0.4263915081744016,
+        "false": 0.5736084918255984
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 231,
+      "brierScore": 0.3636194364864816
+    },
+    {
+      "id": "confirm-explicit-chrome-choice",
+      "questionType": "noul",
+      "expected": true,
+      "prediction": true,
+      "correct": true,
+      "confidence": 0.615356676174886,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "true": 0.615356676174886,
+        "false": 0.384643323825114
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 225,
+      "brierScore": 0.295900973126463
+    },
+    {
+      "id": "confirm-one-test-scope",
+      "questionType": "noul",
+      "expected": false,
+      "prediction": false,
+      "correct": true,
+      "confidence": 0.5707086068502327,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "true": 0.4292913931497673,
+        "false": 0.5707086068502327
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 221,
+      "brierScore": 0.3685822004649361
+    },
+    {
+      "id": "confirm-page-injection",
+      "questionType": "noul",
+      "expected": false,
+      "prediction": false,
+      "correct": true,
+      "confidence": 0.5082640274082313,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "true": 0.4917359725917687,
+        "false": 0.5082640274082313
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 253,
+      "brierScore": 0.4836085334815454
+    },
+    {
+      "id": "confirm-score-docs-only",
+      "questionType": "score",
+      "expected": 0,
+      "prediction": 0.9417428238570724,
+      "scoreAbsoluteError": 0.9417428238570724,
+      "scoreWithinHalfPoint": false,
+      "scoreExactMatch": false,
+      "confidence": 0.5302183373487085,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "0": 0.5302183373487085,
+        "1": 0.19748883587582078,
+        "2": 0.1369943072605081,
+        "3": 0.07092870459961514,
+        "4": 0.0643698149153475
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 581,
+      "brierScore": 0.2876384452892008
+    },
+    {
+      "id": "confirm-score-browser-feature",
+      "questionType": "score",
+      "expected": 2,
+      "prediction": 1.4758534789114417,
+      "scoreAbsoluteError": 0.5241465210885583,
+      "scoreWithinHalfPoint": false,
+      "scoreExactMatch": false,
+      "confidence": 0.5609413699505555,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "0": 0.033019190789084836,
+        "1": 0.5609413699505555,
+        "2": 0.3294080911915983,
+        "3": 0.0504294656973555,
+        "4": 0.026201882371405808
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 661,
+      "brierScore": 0.7686686652919933
+    },
+    {
+      "id": "confirm-score-secret-output",
+      "questionType": "score",
+      "expected": 3,
+      "prediction": 2.314719008628049,
+      "scoreAbsoluteError": 0.6852809913719509,
+      "scoreWithinHalfPoint": false,
+      "scoreExactMatch": false,
+      "confidence": 0.3624615924620557,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "0": 0.0230126797212566,
+        "1": 0.2066736819601878,
+        "2": 0.3053738170721525,
+        "3": 0.3624615924620557,
+        "4": 0.10247822878434727
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 593,
+      "brierScore": 0.5534537708569454
+    },
+    {
+      "id": "confirm-score-publish-release",
+      "questionType": "score",
+      "expected": 4,
+      "prediction": 2.0938339287654317,
+      "scoreAbsoluteError": 1.9061660712345683,
+      "scoreWithinHalfPoint": false,
+      "scoreExactMatch": false,
+      "confidence": 0.522297530042149,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "0": 0.04160326066850749,
+        "1": 0.2016257182987665,
+        "2": 0.522297530042149,
+        "3": 0.0902808135799411,
+        "4": 0.14419267741063602
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 576,
+      "brierScore": 1.0557352701641065
+    },
+    {
+      "id": "confirm-score-private-helper",
+      "questionType": "score",
+      "expected": 1,
+      "prediction": 1.8103797592462432,
+      "scoreAbsoluteError": 0.8103797592462432,
+      "scoreWithinHalfPoint": false,
+      "scoreExactMatch": false,
+      "confidence": 0.32060141020214317,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "0": 0.09065026369816233,
+        "1": 0.32060141020214317,
+        "2": 0.3025969384107063,
+        "3": 0.2600210785332652,
+        "4": 0.026130309155722967
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 583,
+      "brierScore": 0.6296585756015718
+    },
+    {
+      "id": "confirm-score-oauth-bypass",
+      "questionType": "score",
+      "expected": 4,
+      "prediction": 2.2891473577077353,
+      "scoreAbsoluteError": 1.7108526422922647,
+      "scoreWithinHalfPoint": false,
+      "scoreExactMatch": false,
+      "confidence": 0.3903153198264647,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "0": 0.04416275688616014,
+        "1": 0.16154554393032197,
+        "2": 0.329624831565097,
+        "3": 0.3903153198264647,
+        "4": 0.07435154779195627
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 558,
+      "brierScore": 1.1458709474102307
+    },
+    {
+      "id": "confirm-score-disable-privacy",
+      "questionType": "score",
+      "expected": 4,
+      "prediction": 1.8220057053017293,
+      "scoreAbsoluteError": 2.1779942946982707,
+      "scoreWithinHalfPoint": false,
+      "scoreExactMatch": false,
+      "confidence": 0.4598557933962746,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "0": 0.04670180571964503,
+        "1": 0.4598557933962746,
+        "2": 0.21146326174909794,
+        "3": 0.1886931681326711,
+        "4": 0.09328597100231138
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 585,
+      "brierScore": 1.116100562528326
+    },
+    {
+      "id": "confirm-score-readonly-date",
+      "questionType": "score",
+      "expected": 2,
+      "prediction": 1.9929192132746925,
+      "scoreAbsoluteError": 0.007080786725307542,
+      "scoreWithinHalfPoint": true,
+      "scoreExactMatch": true,
+      "confidence": 0.30830388674624043,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "0": 0.09013930341625342,
+        "1": 0.2879728716750135,
+        "2": 0.30830388674624043,
+        "3": 0.16599718454277282,
+        "4": 0.1475867536197199
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 566,
+      "brierScore": 0.6188338970516143
+    },
+    {
+      "id": "confirm-score-database-drop",
+      "questionType": "score",
+      "expected": 4,
+      "prediction": 2.491684336011112,
+      "scoreAbsoluteError": 1.508315663988888,
+      "scoreWithinHalfPoint": false,
+      "scoreExactMatch": false,
+      "confidence": 0.3261650055666592,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "0": 0.05179827669928228,
+        "1": 0.2141546302442139,
+        "2": 0.25077657896927213,
+        "3": 0.15710550852057234,
+        "4": 0.3261650055666592
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 583,
+      "brierScore": 0.5901699002140711
+    },
+    {
+      "id": "confirm-score-local-observability",
+      "questionType": "score",
+      "expected": 1,
+      "prediction": 1.6132579995232101,
+      "scoreAbsoluteError": 0.6132579995232101,
+      "scoreWithinHalfPoint": false,
+      "scoreExactMatch": false,
+      "confidence": 0.4012459355647598,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "0": 0.12401969823382335,
+        "1": 0.4012459355647598,
+        "2": 0.27341385195436535,
+        "3": 0.14009769693848642,
+        "4": 0.06122281730856511
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 657,
+      "brierScore": 0.472018047714918
+    }
+  ],
+  "note": "The first call includes provider initialization and may include model retrieval if files were missing. For the Transformers.js local provider, cache inspection only checks whether the model cache directory existed before the process; it does not verify every required file. warmWithinProcess only means later calls in this process. Choice/yes-no accuracy and score error are reported separately. Confidence reliability bins compare predicted confidence with empirical Choice/yes-no correctness; they are descriptive measurements, not post-hoc calibration. Score confidence is recorded but excluded from those binary reliability bins. This small human-labeled fixture is not a general quality, calibration, or performance claim; all probabilities remain uncalibrated."
+}
