@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Add the full pinned BoolQ validation split as an external yes/no benchmark, publish CPU and DirectML-requested results with a majority baseline, and disclose that the default model falls below it.
+- Add deterministic evenly spaced BoolQ sampling for diagnostics and retain an ONNX trace showing mixed DirectML/CPU execution, separate from unprofiled latency results.
 - Compare paired per-question predictions and correctness counts; reject reports with different source dataset metadata.
 - Add optional local `semantic-nli` decisions with a documented label-count fallback, provider-only latency measurements, and paired synthetic result records; keep the smaller MiniLM provider as the default.
 - Allow the local `semantic-nli` provider to rank ambiguous browser controls without enabling remote browser-context sharing.

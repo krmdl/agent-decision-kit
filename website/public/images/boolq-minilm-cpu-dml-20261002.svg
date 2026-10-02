@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 500" role="img" aria-labelledby="title description">
   <title id="title">BoolQ MiniLM CPU and DirectML requested benchmark</title>
-  <desc id="description">The local MiniLM provider answered all 3,270 BoolQ validation questions. CPU accuracy was 57.0 percent and DirectML-requested accuracy was 57.2 percent, both below the 62.2 percent majority baseline. Warm decision p95 was 49 milliseconds on CPU and 149 milliseconds with DirectML requested.</desc>
+  <desc id="description">The local MiniLM provider answered all 3,270 BoolQ validation questions. CPU accuracy was 57.0 percent and DirectML-requested accuracy was 57.2 percent, both below the 62.2 percent majority baseline. Warm decision p95 was 49 milliseconds on CPU and 149 milliseconds with DirectML requested. A separate 30-row profile recorded mixed DirectML and CPU node execution; event counts do not measure compute share.</desc>
   <rect width="1000" height="500" rx="24" fill="#0d1b2b"/>
   <text x="40" y="48" fill="#f3f8ff" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="25" font-weight="700">BoolQ yes/no · quality and decision latency</text>
   <text x="40" y="77" fill="#9fb3c9" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="14">3,270 published validation labels · one local process per requested device · Windows 10</text>
@@ -45,6 +45,6 @@
   </g>
 
   <line x1="40" y1="391" x2="960" y2="391" stroke="#28445d"/>
-  <text x="40" y="421" fill="#9fb3c9" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="13">Neither device beat the majority baseline. DirectML placement was not profiled; one run per device is descriptive, not a quality or speed guarantee.</text>
+  <text x="40" y="421" fill="#9fb3c9" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="13">Neither device beat the majority baseline. Separate 30-row profiling observed mixed DirectML/CPU execution; one run per device is descriptive.</text>
   <text x="40" y="452" fill="#9fb3c9" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="12">Decision p95 excludes model initialization. Confidence estimates are uncalibrated; the dataset passages and questions stay out of the reports.</text>
 </svg>

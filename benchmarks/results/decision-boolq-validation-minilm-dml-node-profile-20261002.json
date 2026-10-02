@@ -1,0 +1,688 @@
+{
+  "provider": "semantic-local",
+  "model": "Xenova/all-MiniLM-L6-v2",
+  "sampleCount": 30,
+  "sourceDataset": {
+    "id": "google/boolq",
+    "revision": "35b264d03638db9f4ce671b711558bf7ff0f80d5",
+    "split": "validation",
+    "rowCount": 3270,
+    "license": "CC-BY-SA-3.0",
+    "datasetCard": "https://huggingface.co/datasets/google/boolq",
+    "parquetUrl": "https://huggingface.co/datasets/google/boolq/resolve/35b264d03638db9f4ce671b711558bf7ff0f80d5/data/validation-00000-of-00001.parquet",
+    "parquetSha256": "52355d11524b4b874a9b9dcc278feb10f672d52c4f4eff9872e695ede59820f8",
+    "citation": "Clark et al. (2019), BoolQ: Exploring the Surprising Difficulty of Natural Yes/No Questions, NAACL.",
+    "selection": "30 evenly spaced row indices from the pinned 3270-row validation split, selected for instrumentation.",
+    "textHandling": "Passage/question text is used only in the local temporary fixture and is not written to the benchmark result."
+  },
+  "byQuestionType": {
+    "choice": {
+      "sampleCount": 0,
+      "accuracy": null,
+      "meanBrierScore": null
+    },
+    "noul": {
+      "sampleCount": 30,
+      "accuracy": 0.5333333333333333,
+      "meanBrierScore": 0.49126624021022247
+    },
+    "score": {
+      "sampleCount": 0,
+      "meanAbsoluteError": null,
+      "withinHalfPointRate": null,
+      "exactMatchRate": null,
+      "meanBrierScore": null
+    }
+  },
+  "classificationExpectedLabelCounts": {
+    "false": 14,
+    "true": 16
+  },
+  "classificationMajorityBaselineAccuracy": 0.5333333333333333,
+  "runtime": {
+    "timestampUtc": "2026-10-02T14:08:22.913Z",
+    "agentDecisionKitCommit": "321a405d971969cc13342c613bcd5f2062cbd853",
+    "trackedWorkingTreeModified": true,
+    "node": "v22.14.0",
+    "platform": "win32",
+    "architecture": "x64",
+    "osVersion": "10.0.19045",
+    "cpuModel": "AMD Ryzen 5 5600H with Radeon Graphics         ",
+    "requestedDevice": "dml",
+    "reportedAccelerator": "DirectML requested; GPU model not independently reported",
+    "reportedAcceleratorSource": "provided by the benchmark operator; this script does not independently detect GPU hardware",
+    "accelerator": "dml requested; per-node ONNX Runtime provider counts are reported below",
+    "onnxProfilingEnabled": true,
+    "onnxExecutionProviderNodeCounts": {
+      "DmlExecutionProvider": 5340,
+      "CPUExecutionProvider": 60
+    },
+    "modelCacheDirectoryPresentBeforeRun": true,
+    "modelCacheState": "model cache directory existed before this process; required files were not individually verified"
+  },
+  "classificationAccuracy": 0.5333333333333333,
+  "scoreMeanAbsoluteError": null,
+  "scoreWithinHalfPointRate": null,
+  "meanBrierScore": 0.49126624021022247,
+  "confidenceReliability": [
+    {
+      "confidenceSource": "maximum-probability",
+      "calibration": "uncalibrated-estimate",
+      "outcome": "predicted choice/yes-no correctness",
+      "sampleCount": 30,
+      "expectedCalibrationError": 0.006249698779756008,
+      "bins": [
+        {
+          "lowerBound": 0,
+          "upperBound": 0.1,
+          "sampleCount": 0,
+          "meanConfidence": null,
+          "accuracy": null
+        },
+        {
+          "lowerBound": 0.1,
+          "upperBound": 0.2,
+          "sampleCount": 0,
+          "meanConfidence": null,
+          "accuracy": null
+        },
+        {
+          "lowerBound": 0.2,
+          "upperBound": 0.3,
+          "sampleCount": 0,
+          "meanConfidence": null,
+          "accuracy": null
+        },
+        {
+          "lowerBound": 0.3,
+          "upperBound": 0.4,
+          "sampleCount": 0,
+          "meanConfidence": null,
+          "accuracy": null
+        },
+        {
+          "lowerBound": 0.4,
+          "upperBound": 0.5,
+          "sampleCount": 0,
+          "meanConfidence": null,
+          "accuracy": null
+        },
+        {
+          "lowerBound": 0.5,
+          "upperBound": 0.6,
+          "sampleCount": 30,
+          "meanConfidence": 0.5270836345535773,
+          "accuracy": 0.5333333333333333
+        },
+        {
+          "lowerBound": 0.6,
+          "upperBound": 0.7,
+          "sampleCount": 0,
+          "meanConfidence": null,
+          "accuracy": null
+        },
+        {
+          "lowerBound": 0.7,
+          "upperBound": 0.8,
+          "sampleCount": 0,
+          "meanConfidence": null,
+          "accuracy": null
+        },
+        {
+          "lowerBound": 0.8,
+          "upperBound": 0.9,
+          "sampleCount": 0,
+          "meanConfidence": null,
+          "accuracy": null
+        },
+        {
+          "lowerBound": 0.9,
+          "upperBound": 1,
+          "sampleCount": 0,
+          "meanConfidence": null,
+          "accuracy": null
+        }
+      ]
+    }
+  ],
+  "onnxExecutionProviderProfile": {
+    "source": "ONNX Runtime per-node profile",
+    "profileFiles": [
+      "decision-boolq-validation-minilm-dml-node-profile-20261002.onnx-profile.json.gz"
+    ],
+    "nodeEventCount": 5400,
+    "nodeCounts": {
+      "DmlExecutionProvider": 5340,
+      "CPUExecutionProvider": 60
+    },
+    "uncompressedBytes": 4659291,
+    "compressedBytes": 205152,
+    "latencyNote": "Profiling may add overhead; use a separate unprofiled run for latency comparisons."
+  },
+  "latencyMs": {
+    "firstCallIncludingInitialization": 518,
+    "allCalls": {
+      "sampleCount": 30,
+      "p50": 114,
+      "p95": 188
+    },
+    "withinProcessSteadyState": {
+      "sampleCount": 29,
+      "p50": 114,
+      "p95": 180
+    }
+  },
+  "records": [
+    {
+      "id": "boolq-validation-0000",
+      "questionType": "noul",
+      "expected": false,
+      "prediction": true,
+      "correct": false,
+      "confidence": 0.5049070897285479,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "true": 0.5049070897285479,
+        "false": 0.4950929102714521
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": false,
+      "latencyMs": 518,
+      "brierScore": 0.5098623385163039
+    },
+    {
+      "id": "boolq-validation-0113",
+      "questionType": "noul",
+      "expected": true,
+      "prediction": false,
+      "correct": false,
+      "confidence": 0.5007882262124452,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "true": 0.4992117737875548,
+        "false": 0.5007882262124452
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 123,
+      "brierScore": 0.5015776950260145
+    },
+    {
+      "id": "boolq-validation-0225",
+      "questionType": "noul",
+      "expected": false,
+      "prediction": true,
+      "correct": false,
+      "confidence": 0.5618644039261342,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "true": 0.5618644039261342,
+        "false": 0.43813559607386576
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 188,
+      "brierScore": 0.6313832167985403
+    },
+    {
+      "id": "boolq-validation-0338",
+      "questionType": "noul",
+      "expected": true,
+      "prediction": true,
+      "correct": true,
+      "confidence": 0.5159131722105282,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "true": 0.5159131722105282,
+        "false": 0.48408682778947176
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 113,
+      "brierScore": 0.4686801136785474
+    },
+    {
+      "id": "boolq-validation-0451",
+      "questionType": "noul",
+      "expected": true,
+      "prediction": true,
+      "correct": true,
+      "confidence": 0.5314405568239754,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "true": 0.5314405568239754,
+        "false": 0.4685594431760246
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 93,
+      "brierScore": 0.4390959035788525
+    },
+    {
+      "id": "boolq-validation-0564",
+      "questionType": "noul",
+      "expected": false,
+      "prediction": true,
+      "correct": false,
+      "confidence": 0.5104698200819808,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "true": 0.5104698200819808,
+        "false": 0.48953017991801917
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 95,
+      "brierScore": 0.5211588744290597
+    },
+    {
+      "id": "boolq-validation-0676",
+      "questionType": "noul",
+      "expected": false,
+      "prediction": true,
+      "correct": false,
+      "confidence": 0.5256766450145712,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "true": 0.5256766450145712,
+        "false": 0.47432335498542877
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 123,
+      "brierScore": 0.552671870227551
+    },
+    {
+      "id": "boolq-validation-0789",
+      "questionType": "noul",
+      "expected": false,
+      "prediction": true,
+      "correct": false,
+      "confidence": 0.5196967288399663,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "true": 0.5196967288399663,
+        "false": 0.4803032711600337
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 156,
+      "brierScore": 0.540169379933923
+    },
+    {
+      "id": "boolq-validation-0902",
+      "questionType": "noul",
+      "expected": true,
+      "prediction": true,
+      "correct": true,
+      "confidence": 0.5779284158114579,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "true": 0.5779284158114579,
+        "false": 0.42207158418854207
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 90,
+      "brierScore": 0.3562888443588511
+    },
+    {
+      "id": "boolq-validation-1015",
+      "questionType": "noul",
+      "expected": true,
+      "prediction": true,
+      "correct": true,
+      "confidence": 0.503677958232997,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "true": 0.503677958232997,
+        "false": 0.496322041767003
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 131,
+      "brierScore": 0.49267113828753334
+    },
+    {
+      "id": "boolq-validation-1127",
+      "questionType": "noul",
+      "expected": true,
+      "prediction": false,
+      "correct": false,
+      "confidence": 0.5099780299843898,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "true": 0.4900219700156102,
+        "false": 0.5099780299843898
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 114,
+      "brierScore": 0.5201551821335183
+    },
+    {
+      "id": "boolq-validation-1240",
+      "questionType": "noul",
+      "expected": false,
+      "prediction": true,
+      "correct": false,
+      "confidence": 0.5045959326668338,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "true": 0.5045959326668338,
+        "false": 0.4954040673331662
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 114,
+      "brierScore": 0.5092341105278237
+    },
+    {
+      "id": "boolq-validation-1353",
+      "questionType": "noul",
+      "expected": false,
+      "prediction": false,
+      "correct": true,
+      "confidence": 0.5132696212481453,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "true": 0.4867303787518546,
+        "false": 0.5132696212481453
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 115,
+      "brierScore": 0.4738129231998477
+    },
+    {
+      "id": "boolq-validation-1465",
+      "questionType": "noul",
+      "expected": true,
+      "prediction": true,
+      "correct": true,
+      "confidence": 0.5425064430457093,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "true": 0.5425064430457093,
+        "false": 0.4574935569542907
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 120,
+      "brierScore": 0.4186007093093777
+    },
+    {
+      "id": "boolq-validation-1578",
+      "questionType": "noul",
+      "expected": true,
+      "prediction": true,
+      "correct": true,
+      "confidence": 0.5471808500669746,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "true": 0.5471808500669746,
+        "false": 0.4528191499330254
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 101,
+      "brierScore": 0.4100903650921355
+    },
+    {
+      "id": "boolq-validation-1691",
+      "questionType": "noul",
+      "expected": false,
+      "prediction": false,
+      "correct": true,
+      "confidence": 0.51178383884847,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "true": 0.48821616115152994,
+        "false": 0.5117838388484701
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 168,
+      "brierScore": 0.47671004001907324
+    },
+    {
+      "id": "boolq-validation-1804",
+      "questionType": "noul",
+      "expected": false,
+      "prediction": false,
+      "correct": true,
+      "confidence": 0.5006454686545397,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "true": 0.4993545313454603,
+        "false": 0.5006454686545396
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 113,
+      "brierScore": 0.4987098959504887
+    },
+    {
+      "id": "boolq-validation-1916",
+      "questionType": "noul",
+      "expected": false,
+      "prediction": true,
+      "correct": false,
+      "confidence": 0.5458420700575021,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "true": 0.5458420700575021,
+        "false": 0.45415792994249793
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 118,
+      "brierScore": 0.595887130889318
+    },
+    {
+      "id": "boolq-validation-2029",
+      "questionType": "noul",
+      "expected": true,
+      "prediction": true,
+      "correct": true,
+      "confidence": 0.523303272913155,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "true": 0.523303272913155,
+        "false": 0.47669672708684496
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 122,
+      "brierScore": 0.4544795392306199
+    },
+    {
+      "id": "boolq-validation-2142",
+      "questionType": "noul",
+      "expected": true,
+      "prediction": true,
+      "correct": true,
+      "confidence": 0.5088249340133668,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "true": 0.5088249340133668,
+        "false": 0.4911750659866332
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 101,
+      "brierScore": 0.4825058908939469
+    },
+    {
+      "id": "boolq-validation-2254",
+      "questionType": "noul",
+      "expected": true,
+      "prediction": true,
+      "correct": true,
+      "confidence": 0.5513384972595792,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "true": 0.5513384972595792,
+        "false": 0.4486615027404208
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 112,
+      "brierScore": 0.4025942880825853
+    },
+    {
+      "id": "boolq-validation-2367",
+      "questionType": "noul",
+      "expected": false,
+      "prediction": true,
+      "correct": false,
+      "confidence": 0.5218641132362049,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "true": 0.5218641132362049,
+        "false": 0.47813588676379515
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 144,
+      "brierScore": 0.5446843053676209
+    },
+    {
+      "id": "boolq-validation-2480",
+      "questionType": "noul",
+      "expected": true,
+      "prediction": true,
+      "correct": true,
+      "confidence": 0.5252700391854154,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "true": 0.5252700391854154,
+        "false": 0.47472996081458463
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 101,
+      "brierScore": 0.4507370713900341
+    },
+    {
+      "id": "boolq-validation-2593",
+      "questionType": "noul",
+      "expected": false,
+      "prediction": false,
+      "correct": true,
+      "confidence": 0.5588673768830607,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "true": 0.44113262311693935,
+        "false": 0.5588673768830607
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 104,
+      "brierScore": 0.3891959823560633
+    },
+    {
+      "id": "boolq-validation-2705",
+      "questionType": "noul",
+      "expected": true,
+      "prediction": false,
+      "correct": false,
+      "confidence": 0.5181311070041175,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "true": 0.48186889299588254,
+        "false": 0.5181311070041175
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 90,
+      "brierScore": 0.5369196880906244
+    },
+    {
+      "id": "boolq-validation-2818",
+      "questionType": "noul",
+      "expected": true,
+      "prediction": false,
+      "correct": false,
+      "confidence": 0.5036293370598587,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "true": 0.49637066294014126,
+        "false": 0.5036293370598588
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 111,
+      "brierScore": 0.5072850182947057
+    },
+    {
+      "id": "boolq-validation-2931",
+      "questionType": "noul",
+      "expected": true,
+      "prediction": true,
+      "correct": true,
+      "confidence": 0.5545270523659316,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "true": 0.5545270523659316,
+        "false": 0.4454729476340684
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 180,
+      "brierScore": 0.39689229414757093
+    },
+    {
+      "id": "boolq-validation-3044",
+      "questionType": "noul",
+      "expected": true,
+      "prediction": true,
+      "correct": true,
+      "confidence": 0.5240696024141881,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "true": 0.5240696024141881,
+        "false": 0.4759303975858119
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 143,
+      "brierScore": 0.45301948669237796
+    },
+    {
+      "id": "boolq-validation-3156",
+      "questionType": "noul",
+      "expected": false,
+      "prediction": true,
+      "correct": false,
+      "confidence": 0.5824135547859471,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "true": 0.5824135547859471,
+        "false": 0.41758644521405286
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 90,
+      "brierScore": 0.678411097596807
+    },
+    {
+      "id": "boolq-validation-3269",
+      "questionType": "noul",
+      "expected": false,
+      "prediction": true,
+      "correct": false,
+      "confidence": 0.5121048780313248,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "true": 0.5121048780313248,
+        "false": 0.48789512196867524
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 111,
+      "brierScore": 0.524502812206956
+    }
+  ],
+  "note": "The first call includes provider initialization and may include model retrieval if files were missing. For the Transformers.js local provider, cache inspection only checks whether the model cache directory existed before the process; it does not verify every required file. warmWithinProcess only means later calls in this process. Choice/yes-no accuracy and score error are reported separately. Confidence reliability bins compare predicted confidence with empirical Choice/yes-no correctness; they are descriptive measurements, not post-hoc calibration. Score confidence is recorded but excluded from those binary reliability bins. Fixture-specific results do not establish general quality or performance; all probabilities remain uncalibrated."
+}

@@ -50,6 +50,7 @@ import catalogSweep from "../../../benchmarks/results/miniwob-all-125-catalog-sw
 import boolqCpuRun from "../../../benchmarks/results/decision-boolq-validation-minilm-cpu-ed1cbf7-20261002.json";
 import boolqDmlRun from "../../../benchmarks/results/decision-boolq-validation-minilm-dml-ed1cbf7-20261002.json";
 import boolqComparison from "../../../benchmarks/results/decision-boolq-validation-minilm-cpu-vs-dml-ed1cbf7-20261002.json";
+import boolqDmlProfile from "../../../benchmarks/results/decision-boolq-validation-minilm-dml-node-profile-20261002.json";
 
 const episodeCount = latestRun.episodeCount;
 const successCount = latestRun.successCount;
@@ -109,6 +110,8 @@ const dmlProviderCounts = dmlNodeProfile.runtime.onnxExecutionProviderNodeCounts
 const dmlProviderCallCount = dmlNodeProfile.sampleCount;
 const boolqMajorityBaseline = boolqCpuRun.classificationMajorityBaselineAccuracy;
 const boolqPredictionDisagreements = boolqComparison.pairedOutcomes.noul.predictionDisagreementCount;
+const boolqDmlProfileCounts = boolqDmlProfile.runtime.onnxExecutionProviderNodeCounts;
+const boolqDmlProfileEventCount = boolqDmlProfile.onnxExecutionProviderProfile.nodeEventCount;
 const boolqRows = [
   { label: "CPU", report: boolqCpuRun },
   { label: "DirectML requested", report: boolqDmlRun },
@@ -325,14 +328,16 @@ const decisionRows = [
       </div>
       <figure class="provider-chart">
         <img src={`${siteBase}images/boolq-minilm-cpu-dml-20261002.svg`} alt="On the 3,270-example BoolQ validation split, CPU accuracy was 57.0% and DirectML-requested accuracy was 57.2%, both below the 62.2% majority baseline. Warm p95 latency was 49 milliseconds on CPU and 149 milliseconds with DirectML requested." width="1000" height="500" loading="lazy" />
-        <figcaption>Accuracy and decision-call latency on the same labeled split. DirectML was requested, but this run did not profile per-node ONNX execution.</figcaption>
+        <figcaption>Bars show accuracy and warm p95 from the unprofiled full-split runs. A separate 30-row trace observed DirectML and CPU execution; profiling overhead is excluded.</figcaption>
       </figure>
-      <p class="comparison-note">Both device settings fell below the 62.2% majority baseline (CPU {(boolqCpuRow.accuracy * 100 - boolqMajorityBaseline * 100).toFixed(1)} percentage points; DirectML {(boolqDmlRow.accuracy * 100 - boolqMajorityBaseline * 100).toFixed(1)} points). DirectML returned six more correct answers, while the two settings disagreed on {boolqPredictionDisagreements.toLocaleString("en-US")} predictions; one run per setting does not establish a quality difference. Its warm p95 was {boolqDmlRow.warmP95} ms versus {boolqCpuRow.warmP95} ms on CPU. The DirectML device was requested, but this result does not confirm GPU placement. The confidence values are marked uncalibrated; Brier and ECE are descriptive. This external benchmark exposes a current limitation, not a general quality or performance claim.</p>
+      <p class="comparison-note">Both device settings fell below the 62.2% majority baseline (CPU {(boolqCpuRow.accuracy * 100 - boolqMajorityBaseline * 100).toFixed(1)} percentage points; DirectML {(boolqDmlRow.accuracy * 100 - boolqMajorityBaseline * 100).toFixed(1)} points). DirectML returned six more correct answers, while the two settings disagreed on {boolqPredictionDisagreements.toLocaleString("en-US")} predictions; one run per setting does not establish a quality difference. Its unprofiled warm p95 was {boolqDmlRow.warmP95} ms versus {boolqCpuRow.warmP95} ms on CPU. A separate profile on 30 evenly spaced validation rows recorded {boolqDmlProfileCounts.DmlExecutionProvider.toLocaleString("en-US")} <code>DmlExecutionProvider</code> and {boolqDmlProfileCounts.CPUExecutionProvider.toLocaleString("en-US")} <code>CPUExecutionProvider</code> node events ({boolqDmlProfileEventCount.toLocaleString("en-US")} total). This confirms mixed provider execution for those inputs; event counts do not measure compute share. The confidence values are marked uncalibrated; Brier and ECE are descriptive. This external benchmark exposes a current limitation, not a general quality or performance claim.</p>
       <p class="comparison-note">Dataset: <a href="https://huggingface.co/datasets/google/boolq">Google BoolQ validation split</a>, pinned revision <code>{boolqCpuRun.sourceDataset.revision}</code>, licensed CC BY-SA 3.0; see the <a href="https://aclanthology.org/N19-1300/">BoolQ paper</a> and <a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/DATA_LICENSES.md">data license notice</a>. Dataset passages and questions were used locally and are not included in the reports. Model overlap with pretraining data is unknown. Reports were recorded at commit <code>{boolqCpuRun.runtime.agentDecisionKitCommit.slice(0, 7)}</code>; the model-cache directory existed before each run, but individual files were not checked.</p>
       <div class="decision-raw-links">
         <a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/decision-boolq-validation-minilm-cpu-ed1cbf7-20261002.json">CPU raw report ↗</a>
         <a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/decision-boolq-validation-minilm-dml-ed1cbf7-20261002.json">DirectML raw report ↗</a>
         <a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/decision-boolq-validation-minilm-cpu-vs-dml-ed1cbf7-20261002.json">Paired metrics ↗</a>
+        <a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/decision-boolq-validation-minilm-dml-node-profile-20261002.json">30-row ONNX provider profile ↗</a>
+        <a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/decision-boolq-validation-minilm-dml-node-profile-20261002.onnx-profile.json.gz">Compressed ONNX trace ↗</a>
         <a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/prepare-boolq-evaluation.py">Pinned data adapter ↗</a>
       </div>
     </section>
