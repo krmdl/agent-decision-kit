@@ -34,6 +34,13 @@ class RunnerDiagnosticTests(unittest.TestCase):
         self.assertEqual(len(record["runnerDiagnostic"]), 2_000)
 
 
+class RunSeedTests(unittest.TestCase):
+    def test_attaches_suite_seed_to_each_episode_record(self):
+        record = SUITE.attach_run_seed({"task": "click-test"}, 11)
+
+        self.assertEqual(record["runSeed"], 11)
+
+
 class NodeBridgeProviderEnvironmentTests(unittest.TestCase):
     def test_defaults_to_the_local_semantic_provider(self):
         with patch.dict(RUNNER.os.environ, {}, clear=True):
