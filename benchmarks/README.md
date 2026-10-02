@@ -13,6 +13,20 @@ node benchmarks/run-decisions.mjs > decision-report.json
 
 The script reports per-case labels, probabilities, confidence source, calibration labels and latency. It separates choice/yes-no accuracy from ordinal Score mean absolute error, within-half-point rate, and rounded exact-match rate. Brier score is reported by question type. For Choice and yes/no, it also reports ten-bin confidence reliability and expected calibration error (ECE), grouped by confidence source and calibration label; Score confidence is retained in raw records but excluded from this binary correctness analysis. ECE is descriptive and does not fit a post-hoc calibration. The script records the first call including pipeline initialization and within-process warm p50/p95 separately. Before timing, it records whether the model's cache directory exists; this does not prove that every required file is present. The first call may include model retrieval, and the warm label only means later calls in the same process. Record hardware, accelerator, cache state, and provider setup. Run each provider as a separate explicit condition; don't mix results. For a fair Jev comparison, use the same cases, request batching, network conditions, and label rubric. Never use provider responses as training data or to tune an imitation.
 
+`compare-decision-runs.mjs` compares two completed JSON reports from this runner. It refuses mismatched case IDs, question types, or expected labels; outputs aggregate quality, calibration, and latency deltas; and never calls a provider. The reports contain per-case predictions, so keep them local when the fixture or provider output is private. To make an optional Jev comparison, run each command deliberately: the Jev call can incur TypeSafe charges. For comparable latency, run both on the same host and record cache and network conditions.
+
+```powershell
+npm run build
+$env:AGENT_DECISION_PROVIDER = "semantic"
+node benchmarks/run-decisions.mjs --fixtures benchmarks/fixtures/decision-cases-independent.jsonl --output $env:TEMP/adk-local.json
+$env:AGENT_DECISION_PROVIDER = "jev"
+# Set TYPESAFE_API_KEY only if you choose to make paid Jev requests.
+node benchmarks/run-decisions.mjs --fixtures benchmarks/fixtures/decision-cases-independent.jsonl --output $env:TEMP/adk-jev.json
+node benchmarks/compare-decision-runs.mjs --baseline $env:TEMP/adk-local.json --candidate $env:TEMP/adk-jev.json
+```
+
+The comparison reports only metrics and metadata; it does not establish Jev parity from a small fixture and does not estimate provider cost.
+
 The starter fixtures are public and tiny. They are useful for verifying the harness, not for proving broad quality, calibration or performance. `fixtures/decision-cases-independent.jsonl` adds 30 human-authored examples (10 of each question type). Labels were written from the documented product behavior without consulting provider output. This small project-specific fixture is still not held out from the codebase or pretraining corpus and does not establish general quality. Keep future evaluation cases held out and source labels independently from both tested providers.
 
 ### Browser-style large-choice CPU microbenchmark
