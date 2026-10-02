@@ -10,7 +10,7 @@ const playwrightPackage = JSON.parse(
 
 const marker = "@@ADK_BROWSERGYM@@";
 const browser = new BrowserManager({ headless: true, includeCandidateSnapshot: true });
-const provider = createProvider("semantic-local");
+const provider = createProvider();
 const input = readline.createInterface({ input: process.stdin, crlfDelay: Infinity });
 
 function respond(id, result, error) {

@@ -450,9 +450,14 @@ def free_port():
         return sock.getsockname()[1]
 
 
+def node_bridge_environment():
+    env = os.environ.copy()
+    env.setdefault("AGENT_DECISION_PROVIDER", "semantic")
+    return env
+
+
 class NodeBridge:
     def __init__(self):
-        env = {**os.environ, "AGENT_DECISION_PROVIDER": "semantic"}
         self.process = subprocess.Popen(
             ["node", str(ROOT / "benchmarks" / "browsergym-bridge.mjs")],
             cwd=ROOT,
@@ -463,7 +468,7 @@ class NodeBridge:
             encoding="utf-8",
             errors="replace",
             bufsize=1,
-            env=env,
+            env=node_bridge_environment(),
         )
         self.lines = queue.Queue()
         self.reader = threading.Thread(target=self._read_lines, daemon=True)

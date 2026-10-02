@@ -1,6 +1,7 @@
 import importlib.util
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 
 SUITE_PATH = Path(__file__).with_name("run-browsergym-miniwob-suite.py")
@@ -31,6 +32,20 @@ class RunnerDiagnosticTests(unittest.TestCase):
         record = SUITE.attach_runner_diagnostics({}, 1, diagnostic)
 
         self.assertEqual(len(record["runnerDiagnostic"]), 2_000)
+
+
+class NodeBridgeProviderEnvironmentTests(unittest.TestCase):
+    def test_defaults_to_the_local_semantic_provider(self):
+        with patch.dict(RUNNER.os.environ, {}, clear=True):
+            env = RUNNER.node_bridge_environment()
+
+        self.assertEqual(env["AGENT_DECISION_PROVIDER"], "semantic")
+
+    def test_preserves_an_explicit_provider_selection(self):
+        with patch.dict(RUNNER.os.environ, {"AGENT_DECISION_PROVIDER": "semantic-nli"}, clear=True):
+            env = RUNNER.node_bridge_environment()
+
+        self.assertEqual(env["AGENT_DECISION_PROVIDER"], "semantic-nli")
 
 
 class StrictTaskSuccessTests(unittest.TestCase):
