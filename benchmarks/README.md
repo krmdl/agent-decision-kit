@@ -198,6 +198,30 @@ $output = Join-Path $env:TEMP 'miniwob-all-125.json'
 if ($LASTEXITCODE -ne 0) { throw 'MiniWoB catalog sweep failed' }
 ```
 
+### Current-source eight-task DOM repeat
+
+[`results/miniwob-current-dom-8x5-20261002.json`](results/miniwob-current-dom-8x5-20261002.json) contains 40 raw episodes: the same eight selected DOM tasks across seeds 7–11. All 40 reached raw reward 1.0, with no timeouts. Every episode records source commit `06c81bb88ec161b455873d5c2b4edaa7955a489f` and `workingTreeModified: false`; the pinned MiniWoB++ revision is `7fd85d71a4b60325c6585396ec4f48377d049838`. The run used Windows 10 CPU, Node 22.14.0, Python 3.12.13, BrowserGym 0.14.3, Python Playwright 1.44.0, Node Playwright 1.63.0, and HeadlessChrome 125.0.6422.26.
+
+BrowserManager action-loop p50/p95 was 392/990 ms. Eleven semantic calls had p50/p95 of 174/186 ms; 29 episode decisions used deterministic local rules. End-to-end latency including reset was p50/p95 1,688/2,325 ms, and the mean action count was 1.5. The action-loop measure includes inspection, action execution, and any local synthetic approval round-trip. Synthetic approvals were limited to the exact local MiniWoB `file://` tasks.
+
+This is a repeated integration regression check of eight selected DOM tasks on one CPU host. It is not a representative BrowserGym score, a full autonomous agent, OCR/vision coverage, a GPU measurement, a 500 ms latency-target result, or a Jev comparison. Reproduce from a built checkout with BrowserGym 0.14.3 and the pinned MiniWoB++ assets:
+
+```powershell
+npm run build
+$python = 'C:\path\to\browsergym-venv\Scripts\python.exe'
+$miniwobRoot = 'C:\path\to\miniwob-plusplus\miniwob\html\miniwob'
+$runDir = Join-Path $env:TEMP 'adk-current-dom-repeat'
+New-Item -ItemType Directory -Force -Path $runDir | Out-Null
+$tasks = @('click-test', 'click-button', 'click-link', 'click-tab', 'click-collapsible', 'click-dialog', 'click-menu', 'click-checkboxes')
+foreach ($seed in 7..11) {
+  $output = Join-Path $runDir "miniwob-seed-$seed.json"
+  & $python benchmarks/run-browsergym-miniwob-suite.py --miniwob-root $miniwobRoot --output $output --tasks $tasks --seed $seed --max-actions 5 --timeout-seconds 120 --approve-synthetic-actions
+  if ($LASTEXITCODE -ne 0) { throw "MiniWoB run failed for seed $seed" }
+}
+$records = Get-ChildItem -LiteralPath $runDir -File -Filter 'miniwob-seed-*-click*.json' | Sort-Object Name | ForEach-Object { $_.FullName }
+python benchmarks/aggregate-browsergym.py @records --output benchmarks/results/miniwob-current-dom-8x5-20261002.json | Out-Null
+```
+
 ### Paired local-provider browser run
 
 The [MiniLM report](results/miniwob-local-provider-paired-20261002-semantic.json), [NLI report](results/miniwob-local-provider-paired-20261002-nli.json), and [paired comparison](results/miniwob-local-provider-paired-comparison-20261002.json) contain 40 raw episodes per provider: the same eight DOM tasks across seeds 7–11. Both providers completed all 40 episodes without harness timeouts or outcome disagreements. Every record identifies the `fb1399aa3673451962525b8aa27655c8143f9731` source commit and includes its seed.

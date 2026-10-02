@@ -8,7 +8,7 @@ import focusedRun from "../../../benchmarks/results/miniwob-targeted-browser-fix
 import visualDigitsRun from "../../../benchmarks/results/miniwob-visual-digits-5-seed-smoke.json";
 import visualDigitsRetryRun from "../../../benchmarks/results/miniwob-visual-digits-single-char-retry-5-seed-smoke.json";
 import currentEightTaskRun from "../../../benchmarks/results/miniwob-main-8-seed7-smoke.json";
-import repeatedEightTaskRun from "../../../benchmarks/results/miniwob-main-8-seed7-11-post-menu-fix-40.json";
+import repeatedEightTaskRun from "../../../benchmarks/results/miniwob-current-dom-8x5-20261002.json";
 import pairedMiniLMRun from "../../../benchmarks/results/miniwob-local-provider-paired-20261002-semantic.json";
 import pairedNliRun from "../../../benchmarks/results/miniwob-local-provider-paired-20261002-nli.json";
 import pairedProviderComparison from "../../../benchmarks/results/miniwob-local-provider-paired-comparison-20261002.json";
@@ -48,6 +48,7 @@ const successCount = latestRun.successCount;
 const failureCount = episodeCount - successCount;
 const successPercent = Math.round(latestRun.taskSuccessRate * 100);
 const environment = latestRun.rawRecords[0];
+const repeatedEightTaskSource = repeatedEightTaskRun.rawRecords[0];
 const commitUrl = `https://github.com/krmdl/agent-decision-kit/commit/${latestRun.suite.agentDecisionKitCommit}`;
 const rawRunUrl = "https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/miniwob-full-26-post-timeout-fix-20261002.json";
 const verifiedNavigationCount = verifiedNavigationRun.episodeCount;
@@ -417,10 +418,9 @@ const decisionRows = [
           <a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/miniwob-main-8-seed7-smoke.json">Summary and eight raw episodes ↗</a>
         </article>
         <article>
-          <div><strong>{repeatedEightTaskRun.successCount}/{repeatedEightTaskRun.episodeCount}</strong><span>Eight-task regression · five seeds · Windows CPU</span></div>
-          <p>The same eight curated tasks were repeated with seeds 7–11 after hierarchical menu handling was added. All episodes earned full raw reward with no timeouts. The prior matched run was 36/40, with all four failures in <code>click-menu</code>. End-to-end latency including reset was p50 {repeatedEightTaskRun.latencyMs.p50} ms / p95 {repeatedEightTaskRun.latencyMs.p95} ms; the browser decision/action loop was p50 {repeatedEightTaskRun.agentActionLatencyMs.p50} ms / p95 {repeatedEightTaskRun.agentActionLatencyMs.p95} ms. Eleven semantic provider calls had p95 {repeatedEightTaskRun.decisionCallLatencyMs.p95} ms. This paired result is a small regression check, not a broad browser score or speed claim.</p>
-          <a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/miniwob-main-8-seed7-11-post-menu-fix-40.json">Post-fix aggregate and 40 raw episodes ↗</a>
-          <a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/miniwob-main-8-seed7-11-pre-menu-fix-40.json">Matched pre-fix aggregate ↗</a>
+          <div><strong>{repeatedEightTaskRun.successCount}/{repeatedEightTaskRun.episodeCount}</strong><span>Current-source eight-task repeat · five seeds · Windows CPU</span></div>
+          <p>The same eight selected DOM tasks ran with seeds 7–11 at commit <code>{repeatedEightTaskSource.agentDecisionKitCommit.slice(0, 7)}</code>; all episodes reached full raw reward with no timeouts. Eleven semantic model calls had p50 {repeatedEightTaskRun.decisionCallLatencyMs.p50} ms / p95 {repeatedEightTaskRun.decisionCallLatencyMs.p95} ms; 29 episode decisions used local rules. The browser action loop was p50 {repeatedEightTaskRun.agentActionLatencyMs.p50} ms / p95 {repeatedEightTaskRun.agentActionLatencyMs.p95} ms; end-to-end latency including reset was p50 {repeatedEightTaskRun.latencyMs.p50} ms / p95 {repeatedEightTaskRun.latencyMs.p95} ms. These are selected integration tasks on one CPU host, not a general quality or speed claim.</p>
+          <a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/miniwob-current-dom-8x5-20261002.json">Current-source aggregate and 40 raw episodes ↗</a>
         </article>
         <article>
           <div><strong>3/3</strong><span>Full-reward tool smoke</span></div>
