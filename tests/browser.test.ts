@@ -1047,7 +1047,7 @@ describe("Playwright browser safety flow", () => {
     const realInspect = browser.inspect.bind(browser);
     const inspect = vi.spyOn(browser, "inspect");
     inspect.mockImplementationOnce(async () => realInspect());
-    inspect.mockImplementationOnce(async () => { throw new Error("Browser page inspection timed out after 15 seconds."); });
+    inspect.mockImplementationOnce(async () => { throw new Error("Browser page inspection timed out after 3 seconds."); });
 
     const result = await browser.decideAndAct("View the details of all customers", provider);
 
@@ -1055,7 +1055,7 @@ describe("Playwright browser safety flow", () => {
       status: "action-executed",
       action: { label: "Customers" },
       inspectionPending: true,
-      note: expect.stringContaining("resulting page state is unverified"),
+      note: expect.stringContaining("within 3 seconds"),
     });
     await expect(browser.act(result.action.ref)).rejects.toThrow("Unknown or stale action ref");
   }, 45_000);

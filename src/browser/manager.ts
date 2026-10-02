@@ -9,13 +9,16 @@ import type { DecisionProvider } from "../core/types.js";
 export type BrowserCandidate = { ref: string; role: string; label: string; kind: string; risk: "low" | "approval-required"; checked?: boolean; expanded?: boolean; selected?: boolean; readOnly?: boolean; dragSource?: boolean; dropTarget?: boolean; optionLabels?: string[]; selectedOptionLabels?: string[]; min?: number; max?: number; step?: number };
 export type BrowserTable = { index: number; rows: string[][] };
 export type BrowserManagerOptions = { headless?: boolean; profileDir?: string; includeCandidateSnapshot?: boolean };
+const DEFAULT_INSPECTION_TIMEOUT_MS = 15_000;
+const POST_ACTION_INSPECTION_TIMEOUT_MS = 3_000;
+const EXPECTED_NAVIGATION_TIMEOUT_MS = 7_000;
 
 function browserDebug(message: string) {
   if (process.env.ADK_BROWSERGYM_DEBUG === "1") console.error(`[browser-manager] ${message}`);
 }
 
 function isBrowserPageInspectionTimeout(error: unknown) {
-  return error instanceof Error && error.message === "Browser page inspection timed out after 15 seconds.";
+  return error instanceof Error && /^Browser page inspection timed out after \d+ seconds\.$/.test(error.message);
 }
 
 async function withTimeout<T>(operation: Promise<T>, timeoutMs: number, message: string): Promise<T> {
@@ -181,7 +184,7 @@ export class BrowserManager {
     return this.describePage();
   }
 
-  async inspect() {
+  async inspect(timeoutMs = DEFAULT_INSPECTION_TIMEOUT_MS) {
     const page = this.requirePage();
     browserDebug("inspect started");
     const before = performance.now();
@@ -516,7 +519,7 @@ export class BrowserManager {
       });
       markStage("complete");
       return { title: document.title, url: location.href, headings: heading, textExcerpt: body, tables, candidates, privateFormState, privateActionState };
-    }, { referenceAttributeName: this.referenceAttributeName, traceStages: traceInspection }), 15_000, "Browser page inspection timed out after 15 seconds.").finally(() => {
+    }, { referenceAttributeName: this.referenceAttributeName, traceStages: traceInspection }), timeoutMs, `Browser page inspection timed out after ${timeoutMs / 1_000} seconds.`).finally(() => {
       if (traceInspection) page.off("console", onInspectionConsole);
     });
     const { privateFormState, privateActionState, candidates: rawCandidates, ...snapshot } = result;
@@ -895,7 +898,7 @@ export class BrowserManager {
     }
     let afterActionSnapshot: Awaited<ReturnType<BrowserManager["inspect"]>>;
     try {
-      afterActionSnapshot = await this.inspect();
+      afterActionSnapshot = await this.inspect(POST_ACTION_INSPECTION_TIMEOUT_MS);
     } catch (error) {
       if (!isBrowserPageInspectionTimeout(error)) throw error;
       this.candidates.clear();
@@ -916,7 +919,7 @@ export class BrowserManager {
         ...metadata,
         effect,
         inspectionPending: true,
-        note: "The selected action completed, but the page did not respond to inspection within 15 seconds. Its resulting page state is unverified; no further automatic action will be taken. Wait for the page to settle, then inspect it again.",
+        note: `The selected action completed, but the page did not respond to inspection within ${POST_ACTION_INSPECTION_TIMEOUT_MS / 1_000} seconds. Its resulting page state is unverified; no further automatic action will be taken. Wait for the page to settle, then inspect it again.`,
       };
     }
     const visibleStateChanged = this.lastInspectionFingerprint !== beforeActionFingerprint;
@@ -1473,7 +1476,7 @@ export class BrowserManager {
       }
     }
     const navigation = expectsNavigation
-      ? page.waitForNavigation({ waitUntil: "domcontentloaded", timeout: 10_000 }).catch(() => undefined)
+      ? page.waitForNavigation({ waitUntil: "domcontentloaded", timeout: EXPECTED_NAVIGATION_TIMEOUT_MS }).catch(() => undefined)
       : undefined;
     browserDebug(`click started for ${candidate.role} ${candidate.label.slice(0, 80)}`);
     await locator.click({ timeout: 5_000, noWaitAfter: true });
