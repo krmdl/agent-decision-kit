@@ -142,6 +142,45 @@ The separate `results/decision-cases-independent-ryzen5600h-dml-node-profile-202
 
 `results/miniwob-smoke-suite.json` contains a reproducible eight-task MiniWoB smoke suite with one raw JSON episode file per task. The runner attaches the real Agent Decision Kit `BrowserManager` to BrowserGym's live Chromium page through loopback CDP, calls the task validator after each bounded decision/action round, and confirms that detaching does not close BrowserGym's browser. The suite keeps failures, ambiguous choices, and visual-only pages as results instead of omitting them. It is a small smoke suite, not a representative BrowserGym benchmark, model-quality estimate, or speed claim. `latencyMs` includes environment reset; `agentActionLatencyMs` measures the bounded browser decision/action loop; `decisionCallLatencyMs` aggregates model-call latency separately. Synthetic approvals are allowed only for the exact local MiniWoB `file://` task URL.
 
+### Paired local-provider browser run
+
+The [MiniLM report](results/miniwob-local-provider-paired-20261002-semantic.json), [NLI report](results/miniwob-local-provider-paired-20261002-nli.json), and [paired comparison](results/miniwob-local-provider-paired-comparison-20261002.json) contain 40 raw episodes per provider: the same eight DOM tasks across seeds 7–11. Both providers completed all 40 episodes without harness timeouts or outcome disagreements. Every record identifies the `fb1399aa3673451962525b8aa27655c8143f9731` source commit and includes its seed.
+
+| Measurement | MiniLM (`semantic-local`) | NLI (`semantic-nli`) |
+| --- | ---: | ---: |
+| Task success | 40/40 (100%) | 40/40 (100%) |
+| End-to-end latency, including reset, p50 / p95 | 1,716 / 2,353 ms | 1,715 / 2,455 ms |
+| Browser action loop p50 / p95 | 394 / 1,001 ms | 393 / 1,096 ms |
+| Semantic model calls, p50 / p95 | 11 calls, 173 / 182 ms | 11 calls, 810 / 848 ms |
+| Mean BrowserManager action rounds | 1.50 | 1.50 |
+
+The paired NLI-minus-MiniLM median delta was +22.5 ms end to end and +6 ms for the browser action loop; paired p95 deltas were +685 ms and +669 ms. The task set is deliberately small and easy: only 11 of 40 episodes per provider needed model inference, and the other decisions used exact local rules. Each episode starts a new Node bridge, so the measured model calls include per-process pipeline initialization with model files already cached. These CPU results show no browser-speed advantage for NLI; the NLI decision calls were about 4.7× slower by p50. They do not predict warm calls from a persistent MCP server, GPU performance, or broader task quality. All confidence estimates remain uncalibrated.
+
+The provider selection now passes through both the Python BrowserGym runner and Node bridge. To repeat the eight-task run with a BrowserGym 0.14.3 / Python Playwright 1.44.0 environment and the pinned MiniWoB++ checkout, build the package and run:
+
+```powershell
+npm ci
+npm run build
+$tasks = @('click-test', 'click-button', 'click-link', 'click-tab', 'click-collapsible', 'click-dialog', 'click-menu', 'click-checkboxes')
+$miniwobRoot = 'C:\path\to\miniwob-plusplus\miniwob\html\miniwob'
+foreach ($seed in 7..11) {
+  foreach ($provider in @('semantic', 'semantic-nli')) {
+    $env:AGENT_DECISION_PROVIDER = $provider
+    $output = Join-Path $env:TEMP "adk-$provider-seed-$seed.json"
+    python benchmarks/run-browsergym-miniwob-suite.py --miniwob-root $miniwobRoot --output $output --tasks $tasks --seed $seed --max-actions 5 --timeout-seconds 120 --approve-synthetic-actions
+    if ($LASTEXITCODE -ne 0) { throw "BrowserGym run failed: $provider / seed $seed" }
+  }
+}
+```
+
+The suite writes one summary and one raw episode per task for each provider/seed pair. To recompute the checked-in paired metrics from the committed per-episode reports, run:
+
+```powershell
+python benchmarks/compare-browsergym-runs.py --baseline benchmarks/results/miniwob-local-provider-paired-20261002-semantic.json --candidate benchmarks/results/miniwob-local-provider-paired-20261002-nli.json --output $env:TEMP/miniwob-local-provider-comparison.json
+```
+
+The comparison tool checks source, environment, task/seed pairing, and reports success disagreements and latency deltas. These selected integration tasks do not replace the planned MiniWoB/WebArena/VisualWebArena benchmark suites.
+
 The pinned Linux runner image matches BrowserGym 0.14.3's Python Playwright browser revision while retaining the repository's Node 24 Playwright runtime. Build it with `docker build -f benchmarks/Dockerfile.browsergym -t adk-browsergym-miniwob:0.14.3 .`; run a focused local integration set with:
 
 ```sh

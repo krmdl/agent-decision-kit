@@ -136,6 +136,7 @@ Claude Code users can also opt into the [prompt-routing hook](integrations/claud
 | --- | --- | --- |
 | MiniWoB multi-tool, 26 tasks | 26/26; browser action-loop p50/p95 325/940 ms | Windows CPU, synthetic task instructions. The calendar drag uses known coordinates from the pinned 332×214 fixture, so this checks visual-tool integration, not OCR target detection or an autonomous agent. [Raw aggregate](benchmarks/results/miniwob-full-26-post-timeout-fix-20261002.json) |
 | MiniWoB DOM subset, 24 tasks | 24/24; browser action-loop p50/p95 323/907 ms | Excludes both visual-only tasks; bounded form and visible-table workflows. [Raw aggregate](benchmarks/results/miniwob-dom-table-24-5b52abc-utf8.json) |
+| MiniWoB local-provider pair, 40 episodes/provider | Both 40/40; decision-call p50/p95 173/182 ms MiniLM, 810/848 ms NLI | Same eight tasks and five seeds on Windows CPU. Each episode starts a fresh bridge, and 11 episodes per provider called the model. [Paired results](benchmarks/results/miniwob-local-provider-paired-comparison-20261002.json) |
 | WebArena Verified, 18 tasks | 3 full, 13 partial, 2 zero rewards; mean 0.528 | Read-only navigation on one synthetic Magento admin site; not the original multi-site WebArena suite. Action/decision p95 includes inspection and selection: 1.176 s. [Run report](benchmarks/results/webarena-verified-docker-b-page-settle-18-20261002-summary.json) |
 
 ### Decision latency samples

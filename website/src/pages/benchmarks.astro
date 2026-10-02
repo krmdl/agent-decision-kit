@@ -9,6 +9,9 @@ import visualDigitsRun from "../../../benchmarks/results/miniwob-visual-digits-5
 import visualDigitsRetryRun from "../../../benchmarks/results/miniwob-visual-digits-single-char-retry-5-seed-smoke.json";
 import currentEightTaskRun from "../../../benchmarks/results/miniwob-main-8-seed7-smoke.json";
 import repeatedEightTaskRun from "../../../benchmarks/results/miniwob-main-8-seed7-11-post-menu-fix-40.json";
+import pairedMiniLMRun from "../../../benchmarks/results/miniwob-local-provider-paired-20261002-semantic.json";
+import pairedNliRun from "../../../benchmarks/results/miniwob-local-provider-paired-20261002-nli.json";
+import pairedProviderComparison from "../../../benchmarks/results/miniwob-local-provider-paired-comparison-20261002.json";
 import cpuDecisionRepeat1 from "../../../benchmarks/results/decision-cases-independent-ryzen5600h-cpu-repeat-20261002.json";
 import cpuDecisionRepeat2 from "../../../benchmarks/results/decision-cases-independent-ryzen5600h-cpu-repeat-2-20261002.json";
 import cpuDecisionRepeat3 from "../../../benchmarks/results/decision-cases-independent-ryzen5600h-cpu-repeat-3-20261002.json";
@@ -157,6 +160,38 @@ const decisionRows = [
         <p>OCR visual clicks and the daily-calendar drag were separately approved by the synthetic harness and restricted to the local MiniWoB page. The daily-calendar path uses known geometry from its pinned fixture; it does not measure OCR target detection or a general vision agent.</p>
         <a class="text-link" href={rawRunUrl}>Inspect the summary and all raw episodes ↗</a>
       </aside>
+    </section>
+
+    <section class="decision-runs" aria-labelledby="paired-provider-title">
+      <p class="eyebrow">PAIRED BROWSER PROVIDER RUN · CPU</p>
+      <h2 id="paired-provider-title">The same DOM tasks, with both local providers.</h2>
+      <p class="comparison-note">Five seeds repeated the same eight MiniWoB tasks for each provider on Windows 10 and a Ryzen 5 5600H CPU. All 40 episodes per provider reached full task reward without a harness timeout or an outcome disagreement. Only 11 episodes per provider called the semantic model; all other selections came from exact local rules.</p>
+      <div class="decision-table-wrap">
+        <table>
+          <caption>Forty episodes per provider · first model inference in a fresh bridge process · model files cached</caption>
+          <thead><tr><th scope="col">Provider</th><th scope="col">Task success</th><th scope="col">End-to-end p50 / p95</th><th scope="col">Browser loop p50 / p95</th><th scope="col">Decision call p50 / p95</th><th scope="col">Mean action rounds</th></tr></thead>
+          <tbody>
+            {[
+              { label: "MiniLM · semantic-local", report: pairedMiniLMRun },
+              { label: "NLI · semantic-nli", report: pairedNliRun },
+            ].map(({ label, report }) => <tr>
+              <th scope="row">{label}</th>
+              <td>{report.successCount}/{report.episodeCount}</td>
+              <td>{report.latencyMs.p50} / {report.latencyMs.p95} ms</td>
+              <td>{report.agentActionLatencyMs.p50} / {report.agentActionLatencyMs.p95} ms</td>
+              <td>{report.decisionCallLatencyMs.p50} / {report.decisionCallLatencyMs.p95} ms (n={report.decisionCallLatencyMs.sampleCount})</td>
+              <td>{report.actions.mean.toFixed(2)}</td>
+            </tr>)}
+          </tbody>
+        </table>
+      </div>
+      <p class="comparison-note">In this CPU run, NLI's model-call p50 was about 4.7× MiniLM's (810 ms vs 173 ms). The median paired delta for the full browser loop was only +6 ms because model inference occurred in 11 of 40 episodes and environment reset dominates total time. Every episode starts a fresh bridge, so these model calls include process-level pipeline initialization; this does not measure warm requests to a persistent MCP server, GPU latency, or broad task quality. Confidence estimates remain uncalibrated. The measurement supports no general speed claim.</p>
+      <div class="decision-raw-links">
+        <a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/miniwob-local-provider-paired-20261002-semantic.json">MiniLM raw episodes ↗</a>
+        <a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/miniwob-local-provider-paired-20261002-nli.json">NLI raw episodes ↗</a>
+        <a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/miniwob-local-provider-paired-comparison-20261002.json">Paired metric report ↗</a>
+        <a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/compare-browsergym-runs.py">Comparison code ↗</a>
+      </div>
     </section>
 
     <section class="decision-runs" aria-labelledby="decision-runs-title">
