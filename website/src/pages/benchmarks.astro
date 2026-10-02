@@ -46,11 +46,18 @@ const median = (values: number[]) => {
   const middle = Math.floor(ordered.length / 2);
   return ordered.length % 2 ? ordered[middle]! : Math.round((ordered[middle - 1]! + ordered[middle]!) / 2);
 };
+const nearestRankP95 = (values: number[]) => {
+  const ordered = [...values].sort((left, right) => left - right);
+  return ordered[Math.ceil(ordered.length * 0.95) - 1]!;
+};
 const summarizeDecisionRuns = (reports: typeof cpuDecisionRuns) => {
   const p95Values = reports.map((report) => report.latencyMs.withinProcessSteadyState.p95);
+  const allCallLatencies = reports.flatMap((report) => report.records.map((record) => record.latencyMs));
   return {
     firstCall: median(reports.map((report) => report.latencyMs.firstCallIncludingInitialization)),
     firstCallMax: Math.max(...reports.map((report) => report.latencyMs.firstCallIncludingInitialization)),
+    allCallP95: nearestRankP95(allCallLatencies),
+    allCallCount: allCallLatencies.length,
     p50: median(reports.map((report) => report.latencyMs.withinProcessSteadyState.p50)),
     p95: median(p95Values),
     p95Min: Math.min(...p95Values),
@@ -75,6 +82,8 @@ const decisionRows = [
     firstCall: summary.firstCall,
     p50: summary.p50,
     p95: summary.p95,
+    allCallP95: summary.allCallP95,
+    allCallCount: summary.allCallCount,
     p95Min: summary.p95Min,
     p95Max: summary.p95Max,
     warmCount: report.latencyMs.withinProcessSteadyState.sampleCount,
@@ -156,11 +165,12 @@ const decisionRows = [
       <div class="decision-table-wrap">
         <table>
           <caption>Five paired runs · 29 warm calls per run · labels are not held out</caption>
-          <thead><tr><th scope="col">Device</th><th scope="col">First call median (incl. init)</th><th scope="col">Warm p50 / p95 medians</th><th scope="col">Choice</th><th scope="col">Yes/no</th><th scope="col">Score MAE</th><th scope="col">Brier: Choice / yes-no</th><th scope="col">ECE (n=20)</th></tr></thead>
+          <thead><tr><th scope="col">Device</th><th scope="col">First call median (incl. init)</th><th scope="col">All-call p95 (n=150)</th><th scope="col">Warm p50 / p95 medians</th><th scope="col">Choice</th><th scope="col">Yes/no</th><th scope="col">Score MAE</th><th scope="col">Brier: Choice / yes-no</th><th scope="col">ECE (n=20)</th></tr></thead>
           <tbody>
             {decisionRows.map((row) => <tr>
               <th scope="row">{row.device}</th>
               <td>{row.firstCall} ms</td>
+              <td>{row.allCallP95} ms</td>
               <td>{row.p50} / {row.p95} ms (p95 range {row.p95Min}–{row.p95Max}; n=29/run)</td>
               <td>{row.choiceCorrect}/{row.choiceTotal}</td>
               <td>{row.yesNoCorrect}/{row.yesNoTotal}</td>
@@ -171,7 +181,7 @@ const decisionRows = [
           </tbody>
         </table>
       </div>
-      <p class="comparison-note">Across these five pairs, CPU warm p95 had a {cpuDecisionSummary.p95} ms median ({cpuDecisionSummary.p95Min}–{cpuDecisionSummary.p95Max} ms across run p95s); DirectML had a {dmlDecisionSummary.p95} ms median ({dmlDecisionSummary.p95Min}–{dmlDecisionSummary.p95Max} ms){dmlSlowerInEveryPair ? " and was slower in every pair" : ""}. A separate {dmlProviderCallCount}-call ONNX profile observed {dmlProviderCounts.DmlExecutionProvider.toLocaleString("en-US")} <code>DmlExecutionProvider</code> node events and {dmlProviderCounts.CPUExecutionProvider.toLocaleString("en-US")} <code>CPUExecutionProvider</code> events ({Math.round(dmlProviderCounts.DmlExecutionProvider / dmlProviderCallCount)} and {Math.round(dmlProviderCounts.CPUExecutionProvider / dmlProviderCallCount)} per call). This verifies DirectML execution with some CPU fallback, but node counts do not measure compute share. {allWarmP95Under500 ? "Every warm p95 in these runs stayed below 500 ms" : "At least one warm p95 in these runs reached 500 ms"}; DirectML first-call latency included initialization, with a {dmlDecisionSummary.firstCall} ms median and {dmlDecisionSummary.firstCallMax} ms maximum. This one machine and non-held-out fixture do not establish a general speed guarantee or GPU advantage. Confidence estimates remain uncalibrated; ECE is descriptive only.</p>
+      <p class="comparison-note">Across these five pairs, CPU warm p95 had a {cpuDecisionSummary.p95} ms median ({cpuDecisionSummary.p95Min}–{cpuDecisionSummary.p95Max} ms across run p95s); DirectML had a {dmlDecisionSummary.p95} ms median ({dmlDecisionSummary.p95Min}–{dmlDecisionSummary.p95Max} ms){dmlSlowerInEveryPair ? " and was slower in every pair" : ""}. The nearest-rank p95 across all {cpuDecisionSummary.allCallCount} CPU calls was {cpuDecisionSummary.allCallP95} ms; across all {dmlDecisionSummary.allCallCount} DirectML-requested calls it was {dmlDecisionSummary.allCallP95} ms. A separate {dmlProviderCallCount}-call ONNX profile observed {dmlProviderCounts.DmlExecutionProvider.toLocaleString("en-US")} <code>DmlExecutionProvider</code> node events and {dmlProviderCounts.CPUExecutionProvider.toLocaleString("en-US")} <code>CPUExecutionProvider</code> events ({Math.round(dmlProviderCounts.DmlExecutionProvider / dmlProviderCallCount)} and {Math.round(dmlProviderCounts.CPUExecutionProvider / dmlProviderCallCount)} per call). This verifies DirectML execution with some CPU fallback, but node counts do not measure compute share. {allWarmP95Under500 ? "Every warm p95 in these runs stayed below 500 ms" : "At least one warm p95 in these runs reached 500 ms"}; DirectML first-call latency included initialization, with a {dmlDecisionSummary.firstCall} ms median and {dmlDecisionSummary.firstCallMax} ms maximum. This one machine and non-held-out fixture do not establish a general speed guarantee, full browser latency target, or GPU advantage. Confidence estimates remain uncalibrated; ECE is descriptive only.</p>
       <div class="decision-raw-links"><a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/decision-cases-independent-ryzen5600h-cpu-repeat-20261002.json">CPU raw run 1 ↗</a><a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/decision-cases-independent-ryzen5600h-dml-repeat-20261002.json">DirectML raw run 1 ↗</a><a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/decision-cases-independent-ryzen5600h-dml-node-profile-20261002.json">Node profile report ↗</a><a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/decision-cases-independent-ryzen5600h-dml-node-profile-20261002.onnx-profile.json.gz">Compressed ONNX trace ↗</a><a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/fixtures/decision-cases-independent.jsonl">30 labeled examples ↗</a></div>
     </section>
 
