@@ -1,6 +1,6 @@
 # Benchmarks
 
-Every result must include its raw episode data and enough environment detail to reproduce it. Do not turn a small smoke run into a broad quality or performance claim. No aggregate charts are published until repeated, comparable runs support them.
+Every result must include its raw episode data and enough environment detail to reproduce it. Do not turn a small smoke run into a broad quality or performance claim. A chart from one run is descriptive only; comparative claims require repeated, comparable runs.
 
 ## Decision quality and latency
 
