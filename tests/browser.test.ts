@@ -124,7 +124,7 @@ describe("Playwright browser safety flow", () => {
     navigationLabelHtml = Buffer.from('<!doctype html><h1 id="heading">Dashboard</h1><a href="#customers" onclick="document.querySelector(\'#heading\').textContent=\'Customers\';document.querySelector(\'#status\').textContent=\'Customers opened\'">Customers</a><p id="status">Dashboard</p>');
     slowNavigationHtml = Buffer.from('<!doctype html><h1>Dashboard</h1><a href="/slow-navigation-target">Customers</a>');
     navigationTargetingHtml = Buffer.from('<!doctype html><h1>Dashboard</h1><a href="#magento">Magento</a><a href="#sales">Sales</a><a href="#reports" onclick="document.querySelector(\'h1\').textContent=\'Reports menu opened\'">Reports</a>');
-    navigationReportsHtml = Buffer.from('<!doctype html><h1>Dashboard</h1><a id="reports" href="#reports" onclick="document.querySelector(\'#reports-menu\').hidden=false;document.querySelector(\'h1\').textContent=\'Reports menu opened\'">Reports</a><div id="reports-menu" hidden><a href="#product-viewed" onclick="document.querySelector(\'h1\').textContent=\'Product Views Report\'">Views</a><a href="#best-sellers" onclick="document.querySelector(\'h1\').textContent=\'Best Sellers Report\'">Bestsellers</a></div>');
+    navigationReportsHtml = Buffer.from('<!doctype html><h1 id="heading">Dashboard</h1><a id="reports" href="#reports" onclick="document.querySelector(\'#reports-menu\').hidden=false;document.querySelector(\'#heading\').textContent=\'Reports menu opened\'">Reports</a><div id="reports-menu" hidden><a href="#product-viewed" onclick="document.querySelector(\'#heading\').textContent=\'Product Views Report\';document.querySelector(\'#reports-menu\').hidden=true;document.querySelector(\'#report-page\').hidden=false">Views</a><a href="#best-sellers" onclick="document.querySelector(\'#heading\').textContent=\'Best Sellers Report\';document.querySelector(\'#reports-menu\').hidden=true;document.querySelector(\'#report-page\').hidden=false">Bestsellers</a></div><div id="report-page" hidden><label>From <input id="from" type="text"></label><label>To <input id="to" type="text"></label><button id="show-report" type="button" onclick="document.querySelector(\'#status\').textContent=\'Applied \'+document.querySelector(\'#from\').value+\' to \'+document.querySelector(\'#to\').value">Show Report</button><p id="status">Not applied</p></div>');
     navigationOrdersHtml = Buffer.from('<!doctype html><h1>Dashboard</h1><a href="#sales">Sales</a><a href="#orders">Orders</a>');
     hierarchicalNavigationOrdersHtml = Buffer.from('<!doctype html><h1>Dashboard</h1><a id="sales" href="#sales">Sales</a><div id="sales-menu" hidden><a href="#orders" onclick="document.querySelector(\'h1\').textContent=\'Orders list\';document.querySelector(\'#sales-menu\').hidden=true">Orders</a></div><script>document.querySelector("#sales").addEventListener("click",()=>document.querySelector("#sales-menu").hidden=false)</script>');
     hierarchicalNavigationThemesHtml = Buffer.from('<!doctype html><h1>Dashboard</h1><a id="content" href="#content">Content</a><div id="content-menu" hidden><a href="#themes" onclick="document.querySelector(\'h1\').textContent=\'Themes\';document.querySelector(\'#content-menu\').hidden=true">Themes</a><a href="#configuration">Configuration</a></div><script>document.querySelector("#content").addEventListener("click",()=>document.querySelector("#content-menu").hidden=false)</script>');
@@ -214,8 +214,9 @@ describe("Playwright browser safety flow", () => {
   });
 
   it("lists loopback Chrome tabs first and attaches only to an explicitly selected tab", async () => {
+    const opaquePathToken = "cGVyaW9kX3R5cGU9ZGF5JmZyb209MDclMkYwNSUyRjIwMjEmdG89MDUlMkYzMSUyRjIwMjMmc2hvd19lbXB0eV9yb3dzPTA=";
     const pages = [
-      { title: async () => "First tab", url: () => "https://user:secret@first.example.test/path?access_token=private#session", isClosed: () => false },
+      { title: async () => "First tab", url: () => `https://user:secret@first.example.test/path/filter/${opaquePathToken}?access_token=private#session`, isClosed: () => false },
       { title: async () => "Second tab", url: () => "https://second.example.test", isClosed: () => false },
     ];
     const context = { pages: () => pages };
@@ -226,9 +227,10 @@ describe("Playwright browser safety flow", () => {
 
     const listed = await browser.connect(baseUrl);
     expect(listed).toMatchObject({ connected: false, selectedTabRequired: true, tabs: [
-      { index: 0, title: "First tab", url: "https://first.example.test/path" },
+      { index: 0, title: "First tab", url: "https://first.example.test/path/filter/[redacted]" },
       { index: 1, title: "Second tab", url: "https://second.example.test/" },
     ] });
+    expect(JSON.stringify(listed)).not.toContain(opaquePathToken);
     expect(browser.connected).toBe(false);
     expect(connectOverCDP).toHaveBeenNthCalledWith(1, cdpWebSocketUrl);
     expect(cdpBrowser.close).toHaveBeenCalledTimes(1);
@@ -1092,14 +1094,23 @@ describe("Playwright browser safety flow", () => {
       model: "fixture-provider",
       decide: async () => { throw new Error("The product view report should resolve from its visible menu label locally"); },
     };
-    const task = "Show the product view report for July 5, 2021 to May 31, 2023";
+    const task = "Show the product view report from July 5, 2021 to May 31, 2023";
 
     const parent = await browser.decideAndAct(task, provider);
     const destination = await browser.decideAndAct(task, provider);
+    const fromDate = await browser.decideAndAct(task, provider);
+    const toDate = await browser.decideAndAct(task, provider);
+    const showReport = await browser.decideAndAct(task, provider);
+    const repeated = await browser.decideAndAct(task, provider);
 
     expect(parent).toMatchObject({ status: "action-executed", action: { label: "Reports" } });
     expect(destination).toMatchObject({ status: "action-executed", action: { label: "Views" }, selectionRule: "unique-mentioned-navigation-label" });
+    expect(fromDate).toMatchObject({ status: "action-executed", action: { label: "From" }, selectionRule: "explicit-report-date-range-fill", effect: { status: "filled", characterCount: 10, valueReturned: false, submitted: false } });
+    expect(toDate).toMatchObject({ status: "action-executed", action: { label: "To" }, selectionRule: "explicit-report-date-range-fill", effect: { status: "filled", characterCount: 10, valueReturned: false, submitted: false } });
+    expect(showReport).toMatchObject({ status: "action-executed", action: { label: "Show Report" }, selectionRule: "explicit-report-date-range-submit" });
+    expect(repeated.status).toBe("report-filter-already-shown");
     expect((await browser.inspect()).headings).toContain("Product Views Report");
+    expect((await browser.inspect()).textExcerpt).toContain("Applied [editable content] to [editable content]");
   }, 45_000);
 
   it("matches a best sellers report to Magento's compound Bestsellers link", async () => {
@@ -1111,14 +1122,23 @@ describe("Playwright browser safety flow", () => {
       model: "fixture-provider",
       decide: async () => { throw new Error("The best sellers report should resolve from its visible menu label locally"); },
     };
-    const task = "Show the best sellers report for last month";
+    const task = "Show the best sellers report from May 1, 2022 to May 31, 2023";
 
     const parent = await browser.decideAndAct(task, provider);
     const destination = await browser.decideAndAct(task, provider);
+    const fromDate = await browser.decideAndAct(task, provider);
+    const toDate = await browser.decideAndAct(task, provider);
+    const showReport = await browser.decideAndAct(task, provider);
 
     expect(parent).toMatchObject({ status: "action-executed", action: { label: "Reports" } });
     expect(destination).toMatchObject({ status: "action-executed", action: { label: "Bestsellers" }, selectionRule: "unique-mentioned-navigation-label" });
-    expect((await browser.inspect()).headings).toContain("Best Sellers Report");
+    expect(fromDate).toMatchObject({ status: "action-executed", action: { label: "From" }, selectionRule: "explicit-report-date-range-fill" });
+    expect(toDate).toMatchObject({ status: "action-executed", action: { label: "To" }, selectionRule: "explicit-report-date-range-fill" });
+    expect(showReport).toMatchObject({ status: "action-executed", action: { label: "Show Report" }, selectionRule: "explicit-report-date-range-submit" });
+    const finalSnapshot = await browser.inspect();
+    expect(finalSnapshot.headings).toContain("Best Sellers Report");
+    expect(JSON.stringify(finalSnapshot)).not.toContain("05/01/2022");
+    expect(JSON.stringify(finalSnapshot)).not.toContain("05/31/2023");
   }, 45_000);
 
   it("matches the requested list destination instead of its unrelated parent menu", async () => {

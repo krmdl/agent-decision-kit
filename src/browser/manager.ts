@@ -55,8 +55,8 @@ type VisualSnapshot = { url: string; fingerprint: string; privateStateFingerprin
 type DisclosureSearchIntent = { task: string; url: string; createdAt: number; visitedCandidateKeys: string[] };
 type HierarchicalMenuIntent = { task: string; url: string; path: string[]; nextIndex: number; createdAt: number };
 type AutomaticActionTrajectory = { fingerprints: Set<string>; blockedFingerprint?: string };
-type DeterministicBrowserMatch = { candidate: BrowserCandidate; rule: string; note: string; optionLabel?: string; rangeValue?: number };
-type InspectedBrowserCandidate = BrowserCandidate & { privateRangeValue?: number; privateValuePresent?: boolean };
+type DeterministicBrowserMatch = { candidate: BrowserCandidate; rule: string; note: string; optionLabel?: string; rangeValue?: number; textValue?: string };
+type InspectedBrowserCandidate = BrowserCandidate & { privateRangeValue?: number; privateValuePresent?: boolean; privateValue?: string };
 type PendingBrowserApproval =
   | { kind: "dom"; ref: string; createdAt: number; url: string; fingerprint: string; menuPath?: HierarchicalMenuIntent }
   | { kind: "drag"; sourceRef: string; targetRef: string; createdAt: number; url: string; fingerprint: string }
@@ -76,10 +76,12 @@ export class BrowserManager {
   private privateActionTargets = new Map<string, { href: string; target: string }>();
   private pending = new Map<string, PendingBrowserApproval>();
   private privateFieldValuePresence = new Map<string, boolean>();
+  private privateFieldValueHashes = new Map<string, string>();
   private privateRangeValues = new Map<string, number>();
   private nonProgressingActions = new Set<string>();
   private automaticActionTrajectories = new Map<string, AutomaticActionTrajectory>();
   private navigationActionsByTask = new Map<string, { labels: Set<string>; createdAt: number }>();
+  private completedReportActionsByTask = new Map<string, { pageIdentityHash: string; createdAt: number }>();
   private ownsContext = false;
   private lastInspectionFingerprint = "";
   private completedDisclosureIntent: { task: string; url: string; createdAt: number } | undefined;
@@ -412,6 +414,9 @@ export class BrowserManager {
           ? element.value.length > 0
           : element instanceof HTMLTextAreaElement ? element.value.length > 0
             : element instanceof HTMLSelectElement ? Array.from(element.selectedOptions).some((option) => option.value.length > 0) : undefined;
+        const privateValue = element instanceof HTMLInputElement && formEntryInputTypes.has(element.type)
+          ? element.value
+          : element instanceof HTMLTextAreaElement ? element.value : undefined;
         return {
           ref,
           role,
@@ -429,6 +434,7 @@ export class BrowserManager {
           ...(rangeBounds === undefined ? {} : rangeBounds),
           ...(privateRangeValue === undefined ? {} : { privateRangeValue }),
           ...(privateValuePresent === undefined ? {} : { privateValuePresent }),
+          ...(privateValue === undefined ? {} : { privateValue }),
         };
       });
       const heading = Array.from(document.querySelectorAll("h1,h2")).filter(visible).slice(0, 8).map((element) => redactEditableText(element.textContent ?? "")).filter(Boolean);
@@ -481,9 +487,11 @@ export class BrowserManager {
         this.privateActionTargets.set(ref, { href: actionState.href, target: actionState.target });
       }
     });
-    const candidates = rawCandidates.map(({ privateRangeValue, privateValuePresent, ...candidate }) => {
+    this.privateFieldValueHashes.clear();
+    const candidates = rawCandidates.map(({ privateRangeValue, privateValuePresent, privateValue, ...candidate }) => {
       if (privateRangeValue !== undefined) this.privateRangeValues.set(candidate.ref, privateRangeValue);
       if (privateValuePresent !== undefined) this.privateFieldValuePresence.set(candidate.ref, privateValuePresent);
+      if (privateValue !== undefined) this.privateFieldValueHashes.set(candidate.ref, createHash("sha256").update(privateValue).digest("hex"));
       return candidate;
     });
     this.candidates = new Map(candidates.map((candidate) => [candidate.ref, candidate]));
@@ -492,12 +500,21 @@ export class BrowserManager {
     const safeSnapshot = { ...snapshot, candidates };
     this.lastInspectionFingerprint = snapshotFingerprint({ ...safeSnapshot, privateStateFingerprint });
     browserDebug(`inspect finished with ${candidates.length} candidates`);
-    return { ...safeSnapshot, url: redactBrowserUrl(snapshot.url), candidates: candidates.map(({ ref, role, label, kind, risk, checked, expanded, selected, readOnly, dragSource, dropTarget, optionLabels, selectedOptionLabels, min, max, step }) => ({ ref, role, label, kind, risk, ...(checked === undefined ? {} : { checked }), ...(expanded === undefined ? {} : { expanded }), ...(selected === undefined ? {} : { selected }), ...(readOnly === undefined ? {} : { readOnly }), ...(dragSource === undefined ? {} : { dragSource }), ...(dropTarget === undefined ? {} : { dropTarget }), ...(optionLabels === undefined ? {} : { optionLabels }), ...(selectedOptionLabels === undefined ? {} : { selectedOptionLabels }), ...(min === undefined ? {} : { min }), ...(max === undefined ? {} : { max }), ...(step === undefined ? {} : { step }) })), inspectMs: Math.round(performance.now() - before), candidateLimit: 80, note: "Bounded visible DOM/accessibility snapshot. It includes up to three visible HTML tables with six rows and six cells each; visible table actions also include a bounded label of their non-action row cells. It includes adjacent explicit labels for otherwise unassociated form fields. Alongside semantic controls, it scans keyboard-operated jQuery UI slider handles with a linked visible numeric readout, native drag sources and declared drop targets, and clear CSS pointer-only text or icon targets within the same 80-candidate limit. Distinct labeled child targets are exposed separately; CSS image filenames may provide a fallback label for icon-only controls. Custom targets have no semantic role and always require a separate approval. Native select options are limited to 12 enabled labels; current editable values, passwords, cookies and storage are not returned. Editable values, slider readings and action destinations are hashed locally only to invalidate stale approvals. URL credentials, query and hash are redacted." };
+    return { ...safeSnapshot, url: redactBrowserUrl(snapshot.url), candidates: candidates.map(({ ref, role, label, kind, risk, checked, expanded, selected, readOnly, dragSource, dropTarget, optionLabels, selectedOptionLabels, min, max, step }) => ({ ref, role, label, kind, risk, ...(checked === undefined ? {} : { checked }), ...(expanded === undefined ? {} : { expanded }), ...(selected === undefined ? {} : { selected }), ...(readOnly === undefined ? {} : { readOnly }), ...(dragSource === undefined ? {} : { dragSource }), ...(dropTarget === undefined ? {} : { dropTarget }), ...(optionLabels === undefined ? {} : { optionLabels }), ...(selectedOptionLabels === undefined ? {} : { selectedOptionLabels }), ...(min === undefined ? {} : { min }), ...(max === undefined ? {} : { max }), ...(step === undefined ? {} : { step }) })), inspectMs: Math.round(performance.now() - before), candidateLimit: 80, note: "Bounded visible DOM/accessibility snapshot. It includes up to three visible HTML tables with six rows and six cells each; visible table actions also include a bounded label of their non-action row cells. It includes adjacent explicit labels for otherwise unassociated form fields. Alongside semantic controls, it scans keyboard-operated jQuery UI slider handles with a linked visible numeric readout, native drag sources and declared drop targets, and clear CSS pointer-only text or icon targets within the same 80-candidate limit. Distinct labeled child targets are exposed separately; CSS image filenames may provide a fallback label for icon-only controls. Custom targets have no semantic role and always require a separate approval. Native select options are limited to 12 enabled labels; current editable values, passwords, cookies and storage are not returned. Editable values, slider readings and action destinations are hashed locally for stale-approval and explicit-task checks; raw values are never returned. URL credentials, query, hash, and long opaque path tokens are redacted." };
   }
 
   async decideAndAct(task: string, provider: DecisionProvider) {
     browserDebug("decide-and-act started");
     const snapshot = await this.inspect();
+    const reportActionTaskKey = normalizeLabel(task);
+    const previousReportAction = this.completedReportActionsByTask.get(reportActionTaskKey);
+    if (parseExplicitReportDateRange(task) && previousReportAction) {
+      const currentPageIdentityHash = createHash("sha256").update(pageIdentity(this.requirePage().url())).digest("hex");
+      if (Date.now() - previousReportAction.createdAt <= 5 * 60_000 && previousReportAction.pageIdentityHash === currentPageIdentityHash) {
+        return { status: "report-filter-already-shown", candidateCount: snapshot.candidates.length, note: "The explicitly requested report filter was already applied on this page. No field was rewritten and Show Report was not clicked again." };
+      }
+      this.completedReportActionsByTask.delete(reportActionTaskKey);
+    }
     browserDebug(`initial snapshot ready with ${snapshot.candidates.length} candidates`);
     const visibleCollectionHeading = findVisibleAllCollectionHeading(task, snapshot.headings);
     if (visibleCollectionHeading) {
@@ -599,6 +616,8 @@ export class BrowserManager {
       if (rangePlan?.error) return { status: "no-safe-selection", candidateCount: snapshot.candidates.length, candidates: snapshot.candidates, note: rangePlan.error };
       if (rangePlan?.allSet && !/\b(?:submit|send|publish|post)\b/i.test(task)) return { status: "target-values-already-set", candidateCount: snapshot.candidates.length, note: "Every explicitly named visible slider already has its requested value. No control was changed." };
       if (rangePlan?.match) localMatch ??= rangePlan.match;
+      const reportDateMatch = findExplicitReportDateMatch(task, snapshot.candidates, this.privateFieldValueHashes);
+      if (reportDateMatch) localMatch ??= reportDateMatch;
       const taskKey = normalizeLabel(task);
       const priorNavigation = this.navigationActionsByTask.get(taskKey);
       const recentNavigationLabels = priorNavigation && Date.now() - priorNavigation.createdAt <= 5 * 60_000
@@ -625,7 +644,7 @@ export class BrowserManager {
       if (this.nonProgressingActions.has(nonProgressingActionKey(this.lastInspectionFingerprint, localMatch.candidate))) {
         return { status: "repeated-action-blocked", action: localMatch.candidate, note: repeatedActionNote(localMatch.candidate) };
       }
-      const result = await this.applyLocalMatch(localMatch.candidate, snapshot, localMatch.rule, localMatch.note, task, localMatch.optionLabel, localMatch.rangeValue);
+      const result = await this.applyLocalMatch(localMatch.candidate, snapshot, localMatch.rule, localMatch.note, task, localMatch.optionLabel, localMatch.rangeValue, localMatch.textValue);
       browserDebug(`deterministic action finished with status ${result.status}`);
       if (localMatch.rule === "unique-mentioned-navigation-label" && ["action-executed", "action-loop-detected"].includes(result.status)) {
         const taskKey = normalizeLabel(task);
@@ -796,7 +815,7 @@ export class BrowserManager {
     };
   }
 
-  private async applyLocalMatch(candidate: BrowserCandidate, snapshot: { title: string; url: string; headings: string[]; textExcerpt: string; candidates: BrowserCandidate[] }, rule: string, note: string, task: string, optionLabel?: string, rangeValue?: number) {
+  private async applyLocalMatch(candidate: BrowserCandidate, snapshot: { title: string; url: string; headings: string[]; textExcerpt: string; candidates: BrowserCandidate[] }, rule: string, note: string, task: string, optionLabel?: string, rangeValue?: number, textValue?: string) {
     const menuPathProgress = rule === "explicit-hierarchical-menu-path" ? this.hierarchicalMenuIntent : undefined;
     const metadata = {
       candidateCount: snapshot.candidates.length,
@@ -822,9 +841,18 @@ export class BrowserManager {
       ? await this.selectOption(candidate.ref, optionLabel)
       : rangeValue !== undefined
         ? await this.setRange(candidate.ref, rangeValue)
+        : textValue !== undefined
+          ? await this.fillCandidateText(candidate, textValue)
         : await this.perform(candidate, clickTextControl);
     const afterActionSnapshot = await this.inspect();
     const visibleStateChanged = this.lastInspectionFingerprint !== beforeActionFingerprint;
+    if (rule === "explicit-report-date-range-submit") {
+      this.completedReportActionsByTask.set(normalizeLabel(task), {
+        pageIdentityHash: createHash("sha256").update(pageIdentity(this.requirePage().url())).digest("hex"),
+        createdAt: Date.now(),
+      });
+      while (this.completedReportActionsByTask.size > 64) this.completedReportActionsByTask.delete(this.completedReportActionsByTask.keys().next().value!);
+    }
     if (menuPathProgress) this.advanceHierarchicalMenuIntent(menuPathProgress, visibleStateChanged, afterActionSnapshot.url === snapshot.url);
     const targetHeadingAfterAction = findVisibleAllCollectionHeading(task, afterActionSnapshot.headings);
     if (!visibleStateChanged) this.rememberNonProgressingAction(beforeActionFingerprint, candidate);
@@ -911,6 +939,14 @@ export class BrowserManager {
     return { status: "action-executed", action: candidate, effect: await this.perform(candidate) };
   }
 
+  private async fillCandidateText(candidate: BrowserCandidate, text: string) {
+    if (text.length > 20_000) throw new Error("Text exceeds the 20,000 character limit.");
+    if (candidate.readOnly) throw new Error("This field is read-only. Open its visible picker control and choose a current option instead.");
+    if (!COPYABLE_FIELD_KINDS.has(candidate.kind) || !["input", "textarea"].includes(candidate.role)) throw new Error("This field type is not supported for text entry. Password, file, and hidden fields are excluded.");
+    await this.candidateLocator(candidate.ref).fill(text, { timeout: 5_000 });
+    return { status: "filled", ref: candidate.ref, characterCount: text.length, valueReturned: false, submitted: false, note: "Text was entered only into the page field; it was not submitted." };
+  }
+
   async drag(sourceRef: string, targetRef: string) {
     if (sourceRef === targetRef) throw new Error("Choose different drag source and drop target refs.");
     const inspectedFingerprint = this.lastInspectionFingerprint;
@@ -939,12 +975,9 @@ export class BrowserManager {
     if (this.lastInspectionFingerprint !== inspectedFingerprint) throw new Error("The page changed after inspection. Inspect it again and select a current field ref.");
     const candidate = this.candidates.get(ref);
     if (!candidate) throw new Error("Unknown or stale action ref. Call browser_inspect first.");
-    if (candidate.readOnly) throw new Error("This field is read-only. Open its visible picker control and choose a current option instead.");
-    if (!["text", "search", "email", "tel", "url", "number", "date", "datetime-local", "time", "month", "week", "textarea"].includes(candidate.kind)) throw new Error("This field type is not supported for text entry. Password, file, and hidden fields are excluded.");
-    const locator = this.candidateLocator(candidate.ref);
-    await locator.fill(text, { timeout: 5_000 });
+    const result = await this.fillCandidateText(candidate, text);
     await this.inspect();
-    return { status: "filled", ref, characterCount: text.length, valueReturned: false, note: "Text was entered only into the page field; it was not submitted." };
+    return result;
   }
 
   async copyField(sourceRef: string, targetRef: string) {
@@ -1326,7 +1359,7 @@ export class BrowserManager {
     if (this.context && this.ownsContext) await this.context.close().catch(() => undefined);
     if (this.browser) await this.browser.close().catch(() => undefined);
     await closeOcrWorker().catch(() => undefined);
-    this.context = undefined; this.browser = undefined; this.page = undefined; this.ownsContext = false; this.lastInspectionFingerprint = ""; this.candidates.clear(); this.privateActionTargets.clear(); this.pending.clear(); this.privateFieldValuePresence.clear(); this.privateRangeValues.clear(); this.nonProgressingActions.clear(); this.automaticActionTrajectories.clear(); this.navigationActionsByTask.clear(); this.completedDisclosureIntent = undefined; this.disclosureSearchIntent = undefined; this.hierarchicalMenuIntent = undefined; this.lastVisualSnapshot = undefined;
+    this.context = undefined; this.browser = undefined; this.page = undefined; this.ownsContext = false; this.lastInspectionFingerprint = ""; this.candidates.clear(); this.privateActionTargets.clear(); this.pending.clear(); this.privateFieldValuePresence.clear(); this.privateFieldValueHashes.clear(); this.privateRangeValues.clear(); this.nonProgressingActions.clear(); this.automaticActionTrajectories.clear(); this.navigationActionsByTask.clear(); this.completedReportActionsByTask.clear(); this.completedDisclosureIntent = undefined; this.disclosureSearchIntent = undefined; this.hierarchicalMenuIntent = undefined; this.lastVisualSnapshot = undefined;
     return { closed: true };
   }
 
@@ -1781,6 +1814,90 @@ function findVisibleAllCollectionHeading(task: string, headings: string[]) {
   return matches.length === 1 ? matches[0] : undefined;
 }
 
+function findExplicitReportDateMatch(task: string, candidates: BrowserCandidate[], fieldValueHashes: Map<string, string>): DeterministicBrowserMatch | undefined {
+  const dates = parseExplicitReportDateRange(task);
+  if (!dates) return undefined;
+  const editableFields = candidates.filter((candidate) =>
+    candidate.role === "input"
+    && ["text", "date"].includes(candidate.kind)
+    && !candidate.readOnly
+    && candidate.risk === "low",
+  );
+  const fromFields = editableFields.filter((candidate) => labelParts(candidate).some((label) => /^from(?:\s+date)?$/u.test(label)));
+  const toFields = editableFields.filter((candidate) => labelParts(candidate).some((label) => /^to(?:\s+date)?$/u.test(label)));
+  if (fromFields.length !== 1 || toFields.length !== 1 || fromFields[0]!.ref === toFields[0]!.ref) return undefined;
+  const from = fromFields[0]!;
+  const to = toFields[0]!;
+  const fromValue = from.kind === "date" ? dates.from.iso : dates.from.slash;
+  const toValue = to.kind === "date" ? dates.to.iso : dates.to.slash;
+  const fromHash = createHash("sha256").update(fromValue).digest("hex");
+  const toHash = createHash("sha256").update(toValue).digest("hex");
+  if (fieldValueHashes.get(from.ref) !== fromHash) {
+    return {
+      candidate: from,
+      textValue: fromValue,
+      rule: "explicit-report-date-range-fill",
+      note: "The task gives a report date range. This fills only the uniquely labeled From field locally; it does not submit the form or return the field value.",
+    };
+  }
+  if (fieldValueHashes.get(to.ref) !== toHash) {
+    return {
+      candidate: to,
+      textValue: toValue,
+      rule: "explicit-report-date-range-fill",
+      note: "The task gives a report date range. This fills only the uniquely labeled To field locally; it does not submit the form or return the field value.",
+    };
+  }
+  const showReport = candidates.filter((candidate) =>
+    ["button", "link"].includes(candidate.role)
+    && labelParts(candidate).includes("show report"),
+  );
+  if (showReport.length !== 1) return undefined;
+  return {
+    candidate: showReport[0]!,
+    rule: "explicit-report-date-range-submit",
+    note: "Both requested dates match the locally hashed From/To field state. The task asks to show this report, so its unique visible Show Report control is selected next.",
+  };
+}
+
+function parseExplicitReportDateRange(task: string) {
+  if (!/\breports?\b/iu.test(task)) return undefined;
+  const month = "(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)";
+  const date = `(?:${month}\\s+\\d{1,2}(?:st|nd|rd|th)?[,]?\\s+\\d{4}|\\d{4}-\\d{1,2}-\\d{1,2})`;
+  const range = task.match(new RegExp(`\\bfrom\\s+(${date})\\s+(?:to|through|until)\\s+(${date})\\b`, "iu"))
+    ?? task.match(new RegExp(`\\bbetween\\s+(${date})\\s+and\\s+(${date})\\b`, "iu"));
+  if (!range?.[1] || !range[2]) return undefined;
+  const from = parseReportDate(range[1]);
+  const to = parseReportDate(range[2]);
+  if (!from || !to || to.timestamp < from.timestamp) return undefined;
+  return { from, to };
+}
+
+function parseReportDate(value: string) {
+  let year = 0;
+  let month = 0;
+  let day = 0;
+  const iso = value.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/u);
+  const named = value.match(/^([a-z]+)\s+(\d{1,2})(?:st|nd|rd|th)?[,]?\s+(\d{4})$/iu);
+  if (iso) {
+    year = Number(iso[1]); month = Number(iso[2]); day = Number(iso[3]);
+  } else if (named) {
+    const monthNames = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+    month = monthNames.indexOf(named[1]!.slice(0, 3).toLowerCase()) + 1;
+    day = Number(named[2]); year = Number(named[3]);
+  } else {
+    return undefined;
+  }
+  const checked = new Date(Date.UTC(year, month - 1, day));
+  if (checked.getUTCFullYear() !== year || checked.getUTCMonth() + 1 !== month || checked.getUTCDate() !== day) return undefined;
+  const pad = (part: number) => String(part).padStart(2, "0");
+  return {
+    iso: `${year}-${pad(month)}-${pad(day)}`,
+    slash: `${pad(month)}/${pad(day)}/${year}`,
+    timestamp: checked.getTime(),
+  };
+}
+
 function findExplicitRangePlan(task: string, candidates: BrowserCandidate[], rangeValues: Map<string, number>) {
   const match = task.match(/\b(?:set|adjust|move)\s+(?:the\s+)?sliders?\s+to\s+(?:the\s+)?(?:combination\s+)?\[([^\]]+)\]/i);
   if (!match) return undefined;
@@ -1947,6 +2064,11 @@ function redactBrowserUrl(rawUrl: string) {
   if (url.protocol === "file:") return "file://[local file]";
   url.username = "";
   url.password = "";
+  url.pathname = url.pathname.split("/").map((segment) => {
+    let decoded = segment;
+    try { decoded = decodeURIComponent(segment); } catch { /* Leave malformed path bytes as-is. */ }
+    return decoded.length >= 64 && /^[A-Za-z0-9+/_=-]+$/u.test(decoded) ? "[redacted]" : segment;
+  }).join("/");
   url.search = "";
   url.hash = "";
   return url.href;
