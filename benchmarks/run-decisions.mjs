@@ -103,6 +103,11 @@ const fixtureSource = fixturesIndex >= 0 ? path.resolve(fixturesPath) : new URL(
 const cases = (await readFile(fixtureSource, "utf8"))
   .split(/\r?\n/).filter(Boolean).map((line) => JSON.parse(line));
 if (cases.length === 0) throw new Error("The decision fixture file must contain at least one JSONL record");
+const sourceDataset = cases[0]?.sourceDataset ?? null;
+const sourceDatasetKey = JSON.stringify(sourceDataset);
+if (cases.some((item) => JSON.stringify(item.sourceDataset ?? null) !== sourceDatasetKey)) {
+  throw new Error("All cases in a fixture file must use the same sourceDataset metadata");
+}
 const provider = createProvider();
 const isLocalProvider = provider.id === "semantic-local" || provider.id === "semantic-nli";
 if (profileOnnx && !isLocalProvider) throw new Error("--profile-onnx is supported only with local Transformers.js providers");
@@ -173,11 +178,25 @@ const byQuestionType = Object.fromEntries(["choice", "noul", "score"].map((type)
     meanBrierScore: mean(selected.filter((item) => item.brierScore !== null), "brierScore"),
   }];
 }));
+const classificationExpectedLabelCounts = Object.create(null);
+for (const item of cases.filter((record) => record.question.type === "choice" || record.question.type === "noul")) {
+  const label = String(item.expected);
+  classificationExpectedLabelCounts[label] = (classificationExpectedLabelCounts[label] ?? 0) + 1;
+}
+const classificationSampleCount = Object.values(classificationExpectedLabelCounts).reduce((sum, count) => sum + count, 0);
+const classificationMajorityBaselineAccuracy = classificationSampleCount
+  ? Math.max(...Object.values(classificationExpectedLabelCounts)) / classificationSampleCount
+  : null;
+const allCallOrdered = records.map((item) => item.latencyMs).sort((a, b) => a - b);
+const allCallPercentile = (fraction) => allCallOrdered[Math.max(0, Math.ceil(allCallOrdered.length * fraction) - 1)] ?? 0;
 const report = `${JSON.stringify({
   provider: provider.id,
   model: provider.model,
   sampleCount: records.length,
+  sourceDataset,
   byQuestionType,
+  classificationExpectedLabelCounts,
+  classificationMajorityBaselineAccuracy,
   runtime: {
     timestampUtc: new Date().toISOString(),
     ...repository,
@@ -217,10 +236,11 @@ const report = `${JSON.stringify({
   ...(onnxExecutionProviderProfile ? { onnxExecutionProviderProfile } : {}),
   latencyMs: {
     firstCallIncludingInitialization: firstCallMs,
+    allCalls: { sampleCount: allCallOrdered.length, p50: allCallPercentile(0.5), p95: allCallPercentile(0.95) },
     withinProcessSteadyState: { sampleCount: warmRecords.length, p50: percentile(0.5), p95: percentile(0.95) },
   },
   records,
-  note: "The first call includes provider initialization and may include model retrieval if files were missing. For the Transformers.js local provider, cache inspection only checks whether the model cache directory existed before the process; it does not verify every required file. warmWithinProcess only means later calls in this process. Choice/yes-no accuracy and score error are reported separately. Confidence reliability bins compare predicted confidence with empirical Choice/yes-no correctness; they are descriptive measurements, not post-hoc calibration. Score confidence is recorded but excluded from those binary reliability bins. This small human-labeled fixture is not a general quality, calibration, or performance claim; all probabilities remain uncalibrated.",
+  note: "The first call includes provider initialization and may include model retrieval if files were missing. For the Transformers.js local provider, cache inspection only checks whether the model cache directory existed before the process; it does not verify every required file. warmWithinProcess only means later calls in this process. Choice/yes-no accuracy and score error are reported separately. Confidence reliability bins compare predicted confidence with empirical Choice/yes-no correctness; they are descriptive measurements, not post-hoc calibration. Score confidence is recorded but excluded from those binary reliability bins. Fixture-specific results do not establish general quality or performance; all probabilities remain uncalibrated.",
 }, null, 2)}\n`;
 if (outputPath) {
   const resolvedOutput = path.resolve(outputPath);
