@@ -1,50 +1,57 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 500" role="img" aria-labelledby="title description">
-  <title id="title">BoolQ MiniLM CPU and DirectML requested benchmark</title>
-  <desc id="description">The local MiniLM provider answered all 3,270 BoolQ validation questions. CPU accuracy was 57.0 percent and DirectML-requested accuracy was 57.2 percent, both below the 62.2 percent majority baseline. Warm decision p95 was 49 milliseconds on CPU and 149 milliseconds with DirectML requested. A separate 30-row profile recorded mixed DirectML and CPU node execution; event counts do not measure compute share.</desc>
-  <rect width="1000" height="500" rx="24" fill="#0d1b2b"/>
-  <text x="40" y="48" fill="#f3f8ff" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="25" font-weight="700">BoolQ yes/no · quality and decision latency</text>
-  <text x="40" y="77" fill="#9fb3c9" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="14">3,270 published validation labels · one local process per requested device · Windows 10</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 520" role="img" aria-labelledby="title description">
+  <title id="title">BoolQ accuracy and latency: MiniLM and NLI local models</title>
+  <desc id="description">On 3,270 BoolQ validation questions, MiniLM accuracy was 57.0 percent on CPU and 57.2 percent with DirectML requested; optional NLI accuracy was 49.7 percent on CPU. All were below the 62.2 percent majority baseline. Warm decision p95 was 49, 149, and 145 milliseconds respectively.</desc>
+  <rect width="1000" height="520" rx="24" fill="#0d1b2b"/>
+  <text x="40" y="48" fill="#f3f8ff" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="25" font-weight="700">BoolQ yes/no · local model quality and latency</text>
+  <text x="40" y="77" fill="#9fb3c9" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="14">3,270 published validation labels · one run per condition · Windows 10</text>
 
-  <text x="44" y="123" fill="#f3f8ff" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="17" font-weight="700">Accuracy · higher is better</text>
-  <text x="540" y="123" fill="#f3f8ff" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="17" font-weight="700">Warm p95 · lower is better</text>
+  <text x="40" y="123" fill="#f3f8ff" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="17" font-weight="700">Accuracy · higher is better</text>
+  <text x="535" y="123" fill="#f3f8ff" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="17" font-weight="700">Warm p95 · lower is better</text>
 
   <g stroke="#28445d" stroke-width="1">
-    <line x1="135" y1="151" x2="135" y2="332"/>
-    <line x1="229" y1="151" x2="229" y2="332"/>
-    <line x1="323" y1="151" x2="323" y2="332"/>
-    <line x1="417" y1="151" x2="417" y2="332"/>
-    <line x1="610" y1="151" x2="610" y2="332"/>
-    <line x1="685" y1="151" x2="685" y2="332"/>
-    <line x1="760" y1="151" x2="760" y2="332"/>
-    <line x1="835" y1="151" x2="835" y2="332"/>
-    <line x1="910" y1="151" x2="910" y2="332"/>
+    <line x1="165" y1="151" x2="165" y2="355"/>
+    <line x1="254" y1="151" x2="254" y2="355"/>
+    <line x1="342" y1="151" x2="342" y2="355"/>
+    <line x1="431" y1="151" x2="431" y2="355"/>
+    <line x1="475" y1="151" x2="475" y2="355"/>
+    <line x1="610" y1="151" x2="610" y2="355"/>
+    <line x1="685" y1="151" x2="685" y2="355"/>
+    <line x1="760" y1="151" x2="760" y2="355"/>
+    <line x1="835" y1="151" x2="835" y2="355"/>
+    <line x1="910" y1="151" x2="910" y2="355"/>
   </g>
   <g fill="#9fb3c9" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="12" text-anchor="middle">
-    <text x="135" y="352">0%</text><text x="229" y="352">20%</text><text x="323" y="352">40%</text><text x="417" y="352">60%</text>
-    <text x="610" y="352">0</text><text x="685" y="352">50</text><text x="760" y="352">100</text><text x="835" y="352">150</text><text x="910" y="352">200 ms</text>
+    <text x="165" y="375">0%</text><text x="254" y="375">20%</text><text x="342" y="375">40%</text><text x="431" y="375">60%</text><text x="475" y="375">70%</text>
+    <text x="610" y="375">0</text><text x="685" y="375">50</text><text x="760" y="375">100</text><text x="835" y="375">150</text><text x="910" y="375">200 ms</text>
   </g>
 
-  <line x1="427.3" y1="146" x2="427.3" y2="332" stroke="#f2bd6b" stroke-width="2" stroke-dasharray="6 5"/>
-  <text x="420" y="144" fill="#f2bd6b" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="11" text-anchor="end">62.2% majority baseline</text>
+  <line x1="440.6" y1="145" x2="440.6" y2="355" stroke="#f2bd6b" stroke-width="2" stroke-dasharray="6 5"/>
+  <text x="435" y="144" fill="#f2bd6b" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="11" text-anchor="end">62.2% majority baseline</text>
 
   <g font-family="Inter,Segoe UI,Arial,sans-serif">
-    <text x="44" y="204" fill="#75e2c2" font-size="16" font-weight="700">CPU</text>
-    <text x="44" y="270" fill="#8dbdff" font-size="16" font-weight="700">DirectML</text>
-    <text x="44" y="289" fill="#9fb3c9" font-size="11">requested</text>
-    <rect x="135" y="180" width="268.0" height="27" rx="8" fill="#75e2c2"/>
-    <rect x="135" y="246" width="269.0" height="27" rx="8" fill="#8dbdff"/>
-    <text x="438" y="199" fill="#e6fff6" font-size="14" font-weight="700">57.0%</text>
-    <text x="438" y="265" fill="#e9f2ff" font-size="14" font-weight="700">57.2%</text>
+    <text x="40" y="204" fill="#75e2c2" font-size="14" font-weight="700">MiniLM · CPU</text>
+    <text x="40" y="264" fill="#8dbdff" font-size="14" font-weight="700">MiniLM · DML</text>
+    <text x="40" y="324" fill="#f2bd6b" font-size="14" font-weight="700">NLI · CPU</text>
 
-    <text x="540" y="204" fill="#75e2c2" font-size="16" font-weight="700">CPU</text>
-    <text x="540" y="270" fill="#8dbdff" font-size="16" font-weight="700">DirectML</text>
+    <rect x="165" y="180" width="252.4" height="27" rx="8" fill="#75e2c2"/>
+    <rect x="165" y="240" width="253.3" height="27" rx="8" fill="#8dbdff"/>
+    <rect x="165" y="300" width="220.1" height="27" rx="8" fill="#f2bd6b"/>
+    <text x="450" y="199" fill="#e6fff6" font-size="14" font-weight="700">57.0%</text>
+    <text x="450" y="259" fill="#e9f2ff" font-size="14" font-weight="700">57.2%</text>
+    <text x="395" y="319" fill="#fff1d6" font-size="14" font-weight="700">49.7%</text>
+
+    <text x="535" y="204" fill="#75e2c2" font-size="14" font-weight="700">MiniLM · CPU</text>
+    <text x="535" y="264" fill="#8dbdff" font-size="14" font-weight="700">MiniLM · DML</text>
+    <text x="535" y="324" fill="#f2bd6b" font-size="14" font-weight="700">NLI · CPU</text>
     <rect x="610" y="180" width="73.5" height="27" rx="8" fill="#75e2c2"/>
-    <rect x="610" y="246" width="223.5" height="27" rx="8" fill="#8dbdff"/>
+    <rect x="610" y="240" width="223.5" height="27" rx="8" fill="#8dbdff"/>
+    <rect x="610" y="300" width="217.5" height="27" rx="8" fill="#f2bd6b"/>
     <text x="693" y="199" fill="#e6fff6" font-size="14" font-weight="700">49 ms</text>
-    <text x="843" y="265" fill="#e9f2ff" font-size="14" font-weight="700">149 ms</text>
+    <text x="843" y="259" fill="#e9f2ff" font-size="14" font-weight="700">149 ms</text>
+    <text x="837" y="319" fill="#fff1d6" font-size="14" font-weight="700">145 ms</text>
   </g>
 
-  <line x1="40" y1="391" x2="960" y2="391" stroke="#28445d"/>
-  <text x="40" y="421" fill="#9fb3c9" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="13">Neither device beat the majority baseline. Separate 30-row profiling observed mixed DirectML/CPU execution; one run per device is descriptive.</text>
-  <text x="40" y="452" fill="#9fb3c9" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="12">Decision p95 excludes model initialization. Confidence estimates are uncalibrated; the dataset passages and questions stay out of the reports.</text>
+  <line x1="40" y1="412" x2="960" y2="412" stroke="#28445d"/>
+  <text x="40" y="441" fill="#9fb3c9" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="13">Every model/device condition stayed below the majority baseline. Each is one run, not a quality or speed guarantee.</text>
+  <text x="40" y="471" fill="#9fb3c9" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="12">DirectML values were unprofiled. A separate 30-row ONNX trace found mixed DirectML/CPU events; counts do not measure compute share.</text>
 </svg>

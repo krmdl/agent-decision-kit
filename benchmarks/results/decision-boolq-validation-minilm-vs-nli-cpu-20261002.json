@@ -1,0 +1,341 @@
+{
+  "schemaVersion": 1,
+  "comparedCaseCount": 3270,
+  "questionTypeCounts": {
+    "choice": 0,
+    "noul": 3270,
+    "score": 0
+  },
+  "sourceDataset": {
+    "id": "google/boolq",
+    "revision": "35b264d03638db9f4ce671b711558bf7ff0f80d5",
+    "split": "validation",
+    "rowCount": 3270,
+    "license": "CC-BY-SA-3.0",
+    "datasetCard": "https://huggingface.co/datasets/google/boolq",
+    "parquetUrl": "https://huggingface.co/datasets/google/boolq/resolve/35b264d03638db9f4ce671b711558bf7ff0f80d5/data/validation-00000-of-00001.parquet",
+    "parquetSha256": "52355d11524b4b874a9b9dcc278feb10f672d52c4f4eff9872e695ede59820f8",
+    "citation": "Clark et al. (2019), BoolQ: Exploring the Surprising Difficulty of Natural Yes/No Questions, NAACL.",
+    "selection": "Every row in the pinned validation split; no resampling or dropped examples.",
+    "textHandling": "Passage/question text is used only in the local temporary fixture and is not written to the benchmark result."
+  },
+  "pairedOutcomes": {
+    "choice": {
+      "sampleCount": 0,
+      "predictionAgreementCount": 0,
+      "predictionDisagreementCount": 0,
+      "bothCorrectCount": 0,
+      "baselineOnlyCorrectCount": 0,
+      "candidateOnlyCorrectCount": 0,
+      "bothIncorrectCount": 0
+    },
+    "noul": {
+      "sampleCount": 3270,
+      "predictionAgreementCount": 1542,
+      "predictionDisagreementCount": 1728,
+      "bothCorrectCount": 881,
+      "baselineOnlyCorrectCount": 983,
+      "candidateOnlyCorrectCount": 745,
+      "bothIncorrectCount": 661
+    },
+    "score": {
+      "sampleCount": 0,
+      "predictionAgreementCount": 0,
+      "predictionDisagreementCount": 0,
+      "bothCorrectCount": 0,
+      "baselineOnlyCorrectCount": 0,
+      "candidateOnlyCorrectCount": 0,
+      "bothIncorrectCount": 0
+    }
+  },
+  "baseline": {
+    "provider": "semantic-local",
+    "model": "Xenova/all-MiniLM-L6-v2",
+    "runtime": {
+      "node": "v22.14.0",
+      "platform": "win32",
+      "architecture": "x64",
+      "osVersion": "10.0.19045",
+      "cpuModel": "AMD Ryzen 5 5600H with Radeon Graphics",
+      "requestedDevice": "cpu",
+      "modelCacheState": "model cache directory existed before this process; required files were not individually verified"
+    },
+    "byQuestionType": {
+      "choice": {
+        "sampleCount": 0,
+        "answeredCount": 0,
+        "accuracy": null,
+        "meanBrierScore": null,
+        "brierSampleCount": 0
+      },
+      "noul": {
+        "sampleCount": 3270,
+        "answeredCount": 3270,
+        "accuracy": 0.5700305810397553,
+        "meanBrierScore": 0.4918349355734162,
+        "brierSampleCount": 3270
+      },
+      "score": {
+        "sampleCount": 0,
+        "answeredCount": 0,
+        "meanAbsoluteError": null,
+        "withinHalfPointRate": null,
+        "exactMatchRate": null,
+        "meanBrierScore": null,
+        "brierSampleCount": 0
+      }
+    },
+    "confidenceReliability": {
+      "sampleCount": 3270,
+      "expectedCalibrationError": 0.04320835325143261,
+      "groups": [
+        {
+          "confidenceSource": "maximum-probability",
+          "calibration": "uncalibrated-estimate",
+          "outcome": "predicted choice/yes-no correctness",
+          "sampleCount": 3270,
+          "expectedCalibrationError": 0.04320835325143261,
+          "bins": [
+            {
+              "lowerBound": 0,
+              "upperBound": 0.1,
+              "sampleCount": 0,
+              "meanConfidence": null,
+              "accuracy": null
+            },
+            {
+              "lowerBound": 0.1,
+              "upperBound": 0.2,
+              "sampleCount": 0,
+              "meanConfidence": null,
+              "accuracy": null
+            },
+            {
+              "lowerBound": 0.2,
+              "upperBound": 0.3,
+              "sampleCount": 0,
+              "meanConfidence": null,
+              "accuracy": null
+            },
+            {
+              "lowerBound": 0.3,
+              "upperBound": 0.4,
+              "sampleCount": 0,
+              "meanConfidence": null,
+              "accuracy": null
+            },
+            {
+              "lowerBound": 0.4,
+              "upperBound": 0.5,
+              "sampleCount": 0,
+              "meanConfidence": null,
+              "accuracy": null
+            },
+            {
+              "lowerBound": 0.5,
+              "upperBound": 0.6,
+              "sampleCount": 3248,
+              "meanConfidence": 0.5283653349011889,
+              "accuracy": 0.5708128078817734
+            },
+            {
+              "lowerBound": 0.6,
+              "upperBound": 0.7,
+              "sampleCount": 22,
+              "meanConfidence": 0.6100874041475554,
+              "accuracy": 0.45454545454545453
+            },
+            {
+              "lowerBound": 0.7,
+              "upperBound": 0.8,
+              "sampleCount": 0,
+              "meanConfidence": null,
+              "accuracy": null
+            },
+            {
+              "lowerBound": 0.8,
+              "upperBound": 0.9,
+              "sampleCount": 0,
+              "meanConfidence": null,
+              "accuracy": null
+            },
+            {
+              "lowerBound": 0.9,
+              "upperBound": 1,
+              "sampleCount": 0,
+              "meanConfidence": null,
+              "accuracy": null
+            }
+          ]
+        }
+      ]
+    },
+    "latency": {
+      "firstCallIncludingInitializationMs": 242,
+      "warmCallCount": 3269,
+      "warmP50Ms": 16,
+      "warmP95Ms": 49
+    }
+  },
+  "candidate": {
+    "provider": "semantic-nli",
+    "model": "Xenova/nli-deberta-v3-small",
+    "runtime": {
+      "node": "v22.14.0",
+      "platform": "win32",
+      "architecture": "x64",
+      "osVersion": "10.0.19045",
+      "cpuModel": "AMD Ryzen 5 5600H with Radeon Graphics",
+      "requestedDevice": "cpu",
+      "modelCacheState": "model cache directory existed before this process; required files were not individually verified"
+    },
+    "byQuestionType": {
+      "choice": {
+        "sampleCount": 0,
+        "answeredCount": 0,
+        "accuracy": null,
+        "meanBrierScore": null,
+        "brierSampleCount": 0
+      },
+      "noul": {
+        "sampleCount": 3270,
+        "answeredCount": 3270,
+        "accuracy": 0.4972477064220184,
+        "meanBrierScore": 0.5217413910002147,
+        "brierSampleCount": 3270
+      },
+      "score": {
+        "sampleCount": 0,
+        "answeredCount": 0,
+        "meanAbsoluteError": null,
+        "withinHalfPointRate": null,
+        "exactMatchRate": null,
+        "meanBrierScore": null,
+        "brierSampleCount": 0
+      }
+    },
+    "confidenceReliability": {
+      "sampleCount": 3270,
+      "expectedCalibrationError": 0.08408483786802816,
+      "groups": [
+        {
+          "confidenceSource": "maximum-probability",
+          "calibration": "uncalibrated-estimate",
+          "outcome": "predicted choice/yes-no correctness",
+          "sampleCount": 3270,
+          "expectedCalibrationError": 0.08408483786802816,
+          "bins": [
+            {
+              "lowerBound": 0,
+              "upperBound": 0.1,
+              "sampleCount": 0,
+              "meanConfidence": null,
+              "accuracy": null
+            },
+            {
+              "lowerBound": 0.1,
+              "upperBound": 0.2,
+              "sampleCount": 0,
+              "meanConfidence": null,
+              "accuracy": null
+            },
+            {
+              "lowerBound": 0.2,
+              "upperBound": 0.3,
+              "sampleCount": 0,
+              "meanConfidence": null,
+              "accuracy": null
+            },
+            {
+              "lowerBound": 0.3,
+              "upperBound": 0.4,
+              "sampleCount": 0,
+              "meanConfidence": null,
+              "accuracy": null
+            },
+            {
+              "lowerBound": 0.4,
+              "upperBound": 0.5,
+              "sampleCount": 0,
+              "meanConfidence": null,
+              "accuracy": null
+            },
+            {
+              "lowerBound": 0.5,
+              "upperBound": 0.6,
+              "sampleCount": 2278,
+              "meanConfidence": 0.5450459359241614,
+              "accuracy": 0.4929762949956102
+            },
+            {
+              "lowerBound": 0.6,
+              "upperBound": 0.7,
+              "sampleCount": 772,
+              "meanConfidence": 0.6375014083040325,
+              "accuracy": 0.5103626943005182
+            },
+            {
+              "lowerBound": 0.7,
+              "upperBound": 0.8,
+              "sampleCount": 170,
+              "meanConfidence": 0.7333076558877109,
+              "accuracy": 0.5
+            },
+            {
+              "lowerBound": 0.8,
+              "upperBound": 0.9,
+              "sampleCount": 42,
+              "meanConfidence": 0.8363311049158307,
+              "accuracy": 0.5
+            },
+            {
+              "lowerBound": 0.9,
+              "upperBound": 1,
+              "sampleCount": 8,
+              "meanConfidence": 0.9254353343904583,
+              "accuracy": 0.375
+            }
+          ]
+        }
+      ]
+    },
+    "latency": {
+      "firstCallIncludingInitializationMs": 1151,
+      "warmCallCount": 3269,
+      "warmP50Ms": 59,
+      "warmP95Ms": 145
+    }
+  },
+  "deltas": {
+    "accuracyPercentagePoints": {
+      "choice": null,
+      "yesNo": -7.278287461773697
+    },
+    "scoreMeanAbsoluteError": null,
+    "meanBrierScore": {
+      "choice": null,
+      "noul": 0.029906455426798484,
+      "score": null
+    },
+    "expectedCalibrationError": 0.04087648461659555,
+    "latencyMs": {
+      "firstCallIncludingInitialization": 909,
+      "warmP50": 43,
+      "warmP95": 96
+    }
+  },
+  "comparability": {
+    "sameLabeledCases": true,
+    "sourceDatasetMetadataMatches": true,
+    "sameHost": true,
+    "fieldsComparedForHost": [
+      "node",
+      "platform",
+      "architecture",
+      "osVersion",
+      "cpuModel"
+    ],
+    "providerCostsIncluded": false,
+    "note": "This summarizes two completed runs; it does not call either provider. Paired outcomes count prediction agreement and which device-only answers are correct, but do not estimate statistical significance. Positive accuracy deltas favor the candidate; lower score error, Brier, ECE, and latency values favor the candidate. A paired result on one fixture is not a parity or general performance claim."
+  }
+}
