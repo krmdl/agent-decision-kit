@@ -40,9 +40,9 @@
   },
   "classificationMajorityBaselineAccuracy": 0.5333333333333333,
   "runtime": {
-    "timestampUtc": "2026-10-02T14:08:22.913Z",
-    "agentDecisionKitCommit": "321a405d971969cc13342c613bcd5f2062cbd853",
-    "trackedWorkingTreeModified": true,
+    "timestampUtc": "2026-10-02T14:11:28.657Z",
+    "agentDecisionKitCommit": "922c6f8cf3451b25a18a72a79127ac8e4300950f",
+    "trackedWorkingTreeModified": false,
     "node": "v22.14.0",
     "platform": "win32",
     "architecture": "x64",
@@ -155,21 +155,21 @@
       "DmlExecutionProvider": 5340,
       "CPUExecutionProvider": 60
     },
-    "uncompressedBytes": 4659291,
-    "compressedBytes": 205152,
+    "uncompressedBytes": 4680909,
+    "compressedBytes": 205433,
     "latencyNote": "Profiling may add overhead; use a separate unprofiled run for latency comparisons."
   },
   "latencyMs": {
-    "firstCallIncludingInitialization": 518,
+    "firstCallIncludingInitialization": 517,
     "allCalls": {
       "sampleCount": 30,
-      "p50": 114,
-      "p95": 188
+      "p50": 115,
+      "p95": 185
     },
     "withinProcessSteadyState": {
       "sampleCount": 29,
-      "p50": 114,
-      "p95": 180
+      "p50": 115,
+      "p95": 183
     }
   },
   "records": [
@@ -187,7 +187,7 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": false,
-      "latencyMs": 518,
+      "latencyMs": 517,
       "brierScore": 0.5098623385163039
     },
     {
@@ -204,7 +204,7 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 123,
+      "latencyMs": 121,
       "brierScore": 0.5015776950260145
     },
     {
@@ -221,7 +221,7 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 188,
+      "latencyMs": 185,
       "brierScore": 0.6313832167985403
     },
     {
@@ -272,7 +272,7 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 95,
+      "latencyMs": 94,
       "brierScore": 0.5211588744290597
     },
     {
@@ -289,7 +289,7 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 123,
+      "latencyMs": 121,
       "brierScore": 0.552671870227551
     },
     {
@@ -306,7 +306,7 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 156,
+      "latencyMs": 153,
       "brierScore": 0.540169379933923
     },
     {
@@ -323,7 +323,7 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 90,
+      "latencyMs": 89,
       "brierScore": 0.3562888443588511
     },
     {
@@ -340,7 +340,7 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 131,
+      "latencyMs": 132,
       "brierScore": 0.49267113828753334
     },
     {
@@ -357,7 +357,7 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 114,
+      "latencyMs": 109,
       "brierScore": 0.5201551821335183
     },
     {
@@ -374,7 +374,7 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 114,
+      "latencyMs": 115,
       "brierScore": 0.5092341105278237
     },
     {
@@ -408,7 +408,7 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 120,
+      "latencyMs": 117,
       "brierScore": 0.4186007093093777
     },
     {
@@ -425,7 +425,7 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 101,
+      "latencyMs": 102,
       "brierScore": 0.4100903650921355
     },
     {
@@ -442,7 +442,7 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 168,
+      "latencyMs": 167,
       "brierScore": 0.47671004001907324
     },
     {
@@ -459,7 +459,7 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 113,
+      "latencyMs": 112,
       "brierScore": 0.4987098959504887
     },
     {
@@ -476,7 +476,7 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 118,
+      "latencyMs": 119,
       "brierScore": 0.595887130889318
     },
     {
@@ -493,7 +493,7 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 122,
+      "latencyMs": 121,
       "brierScore": 0.4544795392306199
     },
     {
@@ -510,7 +510,7 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 101,
+      "latencyMs": 98,
       "brierScore": 0.4825058908939469
     },
     {
@@ -544,7 +544,7 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 144,
+      "latencyMs": 143,
       "brierScore": 0.5446843053676209
     },
     {
@@ -561,7 +561,7 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 101,
+      "latencyMs": 102,
       "brierScore": 0.4507370713900341
     },
     {
@@ -578,7 +578,7 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 104,
+      "latencyMs": 102,
       "brierScore": 0.3891959823560633
     },
     {
@@ -595,7 +595,7 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 90,
+      "latencyMs": 88,
       "brierScore": 0.5369196880906244
     },
     {
@@ -612,7 +612,7 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 111,
+      "latencyMs": 112,
       "brierScore": 0.5072850182947057
     },
     {
@@ -629,7 +629,7 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 180,
+      "latencyMs": 183,
       "brierScore": 0.39689229414757093
     },
     {
@@ -646,7 +646,7 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 143,
+      "latencyMs": 141,
       "brierScore": 0.45301948669237796
     },
     {
@@ -663,7 +663,7 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 90,
+      "latencyMs": 93,
       "brierScore": 0.678411097596807
     },
     {
@@ -680,7 +680,7 @@
       },
       "calibration": "uncalibrated-estimate",
       "warmWithinProcess": true,
-      "latencyMs": 111,
+      "latencyMs": 115,
       "brierScore": 0.524502812206956
     }
   ],
