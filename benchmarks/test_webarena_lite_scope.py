@@ -1,6 +1,8 @@
 import importlib.util
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import Mock
 
 
 SCOPE_PATH = Path(__file__).with_name("webarena_lite_scope.py")
@@ -65,6 +67,25 @@ class WebArenaLiteScopeTests(unittest.TestCase):
         ):
             with self.subTest(url=url), self.assertRaises(ValueError):
                 RUNNER.validate_backend_url(url)
+
+    def test_final_snapshot_uses_browsergym_url_when_post_action_inspection_is_pending(self):
+        bridge = Mock()
+        env = SimpleNamespace(unwrapped=SimpleNamespace(page=SimpleNamespace(url="http://localhost:7780/admin/customer/index/")))
+
+        snapshot = RUNNER.final_page_snapshot(bridge, env, inspection_pending=True)
+
+        self.assertEqual(snapshot, {"title": "", "url": "http://localhost:7780/admin/customer/index/"})
+        bridge.call.assert_not_called()
+
+    def test_final_snapshot_uses_browser_inspect_when_it_is_available(self):
+        bridge = Mock()
+        bridge.call.return_value = {"title": "Customers", "url": "http://localhost:7780/admin/customer/index/"}
+        env = SimpleNamespace(unwrapped=SimpleNamespace(page=SimpleNamespace(url="unused")))
+
+        snapshot = RUNNER.final_page_snapshot(bridge, env, inspection_pending=False)
+
+        self.assertEqual(snapshot, bridge.call.return_value)
+        bridge.call.assert_called_once_with("inspect")
 
 
 if __name__ == "__main__":

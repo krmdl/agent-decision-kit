@@ -1,0 +1,90 @@
+{
+  "benchmark": "browsergym-webarenalite-cross-backend-compat",
+  "taskId": 157,
+  "intentTemplateId": 255,
+  "taskType": "read-only-navigation",
+  "taskPrompt": "Show all customers",
+  "runnerMode": "bounded-cross-backend-browsergym-lite-compatibility-smoke",
+  "canonicalBenchmark": false,
+  "seed": 7,
+  "maxActions": 8,
+  "success": false,
+  "reward": 0.0,
+  "terminated": true,
+  "actions": 2,
+  "loopDetected": false,
+  "trace": [
+    {
+      "step": 1,
+      "status": "action-executed",
+      "action": {
+        "role": "link",
+        "label": "Customers",
+        "kind": "a",
+        "risk": "low"
+      },
+      "candidateCount": 31,
+      "provider": "local-literal-match",
+      "model": "unique-mentioned-navigation-label",
+      "selectionRule": "unique-mentioned-navigation-label",
+      "decisionLatencyMs": 0,
+      "elapsedMs": 316,
+      "confidenceSource": "not-applicable-rule",
+      "calibration": "not-applicable-rule",
+      "taskTargetVisible": null,
+      "inspectionPending": null
+    },
+    {
+      "step": 2,
+      "status": "action-executed",
+      "action": {
+        "role": "link",
+        "label": "All Customers",
+        "kind": "a",
+        "risk": "low"
+      },
+      "candidateCount": 36,
+      "provider": "local-literal-match",
+      "model": "unique-mentioned-navigation-label",
+      "selectionRule": "unique-mentioned-navigation-label",
+      "decisionLatencyMs": 0,
+      "elapsedMs": 28216,
+      "confidenceSource": "not-applicable-rule",
+      "calibration": "not-applicable-rule",
+      "taskTargetVisible": null,
+      "inspectionPending": true
+    }
+  ],
+  "initialPage": {
+    "title": "Dashboard / Magento Admin",
+    "path": "/admin/admin/dashboard/"
+  },
+  "finalPage": {
+    "title": "",
+    "path": "/admin/admin/dashboard/"
+  },
+  "resetLatencyMs": 6680,
+  "decisionCallLatenciesMs": [
+    316,
+    28216
+  ],
+  "latencyMs": 37862,
+  "browserGymVersion": "0.14.3",
+  "browserGymLiteVersion": "0.14.3",
+  "playwrightPythonVersion": "1.44.0",
+  "playwrightNodeVersion": "1.63.0",
+  "browserVersion": "HeadlessChrome/125.0.6422.26",
+  "pythonVersion": "3.12.13",
+  "nodeVersion": "v22.14.0",
+  "agentDecisionKitCommit": "2717330ced987e194677c084cecec224f70fb05d",
+  "workingTreeModified": true,
+  "testedSourceFile": "src/browser/manager.ts",
+  "operatingSystem": "Windows-10-10.0.19045-SP0",
+  "cpu": "AMD64 Family 25 Model 80 Stepping 0, AuthenticAMD",
+  "accelerator": "CPU",
+  "backendImage": "am1n3e/webarena-verified-shopping_admin",
+  "backendImageDigest": "sha256:d0531dd27ed98d0c459ff9e88118bf2ed8b660b0ed99c38837db46c065a5be13",
+  "backendBaseUrl": "http://localhost:7780/admin",
+  "timestampUtc": "2026-10-02T03:07:05.874745+00:00",
+  "note": "One read-only BrowserGym WebArena Lite task on a synthetic WebArena Verified shopping_admin backend. The task and URL evaluator come from BrowserGym Lite, but this is a cross-backend compatibility smoke, not a canonical Lite environment, representative task sample, quality/speed claim, or aggregate benchmark score. Approval-required actions are never auto-approved. Expected evaluator URLs and reference answers are omitted."
+}

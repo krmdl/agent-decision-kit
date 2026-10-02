@@ -2,7 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { mkdir } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { chromium, type Browser, type BrowserContext, type Page } from "playwright";
+import { chromium, type Browser, type BrowserContext, type ConsoleMessage, type Page } from "playwright";
 import { closeOcrWorker, findExactOcrTextMatches, recognizeScreenshotText, type OcrBox, type OcrLine } from "./ocr.js";
 import type { DecisionProvider } from "../core/types.js";
 
@@ -12,6 +12,10 @@ export type BrowserManagerOptions = { headless?: boolean; profileDir?: string; i
 
 function browserDebug(message: string) {
   if (process.env.ADK_BROWSERGYM_DEBUG === "1") console.error(`[browser-manager] ${message}`);
+}
+
+function isBrowserPageInspectionTimeout(error: unknown) {
+  return error instanceof Error && error.message === "Browser page inspection timed out after 15 seconds.";
 }
 
 async function withTimeout<T>(operation: Promise<T>, timeoutMs: number, message: string): Promise<T> {
@@ -181,12 +185,22 @@ export class BrowserManager {
     const page = this.requirePage();
     browserDebug("inspect started");
     const before = performance.now();
-    const result = await withTimeout(page.evaluate((referenceAttributeName) => {
+    const traceInspection = process.env.ADK_BROWSERGYM_DEBUG === "1";
+    const onInspectionConsole = (message: ConsoleMessage) => {
+      if (message.type() === "debug" && message.text().startsWith("@@ADK_INSPECT_STAGE@@")) browserDebug(message.text());
+    };
+    if (traceInspection) page.on("console", onInspectionConsole);
+    const result = await withTimeout(page.evaluate(({ referenceAttributeName, traceStages }: { referenceAttributeName: string; traceStages: boolean }) => {
+      const markStage = (name: string) => {
+        if (traceStages) console.debug(`@@ADK_INSPECT_STAGE@@ ${name} ${Math.round(performance.now())}`);
+      };
+      markStage("started");
       // Remove only this manager's prior refs before assigning the current snapshot.
       // A page can hide or replace controls between inspections while old DOM nodes remain.
       for (const element of document.querySelectorAll(`[${referenceAttributeName}]`)) {
         element.removeAttribute(referenceAttributeName);
       }
+      markStage("cleared-refs");
       const editableText = Array.from(document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLElement>("input,textarea,[contenteditable]:not([contenteditable='false'])"))
         .map((element) => {
           if (element instanceof HTMLInputElement) return ["text", "search", "email", "tel", "url", "number", "date", "datetime-local", "time", "month", "week", "password"].includes(element.type) ? element.value : "";
@@ -195,6 +209,7 @@ export class BrowserManager {
         })
         .map((value) => value.replace(/\s+/g, " ").trim())
         .filter(Boolean);
+      markStage(`editable-fields-${editableText.length}`);
       const redactEditableText = (value: string) => {
         let redacted = value.replace(/\s+/g, " ").trim();
         for (const text of editableText) {
@@ -204,17 +219,30 @@ export class BrowserManager {
         }
         return redacted;
       };
-      const visible = (element: Element) => {
+      const computedStyles = new WeakMap<Element, CSSStyleDeclaration>();
+      const visibility = new WeakMap<Element, boolean>();
+      const styleFor = (element: Element) => {
+        const cached = computedStyles.get(element);
+        if (cached) return cached;
         const style = getComputedStyle(element);
+        computedStyles.set(element, style);
+        return style;
+      };
+      const visible = (element: Element) => {
+        const cached = visibility.get(element);
+        if (cached !== undefined) return cached;
+        const style = styleFor(element);
         const rect = element.getBoundingClientRect();
-        return style.visibility !== "hidden" && style.display !== "none" && Number(style.opacity) > 0 && rect.width > 0 && rect.height > 0;
+        const isVisible = style.visibility !== "hidden" && style.display !== "none" && Number(style.opacity) > 0 && rect.width > 0 && rect.height > 0;
+        visibility.set(element, isVisible);
+        return isVisible;
       };
       const iconLabelFor = (element: Element) => {
         const sources = [
-          getComputedStyle(element).content,
+          styleFor(element).content,
           getComputedStyle(element, "::before").content,
           getComputedStyle(element, "::after").content,
-          getComputedStyle(element).backgroundImage,
+          styleFor(element).backgroundImage,
         ];
         for (const source of sources) {
           const match = source.match(/url\((?:["']?)(.*?)(?:["']?)\)/i);
@@ -288,15 +316,20 @@ export class BrowserManager {
           boundedTableRows.add(row);
         }
       }
+      markStage("bounded-table-rows");
       const supportedInputTypes = new Set(["text", "search", "email", "tel", "url", "number", "date", "datetime-local", "time", "month", "week", "range", "checkbox", "radio", "submit", "image", "button", "reset"]);
       const formEntryInputTypes = new Set(["text", "search", "email", "tel", "url", "number", "date", "datetime-local", "time", "month", "week"]);
       const semanticRoles = "[role=button], [role=link], [role=tab], [role=checkbox], [role=radio], [role=switch], [role=slider], .ui-slider-handle[tabindex], [role=menuitem], [role=menuitemcheckbox], [role=menuitemradio], [role=option]";
       const semanticSelector = `button, a[href], input:not([type=password]):not([type=hidden]):not([type=file]), textarea, select, ${semanticRoles}`;
       const all = Array.from(document.querySelectorAll(semanticSelector));
-      const semanticNodes = all.filter(visible).filter((element) => {
-        if (element.tagName.toLowerCase() !== "input") return true;
-        return supportedInputTypes.has((element as HTMLInputElement).type || "text");
-      });
+      const semanticNodes: Element[] = [];
+      for (const element of all) {
+        if (!visible(element)) continue;
+        if (element.tagName.toLowerCase() === "input" && !supportedInputTypes.has((element as HTMLInputElement).type || "text")) continue;
+        semanticNodes.push(element);
+        if (semanticNodes.length === 80) break;
+      }
+      markStage(`semantic-candidates-${semanticNodes.length}-of-${all.length}`);
       const semanticSet = new Set(semanticNodes);
       const dragSources = Array.from(document.querySelectorAll('[draggable="true"], [aria-grabbed], [data-drag-source]'))
         .filter(visible)
@@ -307,6 +340,7 @@ export class BrowserManager {
           .filter((element) => labelFor(element).length > 0)
         : [];
       const dragNodes = [...dragSources, ...dragTargets].filter((element, index, nodes) => !semanticSet.has(element) && nodes.indexOf(element) === index);
+      markStage(`drag-candidates-${dragNodes.length}`);
       const dragNodeSet = new Set(dragNodes);
       const semanticAncestors = new Set<Element>();
       for (const node of semanticNodes) {
@@ -319,22 +353,23 @@ export class BrowserManager {
       const customPointerNodes = semanticNodes.length < 80 ? Array.from(document.querySelectorAll("body *"))
         .filter((element) => {
           if (semanticSet.has(element) || dragNodeSet.has(element) || semanticAncestors.has(element) || element.closest(semanticSelector) || element.closest(`${semanticSelector}, [contenteditable]:not([contenteditable=\"false\"])`)) return false;
+          const style = styleFor(element);
+          if (style.cursor !== "pointer") return false;
           if (!visible(element)) return false;
           const label = labelFor(element);
           if (!label || label.length > 240) return false;
-          const style = getComputedStyle(element);
-          if (style.cursor !== "pointer") return false;
           const pointerChildren = (parent: Element) => Array.from(parent.children)
-            .filter((child) => visible(child) && getComputedStyle(child).cursor === "pointer" && labelFor(child).length > 0);
+            .filter((child) => styleFor(child).cursor === "pointer" && visible(child) && labelFor(child).length > 0);
           // Split pointer containers when their separately labeled children are
           // distinct controls. This keeps a row or toolbar from becoming one
           // large target while avoiding candidates for every nested text node.
           if (pointerChildren(element).length > 1) return false;
           const parent = element.parentElement;
-          if (parent && getComputedStyle(parent).cursor === "pointer" && pointerChildren(parent).length < 2) return false;
+          if (parent && styleFor(parent).cursor === "pointer" && pointerChildren(parent).length < 2) return false;
           return true;
         })
         .slice(0, 80 - semanticNodes.length) : [];
+      markStage(`pointer-candidates-${customPointerNodes.length}`);
       const nodes = [...semanticNodes, ...dragNodes, ...customPointerNodes].slice(0, 80);
       const customPointerSet = new Set(customPointerNodes);
       const dragSourceSet = new Set(dragSources);
@@ -437,8 +472,10 @@ export class BrowserManager {
           ...(privateValue === undefined ? {} : { privateValue }),
         };
       });
+      markStage(`labeled-candidates-${candidates.length}`);
       const heading = Array.from(document.querySelectorAll("h1,h2")).filter(visible).slice(0, 8).map((element) => redactEditableText(element.textContent ?? "")).filter(Boolean);
       const body = redactEditableText(document.body?.innerText ?? "").slice(0, 2_000);
+      markStage("read-headings-and-body");
       const tables: BrowserTable[] = Array.from(document.querySelectorAll("table"))
         .filter(visible)
         .slice(0, 3)
@@ -453,6 +490,7 @@ export class BrowserManager {
               .map((cell) => redactEditableText(cell.innerText ?? "").slice(0, 120))),
         }))
         .filter((table) => table.rows.length > 0);
+      markStage(`read-tables-${tables.length}`);
       const privateFormState = Array.from(document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | HTMLElement>("input,textarea,select,[contenteditable]:not([contenteditable='false'])"))
         .map((element) => {
           if (element instanceof HTMLInputElement) return ["input", element.type, element.value, element.checked];
@@ -460,6 +498,7 @@ export class BrowserManager {
           if (element instanceof HTMLSelectElement) return ["select", element.selectedIndex, element.value];
           return ["contenteditable", element.innerText || element.textContent || ""];
         });
+      markStage("read-private-state");
       const privateActionState = nodes.map((element) => {
         const form = element instanceof HTMLButtonElement || element instanceof HTMLInputElement ? element.form : element.closest("form");
         const disabled = element instanceof HTMLButtonElement || element instanceof HTMLInputElement || element instanceof HTMLSelectElement || element instanceof HTMLTextAreaElement
@@ -475,8 +514,11 @@ export class BrowserManager {
           form: form ? { action: form.action, method: form.method, target: form.target, enctype: form.enctype } : null,
         };
       });
+      markStage("complete");
       return { title: document.title, url: location.href, headings: heading, textExcerpt: body, tables, candidates, privateFormState, privateActionState };
-    }, this.referenceAttributeName), 15_000, "Browser page inspection timed out after 15 seconds.");
+    }, { referenceAttributeName: this.referenceAttributeName, traceStages: traceInspection }), 15_000, "Browser page inspection timed out after 15 seconds.").finally(() => {
+      if (traceInspection) page.off("console", onInspectionConsole);
+    });
     const { privateFormState, privateActionState, candidates: rawCandidates, ...snapshot } = result;
     this.privateFieldValuePresence.clear();
     this.privateRangeValues.clear();
@@ -844,8 +886,6 @@ export class BrowserManager {
         : textValue !== undefined
           ? await this.fillCandidateText(candidate, textValue)
         : await this.perform(candidate, clickTextControl);
-    const afterActionSnapshot = await this.inspect();
-    const visibleStateChanged = this.lastInspectionFingerprint !== beforeActionFingerprint;
     if (rule === "explicit-report-date-range-submit") {
       this.completedReportActionsByTask.set(normalizeLabel(task), {
         pageIdentityHash: createHash("sha256").update(pageIdentity(this.requirePage().url())).digest("hex"),
@@ -853,6 +893,33 @@ export class BrowserManager {
       });
       while (this.completedReportActionsByTask.size > 64) this.completedReportActionsByTask.delete(this.completedReportActionsByTask.keys().next().value!);
     }
+    let afterActionSnapshot: Awaited<ReturnType<BrowserManager["inspect"]>>;
+    try {
+      afterActionSnapshot = await this.inspect();
+    } catch (error) {
+      if (!isBrowserPageInspectionTimeout(error)) throw error;
+      this.candidates.clear();
+      this.privateActionTargets.clear();
+      this.privateFieldValuePresence.clear();
+      this.privateFieldValueHashes.clear();
+      this.privateRangeValues.clear();
+      this.pending.clear();
+      this.lastInspectionFingerprint = "";
+      this.hierarchicalMenuIntent = undefined;
+      this.disclosureSearchIntent = undefined;
+      this.completedDisclosureIntent = undefined;
+      this.lastVisualSnapshot = undefined;
+      browserDebug("post-action inspection timed out; invalidated stale refs and returned the completed action without a page snapshot");
+      return {
+        status: "action-executed",
+        action: candidate,
+        ...metadata,
+        effect,
+        inspectionPending: true,
+        note: "The selected action completed, but the page did not respond to inspection within 15 seconds. Its resulting page state is unverified; no further automatic action will be taken. Wait for the page to settle, then inspect it again.",
+      };
+    }
+    const visibleStateChanged = this.lastInspectionFingerprint !== beforeActionFingerprint;
     if (menuPathProgress) this.advanceHierarchicalMenuIntent(menuPathProgress, visibleStateChanged, afterActionSnapshot.url === snapshot.url);
     const targetHeadingAfterAction = findVisibleAllCollectionHeading(task, afterActionSnapshot.headings);
     if (!visibleStateChanged) this.rememberNonProgressingAction(beforeActionFingerprint, candidate);

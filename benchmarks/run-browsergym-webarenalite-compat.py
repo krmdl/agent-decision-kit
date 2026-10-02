@@ -117,6 +117,13 @@ def validate_backend_url(raw_url):
     return urllib.parse.urlunsplit((parsed.scheme, parsed.netloc, backend_path, "", ""))
 
 
+def final_page_snapshot(bridge, env, inspection_pending):
+    """Use BrowserGym's live URL when the page cannot yet answer a DOM snapshot."""
+    if inspection_pending:
+        return {"title": "", "url": env.unwrapped.page.url}
+    return bridge.call("inspect")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--task-id", type=int, default=DEFAULT_TASK_ID, help="Only tasks passing the read-only scope filter are accepted")
@@ -265,11 +272,12 @@ def main():
                     "confidenceSource": result.get("confidenceSource"),
                     "calibration": result.get("calibration"),
                     "taskTargetVisible": result.get("taskTargetVisible"),
+                    "inspectionPending": result.get("inspectionPending"),
                 })
-                if result.get("status") != "action-executed" or result.get("taskTargetVisible"):
+                if result.get("status") != "action-executed" or result.get("taskTargetVisible") or result.get("inspectionPending"):
                     break
 
-            final_page = bridge.call("inspect")
+            final_page = final_page_snapshot(bridge, env, any(entry.get("inspectionPending") for entry in trace))
             final_url = urllib.parse.urlsplit(final_page.get("url", ""))
             navigated = (final_url.path, final_url.query) != initial_location
             response_text = json.dumps({

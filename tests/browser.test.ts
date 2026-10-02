@@ -1035,6 +1035,31 @@ describe("Playwright browser safety flow", () => {
     expect(result.effect.textDelta.excerpt).toContain("Customers opened");
   }, 45_000);
 
+  it("returns a completed action when its follow-up page inspection times out and invalidates stale refs", async () => {
+    profile = await mkdtemp(path.join(os.tmpdir(), "adk-browser-post-action-inspection-timeout-test-"));
+    browser = new BrowserManager({ headless: true, profileDir: path.join(profile, "chromium") });
+    await browser.launch(`${baseUrl}navigation-label`);
+    const provider: DecisionProvider = {
+      id: "remote-test-provider",
+      model: "unused-test-provider",
+      decide: async () => { throw new Error("A unique visible navigation label should resolve locally"); },
+    };
+    const realInspect = browser.inspect.bind(browser);
+    const inspect = vi.spyOn(browser, "inspect");
+    inspect.mockImplementationOnce(async () => realInspect());
+    inspect.mockImplementationOnce(async () => { throw new Error("Browser page inspection timed out after 15 seconds."); });
+
+    const result = await browser.decideAndAct("View the details of all customers", provider);
+
+    expect(result).toMatchObject({
+      status: "action-executed",
+      action: { label: "Customers" },
+      inspectionPending: true,
+      note: expect.stringContaining("resulting page state is unverified"),
+    });
+    await expect(browser.act(result.action.ref)).rejects.toThrow("Unknown or stale action ref");
+  }, 45_000);
+
   it("keeps same-origin navigation usable when the destination takes longer than the click timeout", async () => {
     profile = await mkdtemp(path.join(os.tmpdir(), "adk-browser-slow-navigation-test-"));
     browser = new BrowserManager({ headless: true, profileDir: path.join(profile, "chromium") });
@@ -1111,6 +1136,33 @@ describe("Playwright browser safety flow", () => {
     expect(repeated.status).toBe("report-filter-already-shown");
     expect((await browser.inspect()).headings).toContain("Product Views Report");
     expect((await browser.inspect()).textExcerpt).toContain("Applied [editable content] to [editable content]");
+  }, 45_000);
+
+  it("does not repeat an explicit report submission when its follow-up inspection times out", async () => {
+    profile = await mkdtemp(path.join(os.tmpdir(), "adk-browser-report-inspection-timeout-test-"));
+    browser = new BrowserManager({ headless: true, profileDir: path.join(profile, "chromium") });
+    await browser.launch(`${baseUrl}navigation-reports`);
+    const provider: DecisionProvider = {
+      id: "remote-test-provider",
+      model: "unused-test-provider",
+      decide: async () => { throw new Error("The explicit report task should resolve locally"); },
+    };
+    const task = "Show the product view report from July 5, 2021 to May 31, 2023";
+    await browser.decideAndAct(task, provider);
+    await browser.decideAndAct(task, provider);
+    await browser.decideAndAct(task, provider);
+    await browser.decideAndAct(task, provider);
+    const realInspect = browser.inspect.bind(browser);
+    const inspect = vi.spyOn(browser, "inspect");
+    inspect.mockImplementationOnce(async () => realInspect());
+    inspect.mockImplementationOnce(async () => { throw new Error("Browser page inspection timed out after 15 seconds."); });
+
+    const submitted = await browser.decideAndAct(task, provider);
+
+    expect(submitted).toMatchObject({ status: "action-executed", action: { label: "Show Report" }, inspectionPending: true });
+    inspect.mockRestore();
+    const repeated = await browser.decideAndAct(task, provider);
+    expect(repeated.status).toBe("report-filter-already-shown");
   }, 45_000);
 
   it("matches a best sellers report to Magento's compound Bestsellers link", async () => {
