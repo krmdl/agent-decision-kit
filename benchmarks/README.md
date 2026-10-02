@@ -200,7 +200,7 @@ $output = Join-Path $env:TEMP 'miniwob-all-125.json'
 if ($LASTEXITCODE -ne 0) { throw 'MiniWoB catalog sweep failed' }
 ```
 
-### Current-source eight-task DOM repeat
+### Earlier eight-task DOM repeat
 
 [`results/miniwob-current-dom-8x5-20261002.json`](results/miniwob-current-dom-8x5-20261002.json) contains 40 raw episodes: the same eight selected DOM tasks across seeds 7–11. All 40 reached raw reward 1.0, with no timeouts. Every episode records source commit `06c81bb88ec161b455873d5c2b4edaa7955a489f` and `workingTreeModified: false`; the pinned MiniWoB++ revision is `7fd85d71a4b60325c6585396ec4f48377d049838`. The run used Windows 10 CPU, Node 22.14.0, Python 3.12.13, BrowserGym 0.14.3, Python Playwright 1.44.0, Node Playwright 1.63.0, and HeadlessChrome 125.0.6422.26.
 
