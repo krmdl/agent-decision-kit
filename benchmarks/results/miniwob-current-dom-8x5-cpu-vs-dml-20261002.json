@@ -1,0 +1,140 @@
+{
+  "reportType": "paired BrowserGym provider comparison",
+  "benchmarkName": "BrowserGym seeded provider/device comparison",
+  "sourceCommit": "a9f8c4609ca463f057512b3f0a71f2d47085bd4e",
+  "episodesPerProvider": 40,
+  "pairedTaskSeedCount": 40,
+  "sameTasksAndSeeds": true,
+  "outcomeDisagreements": 0,
+  "providerReports": {
+    "semantic-local / cpu requested": "miniwob-current-dom-8x5-cpu-20261002.json",
+    "semantic-local / dml requested": "miniwob-current-dom-8x5-dml-20261002.json"
+  },
+  "conditions": {
+    "semantic-local / cpu requested": {
+      "episodeCount": 40,
+      "successCount": 40,
+      "taskSuccessRate": 1.0,
+      "rewardField": "rawTaskReward",
+      "rewardSampleCount": 40,
+      "partialRewardCount": 0,
+      "meanReward": 1,
+      "timeoutRate": 0.0,
+      "failureReasons": {},
+      "decisionStatuses": {
+        "action-executed": 25,
+        "action-executed-after-approval": 15
+      },
+      "decisionProviders": {
+        "semantic-local": 11,
+        "local-literal-match": 49
+      },
+      "syntheticApprovalCount": 15,
+      "latencyMs": {
+        "p50": 1675,
+        "p95": 2295
+      },
+      "agentActionLatencyMs": {
+        "sampleCount": 40,
+        "p50": 407,
+        "p95": 1008
+      },
+      "decisionCallLatencyMs": {
+        "sampleCount": 11,
+        "p50": 171,
+        "p95": 179
+      },
+      "decisionLatencyPerEpisodeMs": {
+        "sampleCount": 40,
+        "p50": 0,
+        "p95": 175
+      },
+      "actions": {
+        "mean": 1.5,
+        "p50": 1,
+        "p95": 3
+      },
+      "note": "Episode latency includes environment reset. Agent action latency includes browser inspection, decision, and any synthetic approval round-trip; decision latency is reported separately when available. These task and hardware samples are not representative quality or performance claims."
+    },
+    "semantic-local / dml requested": {
+      "episodeCount": 40,
+      "successCount": 40,
+      "taskSuccessRate": 1.0,
+      "rewardField": "rawTaskReward",
+      "rewardSampleCount": 40,
+      "partialRewardCount": 0,
+      "meanReward": 1,
+      "timeoutRate": 0.0,
+      "failureReasons": {},
+      "decisionStatuses": {
+        "action-executed": 25,
+        "action-executed-after-approval": 15
+      },
+      "decisionProviders": {
+        "semantic-local": 11,
+        "local-literal-match": 49
+      },
+      "syntheticApprovalCount": 15,
+      "latencyMs": {
+        "p50": 1654,
+        "p95": 2307
+      },
+      "agentActionLatencyMs": {
+        "sampleCount": 40,
+        "p50": 382,
+        "p95": 1030
+      },
+      "decisionCallLatencyMs": {
+        "sampleCount": 11,
+        "p50": 379,
+        "p95": 387
+      },
+      "decisionLatencyPerEpisodeMs": {
+        "sampleCount": 40,
+        "p50": 0,
+        "p95": 384
+      },
+      "actions": {
+        "mean": 1.5,
+        "p50": 1,
+        "p95": 3
+      },
+      "note": "Episode latency includes environment reset. Agent action latency includes browser inspection, decision, and any synthetic approval round-trip; decision latency is reported separately when available. These task and hardware samples are not representative quality or performance claims."
+    }
+  },
+  "pairedEndToEndLatencyDelta": {
+    "sampleCount": 40,
+    "candidateMinusBaselineMs": {
+      "median": 0.0,
+      "p95": 228,
+      "mean": 34.27
+    }
+  },
+  "pairedAgentActionLatencyDelta": {
+    "sampleCount": 40,
+    "candidateMinusBaselineMs": {
+      "median": 8.5,
+      "p95": 216,
+      "mean": 56.5
+    }
+  },
+  "pairedDecisionCallLatencyDelta": {
+    "pairedEpisodeCount": 11,
+    "excludedEpisodesWithDifferentCallCounts": 0,
+    "sampleCount": 11,
+    "baselineLatencyMs": {
+      "p50": 171,
+      "p95": 179
+    },
+    "candidateLatencyMs": {
+      "p50": 379,
+      "p95": 387
+    },
+    "candidateMinusBaselineMs": {
+      "median": 209,
+      "p95": 221,
+      "mean": 208.18
+    }
+  },
+  "note": "This is a project-authored, curated integration sample, not a representative BrowserGym score. Consult each report's environment and rawRecords. Paired differences describe these episodes only; they do not establish warm persistent-server latency, hardware-wide performance, or broad quality."
+}

@@ -47,6 +47,20 @@ class CompareBrowserGymRunsTests(unittest.TestCase):
         self.assertEqual(result["outcomeDisagreements"], 0)
         self.assertEqual(result["conditions"]["semantic-nli"]["decisionProviders"], {"semantic-nli": 2})
         self.assertEqual(result["pairedEndToEndLatencyDelta"]["candidateMinusBaselineMs"]["median"], 5)
+        self.assertEqual(result["pairedDecisionCallLatencyDelta"]["sampleCount"], 2)
+        self.assertEqual(result["pairedDecisionCallLatencyDelta"]["candidateMinusBaselineMs"]["median"], 5)
+
+    def test_excludes_episodes_with_different_decision_call_counts(self):
+        baseline = report("semantic-local")
+        candidate = report("semantic-nli", latency_delta=5)
+        baseline["rawRecords"][0]["decisionCallLatenciesMs"] = [10, 11]
+
+        result = COMPARATOR.compare_reports(baseline, candidate)
+
+        paired = result["pairedDecisionCallLatencyDelta"]
+        self.assertEqual(paired["sampleCount"], 1)
+        self.assertEqual(paired["pairedEpisodeCount"], 1)
+        self.assertEqual(paired["excludedEpisodesWithDifferentCallCounts"], 1)
 
     def test_rejects_reports_with_different_task_seed_pairs(self):
         baseline = report("semantic-local")

@@ -11,6 +11,9 @@ import visualVisionRun from "../../../benchmarks/results/vision-smoke.json";
 import visualOcrRun from "../../../benchmarks/results/ocr-smoke.json";
 import currentEightTaskRun from "../../../benchmarks/results/miniwob-main-8-seed7-smoke.json";
 import repeatedEightTaskRun from "../../../benchmarks/results/miniwob-current-dom-8x5-20261002.json";
+import miniLmBrowserCpuRun from "../../../benchmarks/results/miniwob-current-dom-8x5-cpu-20261002.json";
+import miniLmBrowserDmlRun from "../../../benchmarks/results/miniwob-current-dom-8x5-dml-20261002.json";
+import miniLmBrowserComparison from "../../../benchmarks/results/miniwob-current-dom-8x5-cpu-vs-dml-20261002.json";
 import pairedMiniLMRun from "../../../benchmarks/results/miniwob-local-provider-paired-20261002-semantic.json";
 import pairedNliRun from "../../../benchmarks/results/miniwob-local-provider-paired-20261002-nli.json";
 import pairedProviderComparison from "../../../benchmarks/results/miniwob-local-provider-paired-comparison-20261002.json";
@@ -372,6 +375,42 @@ const decisionRows = [
         <a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/decisions-confirmation-nli-dml-node-profile-20261002.onnx-profile.json.gz">Compressed ONNX trace ↗</a>
         <a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/decision-comparison-confirmation-nli-cpu-vs-dml-20261002.json">Paired first-run summary ↗</a>
         <a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/fixtures/decision-cases-confirmation-20261002.jsonl">30 labeled examples ↗</a>
+      </div>
+    </section>
+
+    <section class="decision-runs" aria-labelledby="minilm-browser-loop-title">
+      <p class="eyebrow">DEFAULT MINILM PROVIDER · CPU AND DIRECTML</p>
+      <h2 id="minilm-browser-loop-title">DirectML was slower for MiniLM on this browser run.</h2>
+      <p class="comparison-note">The current commit <code>{miniLmBrowserCpuRun.sourceCommit.slice(0, 7)}</code> ran the same eight selected DOM tasks across five seeds on Windows 10, with a Ryzen 5 5600H and an operator-reported GTX 1650 (4 GB). Each condition completed {miniLmBrowserCpuRun.episodeCount} episodes; every task reached full reward, and paired outcomes disagreed on {miniLmBrowserComparison.outcomeDisagreements} of {miniLmBrowserComparison.pairedTaskSeedCount} pairs. Eleven semantic model calls were recorded per condition; the other episodes used local rules.</p>
+      <div class="decision-table-wrap">
+        <table>
+          <caption>Windows 10 · Node 22.14.0 · BrowserGym 0.14.3 · fresh bridge process per episode</caption>
+          <thead><tr><th scope="col">Requested device</th><th scope="col">Task success</th><th scope="col">MiniLM calls p50 / p95 (n)</th><th scope="col">Browser loop p50 / p95</th><th scope="col">End-to-end p50 / p95</th></tr></thead>
+          <tbody>
+            {[
+              { label: "CPU", report: miniLmBrowserCpuRun },
+              { label: "DirectML requested", report: miniLmBrowserDmlRun },
+            ].map(({ label, report }) => <tr>
+              <th scope="row">{label}</th>
+              <td>{report.successCount}/{report.episodeCount}</td>
+              <td>{report.decisionCallLatencyMs.p50} / {report.decisionCallLatencyMs.p95} ms (n={report.decisionCallLatencyMs.sampleCount})</td>
+              <td>{report.agentActionLatencyMs.p50} / {report.agentActionLatencyMs.p95} ms</td>
+              <td>{report.latencyMs.p50} / {report.latencyMs.p95} ms</td>
+            </tr>)}
+          </tbody>
+        </table>
+      </div>
+      <figure class="provider-chart">
+        <img src={`${siteBase}images/miniwob-minilm-device-latency-20261002.svg`} alt="MiniWoB MiniLM comparison over 40 episodes per device. CPU versus DirectML-requested p95 was 179 versus 387 milliseconds for model calls, 1,008 versus 1,030 milliseconds for the browser loop, and 2,295 versus 2,307 milliseconds end to end." width="960" height="600" loading="lazy" />
+        <figcaption>Solid bars show p50; outlined bars show p95. End-to-end time includes environment reset. Model-call p95 stayed below 500 ms in this 11-call sample on both requested devices.</figcaption>
+      </figure>
+      <p class="comparison-note">The paired median DirectML-minus-CPU delta was +{miniLmBrowserComparison.pairedDecisionCallLatencyDelta.candidateMinusBaselineMs.median} ms for model calls, +{miniLmBrowserComparison.pairedAgentActionLatencyDelta.candidateMinusBaselineMs.median} ms for the browser loop, and +{miniLmBrowserComparison.pairedEndToEndLatencyDelta.candidateMinusBaselineMs.median} ms end to end. DirectML's decision-call p95 was {miniLmBrowserDmlRun.decisionCallLatencyMs.p95} ms versus {miniLmBrowserCpuRun.decisionCallLatencyMs.p95} ms on CPU. This browser run did not record ONNX per-node placement; a separate decision-only profile records mixed DirectML and CPU execution. The small selected sample does not establish a general GPU speed advantage or warm persistent-server latency.</p>
+      <div class="decision-raw-links">
+        <a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/miniwob-current-dom-8x5-cpu-20261002.json">CPU aggregate and 40 raw episodes ↗</a>
+        <a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/miniwob-current-dom-8x5-dml-20261002.json">DirectML aggregate and 40 raw episodes ↗</a>
+        <a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/miniwob-current-dom-8x5-cpu-vs-dml-20261002.json">Paired comparison ↗</a>
+        <a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/decision-cases-independent-ryzen5600h-dml-node-profile-20261002.json">Separate MiniLM ONNX provider-count profile ↗</a>
+        <a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/compare-browsergym-runs.py">Paired benchmark comparator ↗</a>
       </div>
     </section>
 

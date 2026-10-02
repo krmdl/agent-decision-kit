@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 600" role="img" aria-labelledby="title description">
+  <title id="title">MiniLM MiniWoB browser latency: CPU and DirectML requested</title>
+  <desc id="description">Five seeds of eight selected DOM tasks produced 40 episodes per device with 11 MiniLM semantic calls per device. CPU p50/p95 was 171/179 milliseconds for model calls, 407/1,008 milliseconds for the browser loop, and 1,675/2,295 milliseconds end to end. DirectML requested p50/p95 was 379/387 milliseconds for model calls, 382/1,030 milliseconds for the browser loop, and 1,654/2,307 milliseconds end to end.</desc>
+  <rect width="960" height="600" rx="24" fill="#0d1b2b"/>
+  <text x="40" y="43" fill="#f3f8ff" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="25" font-weight="700">MiniLM · CPU vs DirectML requested</text>
+  <text x="40" y="70" fill="#9fb3c9" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="14">Eight selected DOM tasks × five seeds · 40 episodes per device · 11 semantic calls per device</text>
+
+  <g font-family="Inter,Segoe UI,Arial,sans-serif" font-size="12">
+    <rect x="40" y="88" width="12" height="12" rx="3" fill="#75e2c2"/>
+    <text x="59" y="98" fill="#c2d1df">CPU</text>
+    <rect x="118" y="88" width="12" height="12" rx="3" fill="#8dbdff"/>
+    <text x="137" y="98" fill="#c2d1df">DirectML requested</text>
+    <rect x="342" y="88" width="24" height="9" rx="3" fill="#c2d1df"/>
+    <text x="373" y="97" fill="#c2d1df">p50</text>
+    <rect x="421" y="88" width="24" height="9" rx="3" fill="none" stroke="#c2d1df" stroke-width="2"/>
+    <text x="452" y="97" fill="#c2d1df">p95</text>
+  </g>
+
+  <g stroke="#28445d" stroke-width="1">
+    <line x1="220" y1="115" x2="220" y2="520"/><line x1="413" y1="115" x2="413" y2="520"/><line x1="607" y1="115" x2="607" y2="520"/><line x1="800" y1="115" x2="800" y2="520"/>
+    <line x1="40" y1="231" x2="920" y2="231"/><line x1="40" y1="365" x2="920" y2="365"/>
+  </g>
+
+  <g fill="#f3f8ff" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="15" font-weight="700">
+    <text x="40" y="129">Semantic model calls · milliseconds (scale 0–450)</text>
+    <text x="40" y="263">Browser decision/action loop · milliseconds (scale 0–1,200)</text>
+    <text x="40" y="397">End-to-end task time, including reset · milliseconds (scale 0–3,000)</text>
+  </g>
+
+  <g font-family="Inter,Segoe UI,Arial,sans-serif" font-size="13">
+    <text x="40" y="165" fill="#75e2c2" font-weight="700">CPU</text>
+    <rect x="220" y="148" width="220.4" height="9" rx="3" fill="#75e2c2"/><rect x="220" y="162" width="230.6" height="9" rx="3" fill="none" stroke="#75e2c2" stroke-width="2"/>
+    <text x="464" y="172" fill="#e6fff6">171 / 179 ms</text>
+    <text x="40" y="198" fill="#8dbdff" font-weight="700">DirectML</text>
+    <rect x="220" y="181" width="488.2" height="9" rx="3" fill="#8dbdff"/><rect x="220" y="195" width="498.5" height="9" rx="3" fill="none" stroke="#8dbdff" stroke-width="2"/>
+    <text x="730" y="205" fill="#e9f2ff">379 / 387 ms</text>
+
+    <text x="40" y="299" fill="#75e2c2" font-weight="700">CPU</text>
+    <rect x="220" y="282" width="196.7" height="9" rx="3" fill="#75e2c2"/><rect x="220" y="296" width="486.7" height="9" rx="3" fill="none" stroke="#75e2c2" stroke-width="2"/>
+    <text x="718" y="306" fill="#e6fff6">407 / 1,008 ms</text>
+    <text x="40" y="332" fill="#8dbdff" font-weight="700">DirectML</text>
+    <rect x="220" y="315" width="184.6" height="9" rx="3" fill="#8dbdff"/><rect x="220" y="329" width="497.8" height="9" rx="3" fill="none" stroke="#8dbdff" stroke-width="2"/>
+    <text x="730" y="339" fill="#e9f2ff">382 / 1,030 ms</text>
+
+    <text x="40" y="433" fill="#75e2c2" font-weight="700">CPU</text>
+    <rect x="220" y="416" width="323.2" height="9" rx="3" fill="#75e2c2"/><rect x="220" y="430" width="443.7" height="9" rx="3" fill="none" stroke="#75e2c2" stroke-width="2"/>
+    <text x="675" y="440" fill="#e6fff6">1,675 / 2,295 ms</text>
+    <text x="40" y="466" fill="#8dbdff" font-weight="700">DirectML</text>
+    <rect x="220" y="449" width="319.1" height="9" rx="3" fill="#8dbdff"/><rect x="220" y="463" width="446.4" height="9" rx="3" fill="none" stroke="#8dbdff" stroke-width="2"/>
+    <text x="678" y="473" fill="#e9f2ff">1,654 / 2,307 ms</text>
+  </g>
+
+  <g fill="#9fb3c9" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="12" text-anchor="middle">
+    <text x="220" y="222">0</text><text x="413" y="222">150</text><text x="607" y="222">300</text><text x="800" y="222">450 ms</text>
+    <text x="220" y="356">0</text><text x="413" y="356">400</text><text x="607" y="356">800</text><text x="800" y="356">1,200 ms</text>
+    <text x="220" y="490">0</text><text x="413" y="490">1,000</text><text x="607" y="490">2,000</text><text x="800" y="490">3,000 ms</text>
+  </g>
+
+  <line x1="40" y1="510" x2="920" y2="510" stroke="#28445d"/>
+  <text x="40" y="535" fill="#9fb3c9" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="12">Each episode starts a fresh Node bridge; model files were cached. DirectML was requested, not traced in this browser run.</text>
+  <text x="40" y="557" fill="#9fb3c9" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="12">The other 29 episodes used local rules. This small selected task set is not a general GPU speed claim.</text>
+</svg>

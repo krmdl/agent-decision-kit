@@ -224,6 +224,58 @@ $records = Get-ChildItem -LiteralPath $runDir -File -Filter 'miniwob-seed-*-clic
 python benchmarks/aggregate-browsergym.py @records --output benchmarks/results/miniwob-current-dom-8x5-20261002.json | Out-Null
 ```
 
+### Current-source MiniLM CPU vs DirectML browser run
+
+The [CPU aggregate](results/miniwob-current-dom-8x5-cpu-20261002.json), [DirectML-requested aggregate](results/miniwob-current-dom-8x5-dml-20261002.json), and [paired comparison](results/miniwob-current-dom-8x5-cpu-vs-dml-20261002.json) use the same eight selected DOM tasks across seeds 7–11: 40 episodes and 40 matched task/seed pairs per condition. All 80 episodes reached full raw reward; there were no timeouts or outcome disagreements. Both runs used commit `a9f8c4609ca463f057512b3f0a71f2d47085bd4e` with a clean tracked tree, Windows 10, Ryzen 5 5600H, an operator-reported GeForce GTX 1650 with 4 GB VRAM, Node 22.14.0, Python 3.12.13, BrowserGym 0.14.3, MiniWoB++ commit `7fd85d71a4b60325c6585396ec4f48377d049838`, and the same cached MiniLM model. Each episode started a fresh Node bridge; the measured model calls include pipeline initialization. Eleven semantic model calls were recorded per condition; other episode decisions used deterministic local rules.
+
+| Measure | CPU requested | DirectML requested |
+| --- | ---: | ---: |
+| Full-reward episodes / timeouts | 40/40 / 0 | 40/40 / 0 |
+| MiniLM decision calls | 11 | 11 |
+| Decision-call p50 / p95 | 171 / 179 ms | 379 / 387 ms |
+| Browser action-loop p50 / p95 | 407 / 1,008 ms | 382 / 1,030 ms |
+| End-to-end p50 / p95, including reset | 1,675 / 2,295 ms | 1,654 / 2,307 ms |
+
+![Measured MiniLM browser latency for CPU and DirectML-requested runs](../website/public/images/miniwob-minilm-device-latency-20261002.svg)
+
+The comparer matched all 40 task/seed pairs. Median paired DirectML-minus-CPU deltas were +209 ms for the 11 model calls, +8.5 ms for the browser loop, and 0 ms end to end; paired p95 deltas were +221, +216, and +228 ms respectively. Model-call p95 stayed below the 500 ms target in this small sample, but DirectML was slower for model calls and had no clear browser-loop or end-to-end advantage. A separate [MiniLM decision-only ONNX profile](results/decision-cases-independent-ryzen5600h-dml-node-profile-20261002.json) recorded mixed DirectML and CPU node execution; the BrowserGym run itself did not trace node placement. This is one curated task set on one host, not a general GPU speed result, a warm persistent-server measurement, or a broad browser-quality estimate.
+
+Reproduce with the same BrowserGym environment and pinned MiniWoB++ checkout:
+
+```powershell
+$python = 'C:\path\to\browsergym-venv\Scripts\python.exe'
+$miniwobRoot = 'C:\path\to\miniwob-plusplus\miniwob\html\miniwob'
+$runDir = Join-Path $env:TEMP 'adk-current-minilm-device-paired'
+$tasks = @('click-test', 'click-button', 'click-link', 'click-tab', 'click-collapsible', 'click-dialog', 'click-menu', 'click-checkboxes')
+$reports = @{
+  cpu = [System.Collections.Generic.List[string]]::new()
+  dml = [System.Collections.Generic.List[string]]::new()
+}
+$env:AGENT_DECISION_PROVIDER = 'semantic'
+$env:AGENT_DECISION_BENCHMARK_ACCELERATOR = 'NVIDIA GeForce GTX 1650 (4 GB VRAM; manually reported)'
+foreach ($device in @('cpu', 'dml')) {
+  $deviceDir = Join-Path $runDir $device
+  New-Item -ItemType Directory -Force -Path $deviceDir | Out-Null
+  foreach ($seed in 7..11) {
+    $env:AGENT_DECISION_DEVICE = $device
+    $summary = Join-Path $deviceDir "miniwob-seed-$seed.json"
+    & $python benchmarks/run-browsergym-miniwob-suite.py --miniwob-root $miniwobRoot --output $summary --tasks $tasks --seed $seed --max-actions 5 --timeout-seconds 120 --approve-synthetic-actions
+    if ($LASTEXITCODE -ne 0) { throw "BrowserGym run failed: $device / seed $seed" }
+    $reports[$device].Add($summary)
+  }
+}
+$cpuAggregate = 'benchmarks/results/miniwob-current-dom-8x5-cpu-20261002.json'
+$dmlAggregate = 'benchmarks/results/miniwob-current-dom-8x5-dml-20261002.json'
+$cpuFiles = $reports['cpu'].ToArray()
+$dmlFiles = $reports['dml'].ToArray()
+& $python benchmarks/aggregate-browsergym-suites.py @cpuFiles --provider semantic-local --requested-device cpu --reported-accelerator $env:AGENT_DECISION_BENCHMARK_ACCELERATOR --output $cpuAggregate
+if ($LASTEXITCODE -ne 0) { throw 'CPU aggregation failed' }
+& $python benchmarks/aggregate-browsergym-suites.py @dmlFiles --provider semantic-local --requested-device dml --reported-accelerator $env:AGENT_DECISION_BENCHMARK_ACCELERATOR --output $dmlAggregate
+if ($LASTEXITCODE -ne 0) { throw 'DirectML aggregation failed' }
+python benchmarks/compare-browsergym-runs.py --baseline $cpuAggregate --candidate $dmlAggregate --output benchmarks/results/miniwob-current-dom-8x5-cpu-vs-dml-20261002.json
+if ($LASTEXITCODE -ne 0) { throw 'Paired BrowserGym comparison failed' }
+```
+
 ### Paired local-provider browser run
 
 The [MiniLM report](results/miniwob-local-provider-paired-20261002-semantic.json), [NLI report](results/miniwob-local-provider-paired-20261002-nli.json), and [paired comparison](results/miniwob-local-provider-paired-comparison-20261002.json) contain 40 raw episodes per provider: the same eight DOM tasks across seeds 7–11. Both providers completed all 40 episodes without harness timeouts or outcome disagreements. Every record identifies the `fb1399aa3673451962525b8aa27655c8143f9731` source commit and includes its seed.

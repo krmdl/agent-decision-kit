@@ -64,6 +64,45 @@ def paired_delta(baseline, candidate, keys, field):
     }
 
 
+def paired_decision_call_delta(baseline, candidate, keys):
+    baseline_calls = []
+    candidate_calls = []
+    paired_episode_count = 0
+    excluded_episode_count = 0
+    for key in keys:
+        left_calls = baseline[key].get("decisionCallLatenciesMs", [])
+        right_calls = candidate[key].get("decisionCallLatenciesMs", [])
+        if not isinstance(left_calls, list) or not isinstance(right_calls, list):
+            raise ValueError(f"Task/seed pair {key} has invalid decisionCallLatenciesMs")
+        if len(left_calls) != len(right_calls):
+            excluded_episode_count += 1
+            continue
+        if left_calls:
+            paired_episode_count += 1
+        for left, right in zip(left_calls, right_calls):
+            if any(not isinstance(value, (int, float)) or isinstance(value, bool) for value in (left, right)):
+                raise ValueError(f"Task/seed pair {key} has non-numeric decision-call latency")
+            baseline_calls.append(left)
+            candidate_calls.append(right)
+
+    differences = [right - left for left, right in zip(baseline_calls, candidate_calls)]
+    delta = None
+    if differences:
+        delta = {
+            "median": statistics.median(differences),
+            "p95": percentile(differences, 0.95),
+            "mean": round(statistics.mean(differences), 2),
+        }
+    return {
+        "pairedEpisodeCount": paired_episode_count,
+        "excludedEpisodesWithDifferentCallCounts": excluded_episode_count,
+        "sampleCount": len(differences),
+        "baselineLatencyMs": {"p50": percentile(baseline_calls, 0.5), "p95": percentile(baseline_calls, 0.95)},
+        "candidateLatencyMs": {"p50": percentile(candidate_calls, 0.5), "p95": percentile(candidate_calls, 0.95)},
+        "candidateMinusBaselineMs": delta,
+    }
+
+
 def compare_reports(baseline, candidate, baseline_path="baseline.json", candidate_path="candidate.json"):
     for field in ("sourceCommit", "taskSet", "runSeeds", "environment", "configuration"):
         if baseline.get(field) != candidate.get(field):
@@ -109,6 +148,7 @@ def compare_reports(baseline, candidate, baseline_path="baseline.json", candidat
         },
         "pairedEndToEndLatencyDelta": paired_delta(baseline_records, candidate_records, keys, "latencyMs"),
         "pairedAgentActionLatencyDelta": paired_delta(baseline_records, candidate_records, keys, "agentActionLatencyMs"),
+        "pairedDecisionCallLatencyDelta": paired_decision_call_delta(baseline_records, candidate_records, keys),
         "note": "This is a project-authored, curated integration sample, not a representative BrowserGym score. Consult each report's environment and rawRecords. Paired differences describe these episodes only; they do not establish warm persistent-server latency, hardware-wide performance, or broad quality.",
     }
 
