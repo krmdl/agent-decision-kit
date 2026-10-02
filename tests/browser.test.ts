@@ -216,6 +216,7 @@ describe("Playwright browser safety flow", () => {
     await debugContext?.close();
     debugContext = undefined;
     if (profile) await rm(profile, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
+    vi.unstubAllEnvs();
     vi.restoreAllMocks();
   });
 
@@ -1479,7 +1480,8 @@ describe("Playwright browser safety flow", () => {
     browser = new BrowserManager({ headless: true, profileDir: path.join(profile, "chromium") });
     await browser.launch(`${baseUrl}ambiguous-labels`);
     const provider: DecisionProvider = {
-      id: "remote-test-provider",
+      id: "openai-compatible",
+      dataLocality: "remote",
       model: "unused-test-provider",
       decide: async () => { throw new Error("Remote page context is blocked by default"); },
     };
@@ -1487,6 +1489,47 @@ describe("Playwright browser safety flow", () => {
     const result = await browser.decideAndAct("Click Continue", provider);
     expect(result.status).toBe("remote-provider-blocked-for-browser-privacy");
     expect(result.candidates).toHaveLength(2);
+  }, 45_000);
+
+  it("uses the optional local NLI provider for ambiguous browser choices without a remote-context opt-in", async () => {
+    vi.stubEnv("AGENT_ALLOW_REMOTE_BROWSER_CONTEXT", "false");
+    profile = await mkdtemp(path.join(os.tmpdir(), "adk-browser-local-nli-provider-test-"));
+    browser = new BrowserManager({ headless: true, profileDir: path.join(profile, "chromium") });
+    await browser.launch(`${baseUrl}ambiguous-labels`);
+    let providerCalled = false;
+    const provider: DecisionProvider = {
+      id: "semantic-nli",
+      dataLocality: "local",
+      model: "fixture-nli",
+      async decide(request) {
+        providerCalled = true;
+        const question = request.questions.action;
+        if (question?.type !== "choice") throw new Error("Expected the ambiguous controls to be ranked as a Choice");
+        const labels = Object.keys(question.criteria);
+        const probabilities = Object.fromEntries(labels.map((label, index) => [label, index === 0 ? 0.8 : 0.2 / (labels.length - 1)]));
+        return {
+          provider: this.id,
+          model: this.model,
+          latencyMs: 1,
+          answers: {
+            action: {
+              type: "choice",
+              choice: labels[0]!,
+              probabilities,
+              confidence: 0.8,
+              confidenceSource: "maximum-probability",
+              calibration: "uncalibrated-estimate",
+            },
+          },
+        };
+      },
+    };
+
+    const result = await browser.decideAndAct("Click Continue", provider);
+
+    expect(providerCalled).toBe(true);
+    expect(result).toMatchObject({ status: "action-executed", provider: "semantic-nli", model: "fixture-nli" });
+    expect((await browser.inspect()).textExcerpt).toContain("No action");
   }, 45_000);
 
   it("executes a submit input only after the separate approval call", async () => {

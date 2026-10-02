@@ -53,7 +53,7 @@ The tool reads the local `/json/version` endpoint to discover Chrome's WebSocket
 
 ## What page data is used
 
-The browser tools do not return cookies, storage, password fields, file inputs, or form values. URLs returned by the tools and supplied to the decision model have credentials, query strings, and fragments removed; local file paths are redacted. For a decision, the tools can send the remaining page URL, title, headings, a bounded text excerpt, and up to 80 visible action labels to the configured decision provider. The local provider keeps that context on the machine. Remote providers are blocked for browser context unless `AGENT_ALLOW_REMOTE_BROWSER_CONTEXT=true` is explicitly set in the server environment.
+The browser tools do not return cookies, storage, password fields, file inputs, or form values. URLs returned by the tools and supplied to the decision model have credentials, query strings, and fragments removed; local file paths are redacted. For a decision, the tools can send the remaining page URL, title, headings, a bounded text excerpt, and up to 80 visible action labels to the configured decision provider. The `semantic`, `semantic-nli`, and OpenAI-compatible providers configured to use IPv4/IPv6 loopback keep that context on the machine. Locality is inferred from the endpoint hostname; a loopback proxy may still forward requests elsewhere. Hosted endpoints and providers whose locality is unknown are blocked for browser context unless `AGENT_ALLOW_REMOTE_BROWSER_CONTEXT=true` is explicitly set in the server environment.
 
 For most tasks, the default `browser_launch` tool is simpler: it opens a separate persistent Playwright profile without requiring Chrome's debugging port.
 

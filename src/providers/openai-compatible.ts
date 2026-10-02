@@ -1,3 +1,4 @@
+import { isIP } from "node:net";
 import type { DecisionProvider, DecisionRequest, DecisionResult, DecisionAnswer } from "../core/types.js";
 import { maxProbability, serializeState, validateProbabilities } from "../core/types.js";
 
@@ -18,6 +19,17 @@ function providerConfidence(raw: unknown, name: string): number | undefined {
   return raw;
 }
 
+function isLoopbackEndpoint(baseUrl: string): boolean {
+  try {
+    const hostname = new URL(baseUrl).hostname.replace(/^\[|\]$/g, "").toLowerCase();
+    if (hostname === "localhost") return true;
+    if (isIP(hostname) === 4) return Number(hostname.split(".")[0]) === 127;
+    return isIP(hostname) === 6 && hostname === "::1";
+  } catch {
+    return false;
+  }
+}
+
 export interface OpenAICompatibleOptions {
   baseUrl?: string;
   apiKey?: string;
@@ -27,6 +39,7 @@ export interface OpenAICompatibleOptions {
 
 export class OpenAICompatibleProvider implements DecisionProvider {
   readonly id = "openai-compatible";
+  readonly dataLocality: "local" | "remote";
   readonly model: string;
   private readonly baseUrl: string;
   private readonly apiKey: string | undefined;
@@ -34,6 +47,7 @@ export class OpenAICompatibleProvider implements DecisionProvider {
 
   constructor(options: OpenAICompatibleOptions = {}) {
     this.baseUrl = (options.baseUrl ?? process.env.AGENT_DECISION_BASE_URL ?? "http://127.0.0.1:11434/v1").replace(/\/+$/, "");
+    this.dataLocality = isLoopbackEndpoint(this.baseUrl) ? "local" : "remote";
     this.apiKey = options.apiKey ?? process.env.AGENT_DECISION_API_KEY;
     this.model = options.model ?? process.env.AGENT_DECISION_CHAT_MODEL ?? "qwen2.5:3b";
     this.timeoutMs = options.timeoutMs ?? 30_000;

@@ -75,6 +75,11 @@ const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "::1", "[::1]"]);
 const OCR_MASK_SELECTOR = 'input:not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="image"]), textarea, select, [contenteditable]:not([contenteditable="false"])';
 const COPYABLE_FIELD_KINDS = new Set(["text", "search", "email", "tel", "url", "number", "date", "datetime-local", "time", "month", "week", "textarea"]);
 
+function isLocalDecisionProvider(provider: DecisionProvider): boolean {
+  if (provider.dataLocality !== undefined) return provider.dataLocality === "local";
+  return provider.id === "semantic-local" || provider.id === "semantic-nli";
+}
+
 export class BrowserManager {
   private browser: Browser | undefined;
   private context: BrowserContext | undefined;
@@ -704,7 +709,7 @@ export class BrowserManager {
       }
       return result;
     }
-    if (provider.id !== "semantic-local" && process.env.AGENT_ALLOW_REMOTE_BROWSER_CONTEXT !== "true") {
+    if (!isLocalDecisionProvider(provider) && process.env.AGENT_ALLOW_REMOTE_BROWSER_CONTEXT !== "true") {
       return { status: "remote-provider-blocked-for-browser-privacy", provider: provider.id, candidates: snapshot.candidates, note: "Page labels and text are untrusted browser data. Set AGENT_ALLOW_REMOTE_BROWSER_CONTEXT=true only if you intend to send these bounded labels to the configured remote provider." };
     }
     const taskKey = normalizeLabel(task);

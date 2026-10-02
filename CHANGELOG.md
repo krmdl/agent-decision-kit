@@ -3,6 +3,8 @@
 ## Unreleased
 
 - Add optional local `semantic-nli` decisions with a documented label-count fallback, provider-only latency measurements, and paired synthetic result records; keep the smaller MiniLM provider as the default.
+- Allow the local `semantic-nli` provider to rank ambiguous browser controls without enabling remote browser-context sharing.
+- Identify local versus hosted decision endpoints so loopback OpenAI-compatible providers can use browser context while hosted or unknown providers remain blocked by default.
 - Add opt-in ONNX Runtime per-node provider profiling to decision benchmarks, with provider counts in the JSON report and compressed trace output kept beside it.
 - Classify browser value-entry controls using their accessible labels, so sensitive words in a select option do not block safe filtering while action controls remain approval-gated.
 - Recheck up to eight repeated digit glyphs with local single-character OCR and record the five-seed visual-only MiniWoB retry run.

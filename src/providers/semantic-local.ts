@@ -58,6 +58,7 @@ function cosine(left: number[], right: number[]): number {
 
 export class SemanticLocalProvider implements DecisionProvider {
   readonly id = "semantic-local";
+  readonly dataLocality = "local" as const;
   readonly model: string;
   readonly device: DeviceType;
   private readonly profilePrefix: string | undefined;

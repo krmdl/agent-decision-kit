@@ -110,6 +110,7 @@ function answerFor(plan: QuestionPlan, result: ZeroShotResult): DecisionAnswer {
 
 export class SemanticNliProvider implements DecisionProvider {
   readonly id = "semantic-nli";
+  readonly dataLocality = "local" as const;
   readonly model: string;
   readonly device: DeviceType;
   private readonly fastModel: SemanticLocalProvider;

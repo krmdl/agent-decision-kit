@@ -1,8 +1,23 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { JevProvider } from "../src/providers/jev.js";
+import { OpenAICompatibleProvider } from "../src/providers/openai-compatible.js";
 import type { DecisionRequest } from "../src/core/types.js";
 
 afterEach(() => vi.unstubAllGlobals());
+
+describe("OpenAI-compatible provider locality", () => {
+  it("recognizes IPv4 and IPv6 loopback endpoints as local", () => {
+    expect(new OpenAICompatibleProvider({ baseUrl: "http://127.0.0.1:11434/v1" }).dataLocality).toBe("local");
+    expect(new OpenAICompatibleProvider({ baseUrl: "http://127.0.0.2:11434/v1" }).dataLocality).toBe("local");
+    expect(new OpenAICompatibleProvider({ baseUrl: "http://[::1]:11434/v1" }).dataLocality).toBe("local");
+    expect(new OpenAICompatibleProvider({ baseUrl: "http://localhost:11434/v1" }).dataLocality).toBe("local");
+  });
+
+  it("keeps hosted endpoints remote and malformed endpoints conservative", () => {
+    expect(new OpenAICompatibleProvider({ baseUrl: "https://api.example.test/v1" }).dataLocality).toBe("remote");
+    expect(new OpenAICompatibleProvider({ baseUrl: "not a URL" }).dataLocality).toBe("remote");
+  });
+});
 
 describe("optional Jev API adapter", () => {
   it("uses the documented System One request and maps typed probability answers", async () => {

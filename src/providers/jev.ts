@@ -67,6 +67,7 @@ function requiredConfidenceMetadata(raw: unknown, name: string) {
 
 export class JevProvider implements DecisionProvider {
   readonly id = "jev";
+  readonly dataLocality = "remote" as const;
   readonly model: string;
   private readonly apiKey: string;
   private readonly baseUrl: string;

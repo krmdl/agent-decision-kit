@@ -86,6 +86,8 @@ export interface DecisionResult {
 export interface DecisionProvider {
   readonly id: string;
   readonly model: string;
+  /** Where this provider sends decision state. Privacy-sensitive browser flows treat undeclared providers as remote. */
+  readonly dataLocality?: "local" | "remote";
   decide(request: DecisionRequest): Promise<DecisionResult>;
   warmup?(): Promise<{ provider: string; model: string; latencyMs: number }>;
 }
