@@ -663,6 +663,8 @@ export class BrowserManager {
       if (rangePlan?.match) localMatch ??= rangePlan.match;
       const reportDateMatch = findExplicitReportDateMatch(task, snapshot.candidates, this.privateFieldValueHashes);
       if (reportDateMatch) localMatch ??= reportDateMatch;
+      const explicitCalendarDateMatch = findExplicitCalendarDateMatch(task, snapshot.candidates, snapshot.headings, snapshot.textExcerpt, this.privateFieldValueHashes);
+      if (explicitCalendarDateMatch) localMatch ??= explicitCalendarDateMatch;
       const taskKey = normalizeLabel(task);
       const priorNavigation = this.navigationActionsByTask.get(taskKey);
       const recentNavigationLabels = priorNavigation && Date.now() - priorNavigation.createdAt <= 5 * 60_000
@@ -671,7 +673,7 @@ export class BrowserManager {
       if (priorNavigation && Date.now() - priorNavigation.createdAt > 5 * 60_000) this.navigationActionsByTask.delete(taskKey);
       localMatch ??= findDeterministicMatch(task, snapshot.candidates, this.privateRangeValues, snapshot.headings, recentNavigationLabels);
     }
-    const missingFields = findUnfilledTaskFields(task, snapshot.candidates, this.privateFieldValuePresence);
+    const missingFields = findUnfilledTaskFields(task, snapshot.candidates, this.privateFieldValuePresence, this.privateFieldValueHashes);
     if (missingFields.length && (!localMatch || isSubmitCandidate(localMatch.candidate))) {
       return { status: "prerequisite-fields-required", candidateCount: snapshot.candidates.length, requiredFields: missingFields, note: "The task asks for form entry before submission, and these visible fields are still empty. No submit action was sent to the decision provider or proposed. Fill or select the requested values, inspect again, then ask to submit; submission will still require separate approval." };
     }
@@ -1997,7 +1999,7 @@ function findExplicitRangePlan(task: string, candidates: BrowserCandidate[], ran
   };
 }
 
-function findUnfilledTaskFields(task: string, candidates: BrowserCandidate[], valuePresence: Map<string, boolean>) {
+function findUnfilledTaskFields(task: string, candidates: BrowserCandidate[], valuePresence: Map<string, boolean>, fieldValueHashes: Map<string, string>) {
   const asksToSubmit = /\b(?:submit|send|publish|post)\b/i.test(task);
   const textEntryIntent = /\b(?:enter|type|fill|write|paste|copy)\b/i.test(task);
   const dateIntent = /\b(?:select|choose|set)\s+\d{1,2}\/\d{1,2}\/\d{4}\b/i.test(task);
@@ -2014,13 +2016,77 @@ function findUnfilledTaskFields(task: string, candidates: BrowserCandidate[], va
   const targets = ordinal ? [editable[Number(ordinal) - 1]].filter((candidate): candidate is BrowserCandidate => Boolean(candidate)) : editable;
   const explicitFields = /\b(?:each|every|all)\b|\binto the form\b|\b(?:textbox|text\s+field|input)\b/i.test(task) || /\b(?:copy|paste)\b/i.test(task) || dateIntent || nativeSelectIntent;
   if (!explicitFields || !targets.length) return [];
+  const expectedDateHashes = dateIntent ? explicitDateFieldValues(task)?.hashes : undefined;
   return targets
-    .filter((candidate) => valuePresence.get(candidate.ref) !== true)
+    .filter((candidate) => expectedDateHashes
+      ? !expectedDateHashes.has(fieldValueHashes.get(candidate.ref) ?? "")
+      : valuePresence.get(candidate.ref) !== true)
     .map(({ ref, role, label, kind, readOnly }) => ({ ref, role, label, kind, ...(readOnly ? { readOnly: true } : {}) }));
 }
 
 function isSubmitCandidate(candidate: BrowserCandidate) {
   return candidate.kind === "submit" || labelParts(candidate).some((part) => /\bsubmit\b/u.test(part));
+}
+
+function explicitDateFieldValues(task: string) {
+  const match = task.match(/\b(\d{1,2})\/(\d{1,2})\/(\d{4})\b/);
+  if (!match) return undefined;
+  const monthNumber = Number(match[1]);
+  const day = Number(match[2]);
+  const year = Number(match[3]);
+  const date = new Date(year, monthNumber - 1, day);
+  if (date.getFullYear() !== year || date.getMonth() !== monthNumber - 1 || date.getDate() !== day) return undefined;
+  const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  const month = String(monthNumber).padStart(2, "0");
+  const paddedDay = String(day).padStart(2, "0");
+  const monthName = months[monthNumber - 1]!;
+  const values = [
+    `${monthNumber}/${day}/${year}`,
+    `${month}/${paddedDay}/${year}`,
+    `${year}-${month}-${paddedDay}`,
+    `${monthName} ${day}, ${year}`,
+    `${monthName} ${day} ${year}`,
+  ];
+  return { day, monthName, year, hashes: new Set(values.map((value) => createHash("sha256").update(value).digest("hex"))) };
+}
+
+function findExplicitCalendarDateMatch(task: string, candidates: BrowserCandidate[], headings: string[], textExcerpt: string, fieldValueHashes: Map<string, string>): DeterministicBrowserMatch | undefined {
+  const target = explicitDateFieldValues(task);
+  if (!target || !/\b(?:select|choose|set)\s+\d{1,2}\/\d{1,2}\/\d{4}\b/i.test(task)) return undefined;
+  const dateFields = candidates.filter((candidate) => candidate.role === "input" && ["date", "datetime-local", "text"].includes(candidate.kind));
+  if (dateFields.length !== 1) return undefined;
+  const dateField = dateFields[0]!;
+  if (target.hashes.has(fieldValueHashes.get(dateField.ref) ?? "")) return undefined;
+
+  const exactDateLabel = normalizeLabel(`${target.monthName} ${target.day}, ${target.year}`);
+  const exactDateCandidates = candidates.filter((candidate) => ["button", "link"].includes(candidate.role)
+    && labelParts(candidate).includes(exactDateLabel));
+  if (exactDateCandidates.length === 1) {
+    return { candidate: exactDateCandidates[0]!, rule: "explicit-calendar-date", note: "The task gives an exact date that matches one visible calendar control; only that date is selected." };
+  }
+
+  const visibleContext = `${headings.join(" ")} ${textExcerpt}`;
+  if (normalizeLabel(visibleContext).includes(normalizeLabel(`${target.monthName} ${target.year}`))) {
+    const dayCandidates = candidates.filter((candidate) => ["button", "link"].includes(candidate.role)
+      && labelParts(candidate).some((part) => new RegExp(`^${target.day}(?:\\s+row)?$`).test(part)));
+    if (dayCandidates.length === 1) {
+      return { candidate: dayCandidates[0]!, rule: "explicit-calendar-date", note: "The visible calendar month matches the task's exact date; only its uniquely labeled day is selected." };
+    }
+  }
+
+  const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  const calendarMonthVisible = months.some((month) => new RegExp(`\\b${month}\\s+\\d{4}\\b`, "i").test(visibleContext));
+  const visibleDayCount = candidates.filter((candidate) => ["button", "link"].includes(candidate.role)
+    && labelParts(candidate).some((part) => /^(?:[1-9]|[12]\d|3[01])$/.test(part))).length;
+  if (calendarMonthVisible && visibleDayCount >= 7) return undefined;
+
+  if (dateField.readOnly) {
+    return { candidate: dateField, rule: "explicit-readonly-date-picker", note: "The task gives an exact date and one visible read-only date field. The picker is opened; a uniquely matching visible date must be selected before submission." };
+  }
+  const value = dateField.kind === "date" || dateField.kind === "datetime-local"
+    ? `${target.year}-${String(Number(task.match(/\b(\d{1,2})\/(\d{1,2})\/(\d{4})\b/)?.[1])).padStart(2, "0")}-${String(target.day).padStart(2, "0")}`
+    : task.match(/\b\d{1,2}\/\d{1,2}\/\d{4}\b/)![0];
+  return { candidate: dateField, textValue: value, rule: "explicit-date-field-value", note: "The task gives an exact date and one visible editable date field. The requested value is entered locally and is not returned in the tool result." };
 }
 
 function isPointerTarget(candidate: BrowserCandidate) {

@@ -66,6 +66,7 @@ describe("Playwright browser safety flow", () => {
   let tabHtml: Buffer;
   let expandHtml: Buffer;
   let nativeFieldsHtml: Buffer;
+  let readOnlyDateTaskHtml: Buffer;
   let copyFieldsHtml: Buffer;
   let ambiguousLabelsHtml: Buffer;
   let navigationLabelHtml: Buffer;
@@ -137,6 +138,7 @@ describe("Playwright browser safety flow", () => {
     tabHtml = Buffer.from('<!doctype html><div role="tab">Tab #1</div><div role="tab">Tab #2</div><div role="tab">Tab #3</div>');
     expandHtml = Buffer.from('<!doctype html><button id="toggle" aria-expanded="false" aria-controls="details">Section details</button><div id="details" hidden><p role="tab" aria-expanded="false">Submit</p><form onsubmit="event.preventDefault(); document.querySelector(\'#status\').textContent = \'Submitted locally\'"><button type="submit">Submit</button></form></div><p id="status">Not sent</p><script>document.querySelector(\'#toggle\').addEventListener(\'click\',e=>{const open=e.currentTarget.getAttribute(\'aria-expanded\')!==\'true\';e.currentTarget.setAttribute(\'aria-expanded\',String(open));document.querySelector(\'#details\').hidden=!open;location.hash=\'details\'})</script>');
     nativeFieldsHtml = Buffer.from(`<!doctype html><form id="native-form" onsubmit="event.preventDefault(); document.querySelector('#status').textContent = 'Submitted'"><label for="country">Country</label><select id="country" name="country"><option value="">Choose one</option><option value="ca">Canada</option><option value="cn">China</option><optgroup label="Disabled" disabled><option value="blocked">Unavailable</option></optgroup></select><label for="date">Date</label><input id="date" name="date" type="date"><label for="datepicker">Appointment date</label><input id="datepicker" name="appointment" type="text" aria-label="Appointment date" readonly><div id="picker" role="group" aria-label="December 2016 date picker" hidden><button id="day22" type="button" aria-label="December 22, 2016">22</button></div><button type="submit">Submit</button></form><p id="status">Not submitted</p><script>document.querySelector('#country').addEventListener('change',()=>document.querySelector('#status').textContent='Selected country');document.querySelector('#date').addEventListener('change',()=>document.querySelector('#status').textContent='Date entry updated');document.querySelector('#datepicker').addEventListener('click',()=>document.querySelector('#picker').hidden=false);document.querySelector('#day22').addEventListener('click',()=>{document.querySelector('#datepicker').value='12/22/2016';document.querySelector('#picker').hidden=true;document.querySelector('#status').textContent='Date selected'})</script>`);
+    readOnlyDateTaskHtml = Buffer.from('<!doctype html><h1>Choose the appointment date and submit.</h1><form onsubmit="event.preventDefault();document.querySelector(\'#status\').textContent=\'Submitted\'"><label for="appointment">Appointment date</label><input id="appointment" type="text" readonly><div id="picker" hidden><h2>December 2016</h2><a id="day22" href="#" aria-label="22 row: Su: 18; Mo: 19; Tu: 20; We: 21; Fr: 23" onclick="event.preventDefault();document.querySelector(\'#appointment\').value=\'12/22/2016\';document.querySelector(\'#picker\').hidden=true;document.querySelector(\'#status\').textContent=\'Date selected\'">22</a></div><button type="submit">Submit</button></form><p id="status">Not submitted</p><script>document.querySelector("#appointment").addEventListener("click",()=>document.querySelector("#picker").hidden=false)</script>');
     copyFieldsHtml = Buffer.from('<!doctype html><form id="copy-form" onsubmit="event.preventDefault();document.querySelector(\'#status\').textContent=\'Submitted\'"><label for="source">Source text</label><textarea id="source">private-copy-fixture-61c9</textarea><label for="target">Destination text</label><input id="target" type="text"><button type="submit">Submit</button></form><p id="status">Not submitted</p>');
     editableContentHtml = Buffer.from('<!doctype html><h1>Sample page</h1><div contenteditable="true">private-note-do-not-send-73b1</div><p>Public page context</p>');
     silentFormHtml = Buffer.from('<!doctype html><form onsubmit="event.preventDefault();document.querySelector(\'#status\').textContent=\'Submitted\'"><label for="draft">Draft</label><input id="draft" type="text"><button type="submit">Submit draft</button></form><p id="status">No visible change</p>');
@@ -187,6 +189,10 @@ describe("Playwright browser safety flow", () => {
       }
       if (request.url === "/navigation-reports") {
         response.end(navigationReportsHtml);
+        return;
+      }
+      if (request.url === "/readonly-date-task") {
+        response.end(readOnlyDateTaskHtml);
         return;
       }
       response.end(request.url === "/visual-only" ? visualHtml : request.url === "/visual-gestures" ? visualGesturesHtml : request.url === "/visual-scroll" ? visualScrollHtml : request.url === "/pointer-text" ? pointerTextHtml : request.url === "/icon-pointer" ? iconPointerHtml : request.url === "/silent-pointer" ? silentPointerHtml : request.url === "/silent-input" ? silentInputHtml : request.url === "/mixed-pointer" ? mixedPointerHtml : request.url === "/checkbox" ? checkboxHtml : request.url === "/submit" ? submitHtml : request.url === "/checkbox-task" ? checkboxTaskHtml : request.url === "/tabs" ? tabHtml : request.url === "/expand" ? expandHtml : request.url === "/native-fields" ? nativeFieldsHtml : request.url === "/copy-fields" ? copyFieldsHtml : request.url === "/slider" ? sliderHtml : request.url === "/aria-slider" ? ariaSliderHtml : request.url === "/jquery-ui-slider" ? jqueryUiSliderHtml : request.url === "/autocomplete" ? autocompleteHtml : request.url === "/multi-select" ? multipleSelectHtml : request.url === "/ambiguous-labels" ? ambiguousLabelsHtml : request.url === "/navigation-label" ? navigationLabelHtml : request.url === "/slow-navigation" ? slowNavigationHtml : request.url === "/navigation-targeting" ? navigationTargetingHtml : request.url === "/navigation-orders" ? navigationOrdersHtml : request.url === "/hierarchical-navigation-orders" ? hierarchicalNavigationOrdersHtml : request.url === "/hierarchical-navigation-themes" ? hierarchicalNavigationThemesHtml : request.url === "/navigation-target" ? navigationTargetHtml : request.url === "/navigation-hidden-target" ? navigationHiddenTargetHtml : request.url === "/duplicate-navigation-labels" ? duplicateNavigationLabelsHtml : request.url === "/editable" ? editableContentHtml : request.url === "/silent-form" ? silentFormHtml : request.url === "/async-navigation" ? asyncNavigationHtml : request.url === "/decision-race" ? decisionRaceHtml : request.url === "/replacement-action" ? replacementActionHtml : request.url === "/dynamic-refs" ? dynamicRefsHtml : request.url === "/menu" ? menuHtml : request.url === "/ordinal-fields" ? ordinalFieldsHtml : request.url === "/textareas" ? textareaWidgetsHtml : request.url === "/ordinal-button" ? ordinalButtonHtml : request.url === "/multi-disclosure" ? multiDisclosureHtml : request.url === "/adjacent-label-table" ? adjacentLabelTableHtml : request.url === "/row-action-context" ? rowActionContextHtml : html);
@@ -983,6 +989,29 @@ describe("Playwright browser safety flow", () => {
     expect(selected.status).toBe("action-executed");
     expect((await browser.inspect()).textExcerpt).toContain("Date selected");
     expect(JSON.stringify(selected)).not.toContain("12/22/2016");
+  }, 45_000);
+
+  it("selects the exact date from a read-only picker before requesting submit approval", async () => {
+    profile = await mkdtemp(path.join(os.tmpdir(), "adk-browser-explicit-readonly-date-test-"));
+    browser = new BrowserManager({ headless: true, profileDir: path.join(profile, "chromium") });
+    await browser.launch(`${baseUrl}readonly-date-task`);
+    const provider: DecisionProvider = {
+      id: "semantic-local",
+      model: "unused-date-fixture-provider",
+      decide: async () => { throw new Error("The exact visible date and submit control should resolve locally"); },
+    };
+    const task = "Select 12/22/2016 as the date and hit submit.";
+
+    const opened = await browser.decideAndAct(task, provider);
+    expect(opened).toMatchObject({ status: "action-executed", selectionRule: "explicit-readonly-date-picker", action: { label: "Appointment date" } });
+    const selected = await browser.decideAndAct(task, provider);
+    expect(selected).toMatchObject({ status: "action-executed", selectionRule: "explicit-calendar-date", action: { label: "22 row: Su: 18; Mo: 19; Tu: 20; We: 21; Fr: 23 — 22" } });
+    const submit = await browser.decideAndAct(task, provider);
+    expect(submit).toMatchObject({ status: "awaiting-user-approval", selectionRule: "unique-explicit-submit-control" });
+    if (submit.status !== "awaiting-user-approval") throw new Error("Expected an explicit submit approval prompt");
+    expect(JSON.stringify([opened, selected, submit])).not.toContain("12/22/2016");
+    expect(await browser.confirm(submit.approvalToken, true)).toMatchObject({ status: "action-executed-after-approval" });
+    expect((await browser.inspect()).textExcerpt).toContain("Submitted");
   }, 45_000);
 
   it("uses an exact quoted visible label locally and still gates a risky action", async () => {

@@ -257,7 +257,12 @@ def multi_tool_action(task, candidates, completed_fields, visible_text="", visib
                 return "act", {"ref": date_controls[0]["ref"]}, {"fieldKind": "calendar-day", "dateMatch": "exact-visible-label"}
             target_month = parsed_date.strftime("%B %Y")
             if normalized(target_month) in normalized(visible_text):
-                day_matches = [item for item in candidates if item.get("role") in {"button", "link"} and field_key(item) not in completed_fields and normalized(item["label"]) == str(parsed_date.day)]
+                day_matches = [
+                    item for item in candidates
+                    if item.get("role") in {"button", "link"}
+                    and field_key(item) not in completed_fields
+                    and re.fullmatch(rf"{parsed_date.day}(?:\s+row)?", normalized(re.split(r"\s*[—–|:]\s*", item["label"])[0]))
+                ]
                 if len(day_matches) == 1:
                     return "act", {"ref": day_matches[0]["ref"]}, {"fieldKind": "calendar-day", "dateMatch": "visible-month-and-day"}
             candidate = next((item for item in candidates if item["kind"] in {"date", "text"} and item.get("role") in {"input", "textbox"} and field_key(item) not in completed_fields), None)

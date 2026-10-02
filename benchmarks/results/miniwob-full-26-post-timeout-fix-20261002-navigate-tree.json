@@ -1,0 +1,216 @@
+{
+  "benchmark": "miniwob",
+  "task": "navigate-tree",
+  "taskPrompt": "Navigate through the file tree. Find and click on the folder or file named \"Nathalie\".",
+  "runnerMode": "bounded-multi-tool-integration-smoke",
+  "toolCoverage": [
+    "browser_confirm",
+    "browser_connect",
+    "browser_decide_and_act"
+  ],
+  "notExercisedTools": [
+    "browser_action",
+    "browser_copy_field",
+    "browser_fill",
+    "browser_select_option",
+    "browser_set_checkboxes",
+    "browser_set_range",
+    "browser_visual_action",
+    "browser_visual_click",
+    "browser_visual_drag",
+    "browser_visual_inspect",
+    "browser_visual_scroll",
+    "browser_visual_text"
+  ],
+  "toolActionTrace": [],
+  "success": true,
+  "timeout": false,
+  "failureReason": null,
+  "actions": 2,
+  "selectedAction": {
+    "ref": "r7",
+    "role": "pointer-target",
+    "label": "Nathalie",
+    "kind": "custom-pointer",
+    "risk": "approval-required"
+  },
+  "decisionConfidence": null,
+  "decisionCalibration": "not-applicable-rule",
+  "decisionLatencyMs": 185,
+  "decisionCallLatenciesMs": [
+    185
+  ],
+  "decisionSnapshot": null,
+  "availableCandidates": null,
+  "decisionTrace": [
+    {
+      "step": 1,
+      "decisionStatus": "awaiting-user-approval",
+      "provider": "semantic-local",
+      "model": "Xenova/all-MiniLM-L6-v2",
+      "selectionRule": null,
+      "selectedAction": {
+        "ref": "r3",
+        "role": "pointer-target",
+        "label": "treeview default icon",
+        "kind": "custom-pointer",
+        "risk": "approval-required"
+      },
+      "availableCandidates": null,
+      "decisionLatencyMs": 185,
+      "candidateCount": 6,
+      "confidence": 0.2810449746904494,
+      "calibration": "uncalibrated-estimate",
+      "executionStatus": "action-executed-after-approval"
+    },
+    {
+      "step": 2,
+      "decisionStatus": "awaiting-user-approval",
+      "provider": "local-literal-match",
+      "model": "unique-exact-quoted-label",
+      "selectionRule": "unique-exact-quoted-label",
+      "selectedAction": {
+        "ref": "r7",
+        "role": "pointer-target",
+        "label": "Nathalie",
+        "kind": "custom-pointer",
+        "risk": "approval-required"
+      },
+      "availableCandidates": [
+        {
+          "ref": "r1",
+          "role": "pointer-target",
+          "label": "treeview default icon",
+          "kind": "custom-pointer",
+          "risk": "approval-required"
+        },
+        {
+          "ref": "r2",
+          "role": "pointer-target",
+          "label": "Leonie",
+          "kind": "custom-pointer",
+          "risk": "approval-required"
+        },
+        {
+          "ref": "r3",
+          "role": "pointer-target",
+          "label": "treeview default icon",
+          "kind": "custom-pointer",
+          "risk": "approval-required"
+        },
+        {
+          "ref": "r4",
+          "role": "pointer-target",
+          "label": "Sergio",
+          "kind": "custom-pointer",
+          "risk": "approval-required"
+        },
+        {
+          "ref": "r5",
+          "role": "pointer-target",
+          "label": "treeview default icon",
+          "kind": "custom-pointer",
+          "risk": "approval-required"
+        },
+        {
+          "ref": "r6",
+          "role": "pointer-target",
+          "label": "Joye",
+          "kind": "custom-pointer",
+          "risk": "approval-required"
+        },
+        {
+          "ref": "r7",
+          "role": "pointer-target",
+          "label": "Nathalie",
+          "kind": "custom-pointer",
+          "risk": "approval-required"
+        },
+        {
+          "ref": "r8",
+          "role": "pointer-target",
+          "label": "Bernardine",
+          "kind": "custom-pointer",
+          "risk": "approval-required"
+        },
+        {
+          "ref": "r9",
+          "role": "pointer-target",
+          "label": "treeview default icon",
+          "kind": "custom-pointer",
+          "risk": "approval-required"
+        },
+        {
+          "ref": "r10",
+          "role": "pointer-target",
+          "label": "Beaulah",
+          "kind": "custom-pointer",
+          "risk": "approval-required"
+        },
+        {
+          "ref": "r11",
+          "role": "pointer-target",
+          "label": "Enola",
+          "kind": "custom-pointer",
+          "risk": "approval-required"
+        },
+        {
+          "ref": "r12",
+          "role": "pointer-target",
+          "label": "Beaulah",
+          "kind": "custom-pointer",
+          "risk": "approval-required"
+        }
+      ],
+      "decisionLatencyMs": 0,
+      "candidateCount": 12,
+      "confidence": null,
+      "calibration": "not-applicable-rule",
+      "executionStatus": "action-executed-after-approval"
+    }
+  ],
+  "candidateCount": 12,
+  "selectionRule": "unique-exact-quoted-label",
+  "syntheticApprovalCount": 2,
+  "latencyMs": 1990,
+  "environmentResetLatencyMs": 1292,
+  "agentActionLatencyMs": 698,
+  "reward": 1.0,
+  "rawTaskReward": 1,
+  "successCriterion": "full task reward required (RAW_REWARD_GLOBAL >= 1.0; use wrapper reward only if raw reward is absent)",
+  "terminated": true,
+  "decisionStatus": "action-executed-after-approval",
+  "decisionProvider": "local-literal-match",
+  "decisionModel": "unique-exact-quoted-label",
+  "agentDecisionKitCommit": "1714186275c6a25748ea3092f3df5bada75b7ed8",
+  "workingTreeModified": true,
+  "browserGymVersion": "0.14.3",
+  "browserGymPackageCommit": "0a785fbed075224ae81ca9c1fe924f66050696fe",
+  "playwrightPythonVersion": "1.44.0",
+  "playwrightNodeVersion": "1.63.0",
+  "browserVersion": "HeadlessChrome/125.0.6422.26",
+  "pythonVersion": "3.12.13",
+  "nodeVersion": "v22.14.0",
+  "operatingSystem": "Windows-10-10.0.19045-SP0",
+  "cpu": "AMD64 Family 25 Model 80 Stepping 0, AuthenticAMD",
+  "accelerator": "CPU",
+  "modelCacheState": "local cache already populated before this episode",
+  "ocrLanguageCacheExistedBeforeEpisode": null,
+  "decisionWarmState": "first semantic provider inference in a fresh Node bridge process; model files are cached",
+  "miniWobCommit": "7fd85d71a4b60325c6585396ec4f48377d049838",
+  "browserStillOpenAfterDisconnect": true,
+  "rawTaskInfo": {
+    "REWARD_GLOBAL": 0.998481,
+    "RAW_REWARD_GLOBAL": 1,
+    "REWARD_REASON": null,
+    "DONE_GLOBAL": true,
+    "EPISODE_ID": 1,
+    "TASK_READY": true
+  },
+  "timestampUtc": "2026-10-02T05:27:00.534347+00:00",
+  "maxActions": 8,
+  "note": "A curated MiniWoB integration smoke check, not a representative BrowserGym benchmark or a full autonomous agent. Multi-tool mode extracts only explicit task values, unique matches from bounded visible tables, and visible native options; field values are omitted from action traces. The optional visual path reads a quoted link with general OCR or ascending-number labels with digits-only OCR; each coordinate click remains behind the standard one-use approval gate. Synthetic approval is possible only for the exact local MiniWoB file URL.",
+  "visualOcrActionsEnabled": true,
+  "visualQuestion": null,
+  "runnerExitCode": 0
+}
