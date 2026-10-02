@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add the full pinned BoolQ validation split as an external yes/no benchmark, publish CPU and DirectML-requested results with a majority baseline, and disclose that the default model falls below it.
+- Compare paired per-question predictions and correctness counts; reject reports with different source dataset metadata.
 - Add optional local `semantic-nli` decisions with a documented label-count fallback, provider-only latency measurements, and paired synthetic result records; keep the smaller MiniLM provider as the default.
 - Allow the local `semantic-nli` provider to rank ambiguous browser controls without enabling remote browser-context sharing.
 - Identify local versus hosted decision endpoints so loopback OpenAI-compatible providers can use browser context while hosted or unknown providers remain blocked by default.
