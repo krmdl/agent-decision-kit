@@ -182,7 +182,7 @@ foreach ($device in @('cpu', 'dml')) {
 
 ### Full registered MiniWoB task sweep
 
-[`results/miniwob-all-125-catalog-sweep-20261002.json`](results/miniwob-all-125-catalog-sweep-20261002.json) records one seed across the 125 task IDs registered by BrowserGym MiniWoB 0.14.3, using the pinned MiniWoB++ checkout `7fd85d71a4b60325c6585396ec4f48377d049838`. The Windows 10 CPU run used Node 22.14.0, Python 3.12.13, seed 7, at most 12 bounded decision/action rounds per task, and the existing local semantic provider. It reached full raw reward on 34/125 tasks (27.2%) with no harness timeouts. BrowserManager action-loop p50/p95 was 266/994 ms; the 55 semantic model calls had p50/p95 of 175/217 ms; end-to-end latency including each environment reset was 1,559/2,293 ms. Exact local rules handled many steps, so the 55 model calls are a subset of the 125 episodes.
+[`results/miniwob-all-125-catalog-sweep-a83586d-20261002.json`](results/miniwob-all-125-catalog-sweep-a83586d-20261002.json) is the current-source one-seed run across all 125 task IDs registered by BrowserGym MiniWoB 0.14.3, using pinned MiniWoB++ checkout `7fd85d71a4b60325c6585396ec4f48377d049838`. The Windows 10 CPU run used commit `a83586dea4c83945290a09ef5cb9de80b3914c12`, a clean tracked tree, Node 22.14.0, Python 3.12.13, seed 7, at most 12 bounded decision/action rounds per task, and the local semantic provider. It reached full raw reward on 34/125 tasks (27.2%), positive partial raw reward on 2, and zero or negative reward on 89; there were no harness timeouts. BrowserManager action-loop p50/p95 was 265/990 ms; the 55 semantic model calls had p50/p95 of 174/216 ms; end-to-end latency including reset was 1,577/2,299 ms. The 55 model calls are a subset of the 125 episodes; other decisions used local rules. Task outcomes matched the earlier [working-tree sweep](results/miniwob-all-125-catalog-sweep-20261002.json) on all 125 task IDs, but that is not a controlled code comparison because the earlier run used a different commit and modified working tree.
 
 This is a bounded BrowserManager integration sweep from one seed and one modified working tree, not a full agent, a held-out quality estimate, or a general WebArena result. It exercises only `browser_connect`, `browser_decide_and_act`, and `browser_confirm`; the other browser tools, OCR/vision fallback, and other agents are not covered by this run. The JSON summary embeds every episode record, including task failures, partial reward information, action traces, latencies, and environment metadata. The exact 125 task IDs are versioned in [`miniwob-browsergym-0.14.3-tasks.txt`](miniwob-browsergym-0.14.3-tasks.txt).
 
@@ -195,9 +195,10 @@ npm run build
 $python = 'C:\path\to\BrowserGym\Scripts\python.exe'
 $miniwobRoot = 'C:\path\to\miniwob-plusplus\miniwob\html\miniwob'
 $tasks = Get-Content -LiteralPath 'benchmarks/miniwob-browsergym-0.14.3-tasks.txt'
-$output = Join-Path $env:TEMP 'miniwob-all-125.json'
+$output = Join-Path $env:TEMP 'miniwob-all-125-current.json'
 & $python benchmarks/run-browsergym-miniwob-suite.py --miniwob-root $miniwobRoot --output $output --tasks $tasks --seed 7 --max-actions 12 --timeout-seconds 120 --approve-synthetic-actions
 if ($LASTEXITCODE -ne 0) { throw 'MiniWoB catalog sweep failed' }
+Copy-Item -LiteralPath $output -Destination 'benchmarks/results/miniwob-all-125-catalog-sweep-a83586d-20261002.json'
 ```
 
 ### Earlier eight-task DOM repeat

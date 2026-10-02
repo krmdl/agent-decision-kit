@@ -46,7 +46,7 @@ import verifiedNavigationPreviousRun from "../../../benchmarks/results/webarena-
 import verifiedNavigationRun from "../../../benchmarks/results/webarena-verified-docker-b-page-settle-18-20261002-summary.json";
 import verifiedNavigationBaseline from "../../../benchmarks/results/webarena-verified-shopping-admin-initial-18-task-baseline.json";
 import remoteVerifiedNavigationRun from "../../../benchmarks/results/webarena-verified-docker-b-18-summary.json";
-import catalogSweep from "../../../benchmarks/results/miniwob-all-125-catalog-sweep-20261002.json";
+import catalogSweep from "../../../benchmarks/results/miniwob-all-125-catalog-sweep-a83586d-20261002.json";
 
 const episodeCount = latestRun.episodeCount;
 const successCount = latestRun.successCount;
@@ -65,7 +65,7 @@ const verifiedNavigationBaselineMeanReward = verifiedNavigationBaseline.meanRewa
 const remoteVerifiedNavigationCount = remoteVerifiedNavigationRun.episodeCount;
 const remoteVerifiedNavigationDecisionP95 = remoteVerifiedNavigationRun.decisionCallLatencyMs.p95;
 const catalogSweepSuccessPercent = Math.round(catalogSweep.taskSuccessRate * 100);
-const catalogSweepRawRunUrl = "https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/miniwob-all-125-catalog-sweep-20261002.json";
+const catalogSweepRawRunUrl = "https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/miniwob-all-125-catalog-sweep-a83586d-20261002.json";
 const catalogSweepCommitUrl = `https://github.com/krmdl/agent-decision-kit/commit/${catalogSweep.suite.agentDecisionKitCommit}`;
 const cpuDecisionRuns = [cpuDecisionRepeat1, cpuDecisionRepeat2, cpuDecisionRepeat3, cpuDecisionRepeat4, cpuDecisionRepeat5];
 const dmlDecisionRuns = [dmlDecisionRepeat1, dmlDecisionRepeat2, dmlDecisionRepeat3, dmlDecisionRepeat4, dmlDecisionRepeat5];
@@ -194,7 +194,7 @@ const decisionRows = [
         <article class="metric"><p class="eyebrow">MODEL CALL P50 / P95</p><strong>{catalogSweep.decisionCallLatencyMs.p50} / {catalogSweep.decisionCallLatencyMs.p95}ms</strong><span>{catalogSweep.decisionCallLatencyMs.sampleCount} CPU calls; exact local rules made the other selections</span></article>
         <article class="metric"><p class="eyebrow">END-TO-END P50 / P95</p><strong>{catalogSweep.latencyMs.p50} / {catalogSweep.latencyMs.p95}ms</strong><span>Includes environment reset for each task</span></article>
       </div>
-      <p class="comparison-note">Base source: <a href={catalogSweepCommitUrl}>{catalogSweep.suite.agentDecisionKitCommit.slice(0, 7)}</a>; benchmark used a modified working tree. BrowserGym {catalogSweep.rawRecords[0].browserGymVersion}, MiniWoB++ commit {catalogSweep.rawRecords[0].miniWobCommit.slice(0, 7)}, Node {catalogSweep.rawRecords[0].nodeVersion}, Python {catalogSweep.rawRecords[0].pythonVersion}, Windows 10, CPU. The pinned <a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/miniwob-browsergym-0.14.3-tasks.txt">task list</a> and <a href={catalogSweepRawRunUrl}>raw episode summary</a> are available in the repository.</p>
+      <p class="comparison-note">Base source: <a href={catalogSweepCommitUrl}>{catalogSweep.suite.agentDecisionKitCommit.slice(0, 7)}</a>; the tracked working tree was clean during this run. BrowserGym {catalogSweep.rawRecords[0].browserGymVersion}, MiniWoB++ commit {catalogSweep.rawRecords[0].miniWobCommit.slice(0, 7)}, Node {catalogSweep.rawRecords[0].nodeVersion}, Python {catalogSweep.rawRecords[0].pythonVersion}, Windows 10, CPU. The pinned <a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/miniwob-browsergym-0.14.3-tasks.txt">task list</a> and <a href={catalogSweepRawRunUrl}>raw episode summary</a> are available in the repository.</p>
     </section>
 
     <section class="latest" aria-labelledby="latest-title">
