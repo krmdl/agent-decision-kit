@@ -8,7 +8,7 @@
   "provider": "local-vision",
   "confidence": null,
   "calibration": "unavailable",
-  "latencyMs": 15747,
+  "latencyMs": 14985,
   "sampleCount": 1,
   "runtime": {
     "node": "v22.14.0",
@@ -19,6 +19,6 @@
     "accelerator": "CPU",
     "modelFilesPresentBeforeRun": true
   },
-  "timestampUtc": "2026-10-02T00:32:23.404Z",
+  "timestampUtc": "2026-10-02T12:30:11.973Z",
   "note": "One integration smoke sample on a synthetic canvas page. It checks visible text recognition only; it is not a quality, calibration, or speed benchmark. Latency includes model initialization and generation."
 }

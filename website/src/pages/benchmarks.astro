@@ -7,6 +7,8 @@ import previousFullRun from "../../../benchmarks/results/miniwob-expanded-multi-
 import focusedRun from "../../../benchmarks/results/miniwob-targeted-browser-fixes-8490bd7.json";
 import visualDigitsRun from "../../../benchmarks/results/miniwob-visual-digits-5-seed-smoke.json";
 import visualDigitsRetryRun from "../../../benchmarks/results/miniwob-visual-digits-single-char-retry-5-seed-smoke.json";
+import visualVisionRun from "../../../benchmarks/results/vision-smoke.json";
+import visualOcrRun from "../../../benchmarks/results/ocr-smoke.json";
 import currentEightTaskRun from "../../../benchmarks/results/miniwob-main-8-seed7-smoke.json";
 import repeatedEightTaskRun from "../../../benchmarks/results/miniwob-current-dom-8x5-20261002.json";
 import pairedMiniLMRun from "../../../benchmarks/results/miniwob-local-provider-paired-20261002-semantic.json";
@@ -432,6 +434,16 @@ const decisionRows = [
           <p>One visual-only MiniWoB task, repeated with seeds 7–11 after bounded single-character retries were added for repeated digit glyphs. All five episodes reached full raw reward with five separately approved local clicks; seed 11 used two OCR retries to distinguish duplicate <code>4</code> readings. The pre-retry run reached {visualDigitsRun.successCount}/{visualDigitsRun.episodeCount}, so this is a narrow same-seed regression observation rather than a general OCR claim. End-to-end latency including reset was p50 {visualDigitsRetryRun.latencyMs.p50} ms / p95 {visualDigitsRetryRun.latencyMs.p95} ms; the browser/OCR action loop was p50 {visualDigitsRetryRun.agentActionLatencyMs.p50} ms / p95 {visualDigitsRetryRun.agentActionLatencyMs.p95} ms. This is one task on one Windows CPU machine, not representative BrowserGym coverage or a speed claim.</p>
           <a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/miniwob-visual-digits-single-char-retry-5-seed-smoke.json">Retry run summary and five raw episodes ↗</a>
           <a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/miniwob-visual-digits-5-seed-smoke.json">Pre-retry 4/5 baseline ↗</a>
+        </article>
+        <article>
+          <div><strong>{visualVisionRun.success ? "1/1" : "0/1"}</strong><span>Local visual question answering · CPU</span></div>
+          <p>On a synthetic page with no DOM action candidates, SmolVLM2 read the visible <code>Open task</code> label in {visualVisionRun.latencyMs} ms, including model initialization and generation. Model files were already cached. This checks one visual description only; it is not a quality or speed estimate.</p>
+          <a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/vision-smoke.json">Raw vision smoke ↗</a>
+        </article>
+        <article>
+          <div><strong>{visualOcrRun.success ? "PASS" : "FAIL"}</strong><span>Local OCR and approval-gated click</span></div>
+          <p>Tesseract found the prominent draft labels; its first pass missed the smaller <code>Open task</code> label. A sparse-text retry proposed that exact target, and the harness cancelled it. A separate local click ran only after confirmation; approval against the changed screenshot was rejected. The one-page OCR pass took {visualOcrRun.latencyMs} ms and the retry took {visualOcrRun.sparseTextFallbackSmoke.latencyMs} ms. These are single-sample smoke timings.</p>
+          <a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/ocr-smoke.json">Raw OCR and approval trace ↗</a>
         </article>
         <article>
           <div><strong>3/26</strong><span>Decision/action only</span></div>
