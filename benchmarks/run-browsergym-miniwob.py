@@ -600,6 +600,11 @@ def main():
     completed_fields = set()
     try:
         observation, _ = env.reset(seed=args.seed)
+        # A gated action can stop the episode before the first task.validate call
+        # when this harness is run without synthetic local-task approvals.
+        reward = 0.0
+        terminated = False
+        task_info = {}
         reset_latency_ms = round((time.perf_counter() - reset_start) * 1000)
         if args.capture_screenshot:
             args.capture_screenshot.parent.mkdir(parents=True, exist_ok=True)
