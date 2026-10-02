@@ -71,6 +71,7 @@ describe("Playwright browser safety flow", () => {
   let navigationLabelHtml: Buffer;
   let slowNavigationHtml: Buffer;
   let navigationTargetingHtml: Buffer;
+  let navigationReportsHtml: Buffer;
   let navigationOrdersHtml: Buffer;
   let hierarchicalNavigationOrdersHtml: Buffer;
   let hierarchicalNavigationThemesHtml: Buffer;
@@ -123,6 +124,7 @@ describe("Playwright browser safety flow", () => {
     navigationLabelHtml = Buffer.from('<!doctype html><h1 id="heading">Dashboard</h1><a href="#customers" onclick="document.querySelector(\'#heading\').textContent=\'Customers\';document.querySelector(\'#status\').textContent=\'Customers opened\'">Customers</a><p id="status">Dashboard</p>');
     slowNavigationHtml = Buffer.from('<!doctype html><h1>Dashboard</h1><a href="/slow-navigation-target">Customers</a>');
     navigationTargetingHtml = Buffer.from('<!doctype html><h1>Dashboard</h1><a href="#magento">Magento</a><a href="#sales">Sales</a><a href="#reports" onclick="document.querySelector(\'h1\').textContent=\'Reports menu opened\'">Reports</a>');
+    navigationReportsHtml = Buffer.from('<!doctype html><h1>Dashboard</h1><a id="reports" href="#reports" onclick="document.querySelector(\'#reports-menu\').hidden=false;document.querySelector(\'h1\').textContent=\'Reports menu opened\'">Reports</a><div id="reports-menu" hidden><a href="#product-viewed" onclick="document.querySelector(\'h1\').textContent=\'Product Views Report\'">Views</a><a href="#best-sellers" onclick="document.querySelector(\'h1\').textContent=\'Best Sellers Report\'">Bestsellers</a></div>');
     navigationOrdersHtml = Buffer.from('<!doctype html><h1>Dashboard</h1><a href="#sales">Sales</a><a href="#orders">Orders</a>');
     hierarchicalNavigationOrdersHtml = Buffer.from('<!doctype html><h1>Dashboard</h1><a id="sales" href="#sales">Sales</a><div id="sales-menu" hidden><a href="#orders" onclick="document.querySelector(\'h1\').textContent=\'Orders list\';document.querySelector(\'#sales-menu\').hidden=true">Orders</a></div><script>document.querySelector("#sales").addEventListener("click",()=>document.querySelector("#sales-menu").hidden=false)</script>');
     hierarchicalNavigationThemesHtml = Buffer.from('<!doctype html><h1>Dashboard</h1><a id="content" href="#content">Content</a><div id="content-menu" hidden><a href="#themes" onclick="document.querySelector(\'h1\').textContent=\'Themes\';document.querySelector(\'#content-menu\').hidden=true">Themes</a><a href="#configuration">Configuration</a></div><script>document.querySelector("#content").addEventListener("click",()=>document.querySelector("#content-menu").hidden=false)</script>');
@@ -181,6 +183,10 @@ describe("Playwright browser safety flow", () => {
       }
       if (request.url === "/hierarchical-menu") {
         response.end(hierarchicalMenuHtml);
+        return;
+      }
+      if (request.url === "/navigation-reports") {
+        response.end(navigationReportsHtml);
         return;
       }
       response.end(request.url === "/visual-only" ? visualHtml : request.url === "/visual-gestures" ? visualGesturesHtml : request.url === "/visual-scroll" ? visualScrollHtml : request.url === "/pointer-text" ? pointerTextHtml : request.url === "/icon-pointer" ? iconPointerHtml : request.url === "/silent-pointer" ? silentPointerHtml : request.url === "/silent-input" ? silentInputHtml : request.url === "/mixed-pointer" ? mixedPointerHtml : request.url === "/checkbox" ? checkboxHtml : request.url === "/submit" ? submitHtml : request.url === "/checkbox-task" ? checkboxTaskHtml : request.url === "/tabs" ? tabHtml : request.url === "/expand" ? expandHtml : request.url === "/native-fields" ? nativeFieldsHtml : request.url === "/copy-fields" ? copyFieldsHtml : request.url === "/slider" ? sliderHtml : request.url === "/aria-slider" ? ariaSliderHtml : request.url === "/jquery-ui-slider" ? jqueryUiSliderHtml : request.url === "/autocomplete" ? autocompleteHtml : request.url === "/multi-select" ? multipleSelectHtml : request.url === "/ambiguous-labels" ? ambiguousLabelsHtml : request.url === "/navigation-label" ? navigationLabelHtml : request.url === "/slow-navigation" ? slowNavigationHtml : request.url === "/navigation-targeting" ? navigationTargetingHtml : request.url === "/navigation-orders" ? navigationOrdersHtml : request.url === "/hierarchical-navigation-orders" ? hierarchicalNavigationOrdersHtml : request.url === "/hierarchical-navigation-themes" ? hierarchicalNavigationThemesHtml : request.url === "/navigation-target" ? navigationTargetHtml : request.url === "/navigation-hidden-target" ? navigationHiddenTargetHtml : request.url === "/duplicate-navigation-labels" ? duplicateNavigationLabelsHtml : request.url === "/editable" ? editableContentHtml : request.url === "/silent-form" ? silentFormHtml : request.url === "/async-navigation" ? asyncNavigationHtml : request.url === "/decision-race" ? decisionRaceHtml : request.url === "/replacement-action" ? replacementActionHtml : request.url === "/dynamic-refs" ? dynamicRefsHtml : request.url === "/menu" ? menuHtml : request.url === "/ordinal-fields" ? ordinalFieldsHtml : request.url === "/textareas" ? textareaWidgetsHtml : request.url === "/ordinal-button" ? ordinalButtonHtml : request.url === "/multi-disclosure" ? multiDisclosureHtml : request.url === "/adjacent-label-table" ? adjacentLabelTableHtml : request.url === "/row-action-context" ? rowActionContextHtml : html);
@@ -1059,7 +1065,7 @@ describe("Playwright browser safety flow", () => {
     expect((await browser.inspect()).url).not.toContain("#magento");
   }, 45_000);
 
-  it("prefers the report destination over a mentioned parent menu", async () => {
+  it("does not retry a Reports menu after opening it when its destination is not yet visible", async () => {
     profile = await mkdtemp(path.join(os.tmpdir(), "adk-browser-navigation-report-test-"));
     browser = new BrowserManager({ headless: true, profileDir: path.join(profile, "chromium") });
     await browser.launch(`${baseUrl}navigation-targeting`);
@@ -1073,8 +1079,46 @@ describe("Playwright browser safety flow", () => {
     const repeat = await browser.decideAndAct("Show the sales order report for last month", provider);
 
     expect(result).toMatchObject({ status: "action-executed", selectionRule: "unique-mentioned-navigation-label", action: { label: "Reports" } });
-    expect(repeat.status).toBe("navigation-action-already-tried");
+    expect(repeat.status).toBe("remote-provider-blocked-for-browser-privacy");
     expect((await browser.inspect()).headings).toEqual(["Reports menu opened"]);
+  }, 45_000);
+
+  it("matches a product view report to the newly revealed Views link", async () => {
+    profile = await mkdtemp(path.join(os.tmpdir(), "adk-browser-navigation-reports-semantic-test-"));
+    browser = new BrowserManager({ headless: true, profileDir: path.join(profile, "chromium") });
+    await browser.launch(`${baseUrl}navigation-reports`);
+    const provider: DecisionProvider = {
+      id: "remote-test-provider",
+      model: "fixture-provider",
+      decide: async () => { throw new Error("The product view report should resolve from its visible menu label locally"); },
+    };
+    const task = "Show the product view report for July 5, 2021 to May 31, 2023";
+
+    const parent = await browser.decideAndAct(task, provider);
+    const destination = await browser.decideAndAct(task, provider);
+
+    expect(parent).toMatchObject({ status: "action-executed", action: { label: "Reports" } });
+    expect(destination).toMatchObject({ status: "action-executed", action: { label: "Views" }, selectionRule: "unique-mentioned-navigation-label" });
+    expect((await browser.inspect()).headings).toContain("Product Views Report");
+  }, 45_000);
+
+  it("matches a best sellers report to Magento's compound Bestsellers link", async () => {
+    profile = await mkdtemp(path.join(os.tmpdir(), "adk-browser-navigation-bestsellers-test-"));
+    browser = new BrowserManager({ headless: true, profileDir: path.join(profile, "chromium") });
+    await browser.launch(`${baseUrl}navigation-reports`);
+    const provider: DecisionProvider = {
+      id: "remote-test-provider",
+      model: "fixture-provider",
+      decide: async () => { throw new Error("The best sellers report should resolve from its visible menu label locally"); },
+    };
+    const task = "Show the best sellers report for last month";
+
+    const parent = await browser.decideAndAct(task, provider);
+    const destination = await browser.decideAndAct(task, provider);
+
+    expect(parent).toMatchObject({ status: "action-executed", action: { label: "Reports" } });
+    expect(destination).toMatchObject({ status: "action-executed", action: { label: "Bestsellers" }, selectionRule: "unique-mentioned-navigation-label" });
+    expect((await browser.inspect()).headings).toContain("Best Sellers Report");
   }, 45_000);
 
   it("matches the requested list destination instead of its unrelated parent menu", async () => {

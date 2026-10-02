@@ -1,0 +1,107 @@
+{
+  "benchmark": "webarena-verified",
+  "taskId": 711,
+  "intentTemplateId": 271,
+  "taskType": "navigate",
+  "taskPrompt": "Show the product view report from July 5, 2021 to May 31, 2023.",
+  "runnerMode": "bounded-browser-decide-and-act-with-stale-retries",
+  "seed": 7,
+  "maxActions": 12,
+  "maxStalePageRetries": 1,
+  "browserGymPageIndex": 0,
+  "browserGymPageCount": 1,
+  "success": false,
+  "reward": 0.5,
+  "terminated": true,
+  "actions": 2,
+  "loopDetected": false,
+  "trace": [
+    {
+      "step": 1,
+      "retryAttempt": 0,
+      "status": "action-executed",
+      "action": {
+        "role": "link",
+        "label": "Reports",
+        "kind": "a",
+        "risk": "low"
+      },
+      "candidateCount": 31,
+      "provider": "local-literal-match",
+      "model": "unique-mentioned-navigation-label",
+      "selectionRule": "unique-mentioned-navigation-label",
+      "decisionLatencyMs": 0,
+      "elapsedMs": 316,
+      "confidenceSource": "not-applicable-rule",
+      "calibration": "not-applicable-rule",
+      "taskTargetVisible": null
+    },
+    {
+      "step": 2,
+      "retryAttempt": 0,
+      "status": "action-executed",
+      "action": {
+        "role": "link",
+        "label": "Views",
+        "kind": "a",
+        "risk": "low"
+      },
+      "candidateCount": 57,
+      "provider": "local-literal-match",
+      "model": "unique-mentioned-navigation-label",
+      "selectionRule": "unique-mentioned-navigation-label",
+      "decisionLatencyMs": 0,
+      "elapsedMs": 718,
+      "confidenceSource": "not-applicable-rule",
+      "calibration": "not-applicable-rule",
+      "taskTargetVisible": null
+    },
+    {
+      "step": 3,
+      "retryAttempt": 0,
+      "status": "ambiguous-selection",
+      "action": {},
+      "candidateCount": 31,
+      "provider": "semantic-local",
+      "model": "Xenova/all-MiniLM-L6-v2",
+      "selectionRule": null,
+      "decisionLatencyMs": 301,
+      "elapsedMs": 356,
+      "confidenceSource": null,
+      "calibration": null,
+      "taskTargetVisible": null
+    }
+  ],
+  "initialPage": {
+    "title": "Dashboard / Magento Admin",
+    "path": "/admin/admin/dashboard/"
+  },
+  "finalPage": {
+    "title": "Product Views Report / Products / Reports / Magento Admin",
+    "path": "/admin/reports/report_product/viewed/"
+  },
+  "resetLatencyMs": 10795,
+  "decisionCallLatenciesMs": [
+    316,
+    718,
+    356
+  ],
+  "latencyMs": 13836,
+  "browserGymVersion": "0.14.3",
+  "browserGymVerifiedVersion": "0.14.3",
+  "playwrightPythonVersion": "1.44.0",
+  "playwrightNodeVersion": "1.63.0",
+  "browserVersion": "HeadlessChrome/125.0.6422.26",
+  "pythonVersion": "3.12.13",
+  "nodeVersion": "v22.14.0",
+  "agentDecisionKitCommit": "0970f8c3aa9d133085108bf44c595098dc4eca35",
+  "workingTreeModified": true,
+  "testedSourceFile": "src/browser/manager.ts",
+  "operatingSystem": "Windows-10-10.0.19045-SP0",
+  "cpu": "AMD64 Family 25 Model 80 Stepping 0, AuthenticAMD",
+  "accelerator": "CPU",
+  "containerImage": "am1n3e/webarena-verified-shopping_admin:latest",
+  "containerImageDigest": "sha256:d0531dd27ed98d0c459ff9e88118bf2ed8b660b0ed99c38837db46c065a5be13",
+  "timestampUtc": "2026-10-02T01:29:51.559847+00:00",
+  "note": "One read-only navigation integration smoke, not a representative WebArena score or a general quality/speed claim. Only navigation tasks are accepted; pending confirmations are never auto-approved. The harness omits evaluator internals and expected answers."
+}

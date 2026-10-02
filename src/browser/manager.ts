@@ -599,7 +599,13 @@ export class BrowserManager {
       if (rangePlan?.error) return { status: "no-safe-selection", candidateCount: snapshot.candidates.length, candidates: snapshot.candidates, note: rangePlan.error };
       if (rangePlan?.allSet && !/\b(?:submit|send|publish|post)\b/i.test(task)) return { status: "target-values-already-set", candidateCount: snapshot.candidates.length, note: "Every explicitly named visible slider already has its requested value. No control was changed." };
       if (rangePlan?.match) localMatch ??= rangePlan.match;
-      localMatch ??= findDeterministicMatch(task, snapshot.candidates, this.privateRangeValues, snapshot.headings);
+      const taskKey = normalizeLabel(task);
+      const priorNavigation = this.navigationActionsByTask.get(taskKey);
+      const recentNavigationLabels = priorNavigation && Date.now() - priorNavigation.createdAt <= 5 * 60_000
+        ? priorNavigation.labels
+        : new Set<string>();
+      if (priorNavigation && Date.now() - priorNavigation.createdAt > 5 * 60_000) this.navigationActionsByTask.delete(taskKey);
+      localMatch ??= findDeterministicMatch(task, snapshot.candidates, this.privateRangeValues, snapshot.headings, recentNavigationLabels);
     }
     const missingFields = findUnfilledTaskFields(task, snapshot.candidates, this.privateFieldValuePresence);
     if (missingFields.length && (!localMatch || isSubmitCandidate(localMatch.candidate))) {
@@ -635,7 +641,14 @@ export class BrowserManager {
     if (provider.id !== "semantic-local" && process.env.AGENT_ALLOW_REMOTE_BROWSER_CONTEXT !== "true") {
       return { status: "remote-provider-blocked-for-browser-privacy", provider: provider.id, candidates: snapshot.candidates, note: "Page labels and text are untrusted browser data. Set AGENT_ALLOW_REMOTE_BROWSER_CONTEXT=true only if you intend to send these bounded labels to the configured remote provider." };
     }
-    const availableCandidates = snapshot.candidates.filter((candidate) => !this.nonProgressingActions.has(nonProgressingActionKey(this.lastInspectionFingerprint, candidate)));
+    const taskKey = normalizeLabel(task);
+    const priorNavigation = this.navigationActionsByTask.get(taskKey);
+    const recentNavigationLabels = priorNavigation && Date.now() - priorNavigation.createdAt <= 5 * 60_000
+      ? priorNavigation.labels
+      : new Set<string>();
+    const availableCandidates = snapshot.candidates.filter((candidate) =>
+      !this.nonProgressingActions.has(nonProgressingActionKey(this.lastInspectionFingerprint, candidate))
+      && !recentNavigationLabels.has(normalizeLabel(labelParts(candidate)[0] ?? candidate.label)));
     if (!availableCandidates.length) return { status: "repeated-action-blocked", candidateCount: snapshot.candidates.length, note: "Every visible action in this page state has already run once without changing the inspected state. No automatic action was repeated." };
     const decisionContextFingerprint = this.lastInspectionFingerprint;
     browserDebug(`provider decision started with ${availableCandidates.length} candidates`);
@@ -1505,7 +1518,7 @@ function parseHierarchicalMenuPath(task: string) {
   return path;
 }
 
-function findDeterministicMatch(task: string, candidates: BrowserCandidate[], rangeValues: Map<string, number>, headings: string[] = []): DeterministicBrowserMatch | undefined {
+function findDeterministicMatch(task: string, candidates: BrowserCandidate[], rangeValues: Map<string, number>, headings: string[] = [], previouslyUsedNavigationLabels: ReadonlySet<string> = new Set()): DeterministicBrowserMatch | undefined {
   const normalized = normalizeLabel(task);
   const taskCandidates = findOrdinalTaskCandidate(task, candidates);
   if (taskCandidates) return taskCandidates;
@@ -1522,7 +1535,7 @@ function findDeterministicMatch(task: string, candidates: BrowserCandidate[], ra
   const rowContextNavigationAction = findUniqueRowContextNavigationAction(task, candidates);
   if (rowContextNavigationAction) return rowContextNavigationAction;
 
-  const navigationLabel = findUniqueMentionedNavigationLabel(task, candidates, headings);
+  const navigationLabel = findUniqueMentionedNavigationLabel(task, candidates, headings, previouslyUsedNavigationLabels);
   if (navigationLabel) return navigationLabel;
 
   const optionIntent = task.match(/\b(?:select|choose|pick)\s+(.+?)\s+(?:from|in)\s+(?:the\s+)?(?:scroll\s+)?(?:list|dropdown|select(?:\s+box)?|menu)\b/i)?.[1]
@@ -1608,12 +1621,17 @@ function findDeterministicMatch(task: string, candidates: BrowserCandidate[], ra
   return undefined;
 }
 
-function findUniqueMentionedNavigationLabel(task: string, candidates: BrowserCandidate[], headings: string[] = []) {
+function findUniqueMentionedNavigationLabel(task: string, candidates: BrowserCandidate[], headings: string[] = [], previouslyUsedLabels: ReadonlySet<string> = new Set()) {
   if (!/\b(?:go|navigate|view|show|open|visit|browse|display)\b/i.test(task)) return undefined;
   const normalizedTask = normalizeLabel(task);
   const command = normalizedTask.match(/\b(?:go|navigate|view|show|open|visit|browse|display)\b(?:\s+to)?\s+(.+)/u)?.[1] ?? normalizedTask;
-  const ignored = new Set(["a", "an", "and", "are", "at", "being", "details", "detail", "display", "for", "from", "go", "in", "information", "is", "list", "navigate", "of", "on", "open", "page", "screen", "section", "settings", "show", "the", "to", "view", "visit", "was", "were", "with"]);
-  const normalizedWords = (value: string) => value.split(/\s+/u).filter((word) => word && !ignored.has(word)).map(normalizeNavigationWord);
+  const ignored = new Set(["a", "an", "and", "are", "at", "being", "details", "detail", "display", "for", "from", "go", "in", "information", "is", "list", "navigate", "of", "on", "open", "page", "screen", "section", "settings", "show", "the", "to", "visit", "was", "were", "with"]);
+  const normalizedWords = (value: string) => value.split(/\s+/u).filter((word) => word && !ignored.has(word)).flatMap((word) => {
+    const normalized = normalizeNavigationWord(word);
+    // Magento's report navigation uses the single-word label "Bestsellers"
+    // for the same destination described as a "best sellers report".
+    return normalized === "bestseller" ? ["best", "seller"] : [normalized];
+  });
   const collection = normalizedTask.match(/\b((?:all|every)\s+.+?)(?:\s+(?:in|on|from|for|at|with)\b|$)/u)?.[1];
   let targetWords: string[] = [];
   let reportSubject: string[] = [];
@@ -1653,12 +1671,14 @@ function findUniqueMentionedNavigationLabel(task: string, candidates: BrowserCan
   };
   let matches = candidates.flatMap((candidate) => {
     if (!interactiveRoles.has(candidate.role)) return [];
+    if (previouslyUsedLabels.has(normalizeLabel(labelParts(candidate)[0] ?? candidate.label))) return [];
     const score = specificity(candidate, reportIntent ? reportSubject : targetWords);
     return score ? [{ candidate, specificity: score }] : [];
   });
   if (reportIntent && !matches.length) {
     matches = candidates.flatMap((candidate) => {
       if (!interactiveRoles.has(candidate.role)) return [];
+      if (previouslyUsedLabels.has(normalizeLabel(labelParts(candidate)[0] ?? candidate.label))) return [];
       const score = Math.max(...labelParts(candidate).map((label) => normalizeNavigationWord(normalizeLabel(label))).filter(Boolean).map((word) => word === "report" ? 1 : 0), 0);
       return score ? [{ candidate, specificity: score }] : [];
     });
