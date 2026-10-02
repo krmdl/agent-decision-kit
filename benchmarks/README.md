@@ -154,6 +154,8 @@ The [MiniLM report](results/miniwob-local-provider-paired-20261002-semantic.json
 | Semantic model calls, p50 / p95 | 11 calls, 173 / 182 ms | 11 calls, 810 / 848 ms |
 | Mean BrowserManager action rounds | 1.50 | 1.50 |
 
+![Measured CPU decision-call latency for the paired MiniLM and NLI MiniWoB run](../website/public/images/miniwob-local-provider-latency-20261002.svg)
+
 The paired NLI-minus-MiniLM median delta was +22.5 ms end to end and +6 ms for the browser action loop; paired p95 deltas were +685 ms and +669 ms. The task set is deliberately small and easy: only 11 of 40 episodes per provider needed model inference, and the other decisions used exact local rules. Each episode starts a new Node bridge, so the measured model calls include per-process pipeline initialization with model files already cached. These CPU results show no browser-speed advantage for NLI; the NLI decision calls were about 4.7× slower by p50. They do not predict warm calls from a persistent MCP server, GPU performance, or broader task quality. All confidence estimates remain uncalibrated.
 
 The provider selection now passes through both the Python BrowserGym runner and Node bridge. To repeat the eight-task run with a BrowserGym 0.14.3 / Python Playwright 1.44.0 environment and the pinned MiniWoB++ checkout, build the package and run:

@@ -139,6 +139,8 @@ Claude Code users can also opt into the [prompt-routing hook](integrations/claud
 | MiniWoB local-provider pair, 40 episodes/provider | Both 40/40; decision-call p50/p95 173/182 ms MiniLM, 810/848 ms NLI | Same eight tasks and five seeds on Windows CPU. Each episode starts a fresh bridge, and 11 episodes per provider called the model. [Paired results](benchmarks/results/miniwob-local-provider-paired-comparison-20261002.json) |
 | WebArena Verified, 18 tasks | 3 full, 13 partial, 2 zero rewards; mean 0.528 | Read-only navigation on one synthetic Magento admin site; not the original multi-site WebArena suite. Action/decision p95 includes inspection and selection: 1.176 s. [Run report](benchmarks/results/webarena-verified-docker-b-page-settle-18-20261002-summary.json) |
 
+![Measured CPU decision-call latency: MiniLM p50/p95 173/182 ms and NLI 810/848 ms, 11 model calls per provider](website/public/images/miniwob-local-provider-latency-20261002.svg)
+
 ### Decision latency samples
 
 Five repeated 30-case runs on one Windows 10 Ryzen 5 5600H / GTX 1650 measured p95 at 21 ms on CPU and 148 ms with DirectML requested. The slowest DirectML-requested first call, including initialization, took 693 ms. These runs reuse one small, non-held-out fixture; they measure decision calls, not a full browser loop, and do not establish a general GPU target. [CPU records](benchmarks/results/decision-cases-independent-ryzen5600h-cpu-repeat-5-20261002.json) · [DirectML records](benchmarks/results/decision-cases-independent-ryzen5600h-dml-repeat-5-20261002.json)

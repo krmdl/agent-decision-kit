@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 390" role="img" aria-labelledby="title description">
+  <title id="title">MiniWoB local provider decision-call latency on CPU</title>
+  <desc id="description">On 11 semantic decision calls per provider, MiniLM had p50 173 milliseconds and p95 182 milliseconds. NLI had p50 810 milliseconds and p95 848 milliseconds. The benchmark used a fresh Node bridge for every episode, so these calls include pipeline initialization.</desc>
+  <rect width="960" height="390" rx="24" fill="#0d1b2b"/>
+  <text x="40" y="48" fill="#f3f8ff" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="25" font-weight="700">Local decision calls · CPU</text>
+  <text x="40" y="76" fill="#9fb3c9" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="14">MiniWoB · p50 and nearest-rank p95 · 11 semantic calls per provider</text>
+
+  <g stroke="#28445d" stroke-width="1">
+    <line x1="220" y1="103" x2="220" y2="294"/>
+    <line x1="370" y1="103" x2="370" y2="294"/>
+    <line x1="520" y1="103" x2="520" y2="294"/>
+    <line x1="670" y1="103" x2="670" y2="294"/>
+    <line x1="820" y1="103" x2="820" y2="294"/>
+  </g>
+  <g fill="#9fb3c9" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="12" text-anchor="middle">
+    <text x="220" y="315">0</text>
+    <text x="370" y="315">250</text>
+    <text x="520" y="315">500</text>
+    <text x="670" y="315">750</text>
+    <text x="820" y="315">1,000 ms</text>
+  </g>
+
+  <g font-family="Inter,Segoe UI,Arial,sans-serif">
+    <text x="40" y="145" fill="#75e2c2" font-size="17" font-weight="700">MiniLM</text>
+    <text x="40" y="170" fill="#9fb3c9" font-size="13">semantic-local</text>
+    <text x="164" y="132" fill="#c2d1df" font-size="13" text-anchor="end">p50</text>
+    <text x="164" y="166" fill="#c2d1df" font-size="13" text-anchor="end">p95</text>
+    <rect x="220" y="116" width="104" height="20" rx="7" fill="#75e2c2"/>
+    <rect x="220" y="150" width="109" height="20" rx="7" fill="none" stroke="#75e2c2" stroke-width="3"/>
+    <text x="335" y="132" fill="#e6fff6" font-size="14" font-weight="700">173 ms</text>
+    <text x="340" y="166" fill="#e6fff6" font-size="14" font-weight="700">182 ms</text>
+
+    <text x="40" y="238" fill="#8dbdff" font-size="17" font-weight="700">NLI</text>
+    <text x="40" y="263" fill="#9fb3c9" font-size="13">semantic-nli</text>
+    <text x="164" y="225" fill="#c2d1df" font-size="13" text-anchor="end">p50</text>
+    <text x="164" y="259" fill="#c2d1df" font-size="13" text-anchor="end">p95</text>
+    <rect x="220" y="209" width="486" height="20" rx="7" fill="#8dbdff"/>
+    <rect x="220" y="243" width="509" height="20" rx="7" fill="none" stroke="#8dbdff" stroke-width="3"/>
+    <text x="716" y="225" fill="#e9f2ff" font-size="14" font-weight="700">810 ms</text>
+    <text x="739" y="259" fill="#e9f2ff" font-size="14" font-weight="700">848 ms</text>
+  </g>
+
+  <line x1="40" y1="337" x2="920" y2="337" stroke="#28445d"/>
+  <text x="40" y="362" fill="#9fb3c9" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="12">Fresh Node bridge per episode; the first model inference includes pipeline initialization. This curated CPU sample is not a general speed claim.</text>
+</svg>
