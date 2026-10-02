@@ -144,8 +144,6 @@ def main():
                 "timestampUtc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
             }
             record = attach_runtime_metadata(record, suite_environment)
-            episode_path.parent.mkdir(parents=True, exist_ok=True)
-            episode_path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
         else:
             if episode_path.is_file():
                 record = json.loads(episode_path.read_text(encoding="utf-8"))
@@ -168,8 +166,9 @@ def main():
                 episode_path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
             record = attach_runner_diagnostics(record, completed.returncode, completed.stderr)
             record = attach_runtime_metadata(record, suite_environment)
-            episode_path.write_text(json.dumps(sanitize_record(record), indent=2) + "\n", encoding="utf-8")
         record = attach_run_context(record, args.seed)
+        episode_path.parent.mkdir(parents=True, exist_ok=True)
+        episode_path.write_text(json.dumps(sanitize_record(record), indent=2) + "\n", encoding="utf-8")
         records.append(record)
         print(f"{task}: {'PASS' if record['success'] else 'FAIL'}; actions={record['actions']}; timeout={record.get('timeout', False)}; latencyMs={record['latencyMs']}")
 

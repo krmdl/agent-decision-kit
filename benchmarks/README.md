@@ -221,6 +221,59 @@ python benchmarks/compare-browsergym-runs.py --baseline benchmarks/results/miniw
 
 The comparison tool checks source, environment, task/seed pairing, and reports success disagreements and latency deltas. These selected integration tasks do not replace the planned MiniWoB/WebArena/VisualWebArena benchmark suites.
 
+### NLI CPU vs DirectML browser run
+
+The [CPU aggregate](results/miniwob-nli-device-20261002-cpu.json), [DirectML-requested aggregate](results/miniwob-nli-device-20261002-dml.json), and [paired report](results/miniwob-nli-device-20261002-comparison.json) cover the same eight DOM tasks across seeds 7–11 on Windows 10. Each report includes all 40 raw episodes, the requested device, and each task's seed. The run used commit `dc35feb6c76e89297b2e8e42796ce9644c34aa24`, Node 22.14.0, Python 3.12.13, BrowserGym 0.14.3, MiniWoB++ commit `7fd85d71a4b60325c6585396ec4f48377d049838`, and an operator-reported GTX 1650 (4,096 MiB shown by `nvidia-smi`). The same 11 episodes per device called NLI; the other 29 used local rules. Every episode starts a fresh Node bridge, so each measured NLI call includes process-level pipeline initialization with model files already cached.
+
+| Measurement | CPU requested | DirectML requested |
+| --- | ---: | ---: |
+| Full-reward tasks / episodes | 40/40 | 40/40 |
+| Timeouts | 0 | 0 |
+| NLI model calls | 11 | 11 |
+| NLI call p50 / p95 | 812 / 827 ms | 1,326 / 1,456 ms |
+| Browser action loop p50 / p95 | 395 / 1,087 ms | 400 / 1,601 ms |
+| End-to-end p50 / p95, including reset | 1,722 / 2,405 ms | 1,700 / 2,916 ms |
+
+![Measured MiniWoB NLI latency for CPU and DirectML-requested browser runs](../website/public/images/miniwob-nli-device-latency-20261002.svg)
+
+The comparator matched all 40 task/seed pairs and found no task-outcome disagreements. Median paired deltas were +4 ms for the browser loop and +18 ms end to end. The 11 NLI calls exceeded the plan's 500 ms p95 target on both requested devices; DirectML was slower in model-call and browser-loop tails on this host. These are eight selected DOM tasks and a small model-backed subset, not a broad browser score or GPU speed claim. The decision-only profile above independently shows mixed DirectML and CPU execution for NLI on this machine; this BrowserGym run did not trace per-node execution. MiniLM remains the default fast local provider.
+
+Reproduce with the same BrowserGym environment and MiniWoB++ checkout:
+
+```powershell
+npm ci
+npm run build
+$python = 'C:\path\to\BrowserGym\Scripts\python.exe'
+$miniwobRoot = 'C:\path\to\miniwob-plusplus\miniwob\html\miniwob'
+$runDir = Join-Path $env:TEMP 'adk-miniwob-nli-device'
+New-Item -ItemType Directory -Force -Path $runDir | Out-Null
+$reports = @{
+  cpu = [System.Collections.Generic.List[string]]::new()
+  dml = [System.Collections.Generic.List[string]]::new()
+}
+$env:AGENT_DECISION_PROVIDER = 'semantic-nli'
+$env:AGENT_DECISION_BENCHMARK_ACCELERATOR = 'NVIDIA GeForce GTX 1650 (4 GB VRAM; manually reported)'
+foreach ($seed in 7..11) {
+  foreach ($device in @('cpu', 'dml')) {
+    $env:AGENT_DECISION_DEVICE = $device
+    $summary = Join-Path $runDir "miniwob-nli-$device-seed-$seed.json"
+    & $python benchmarks/run-browsergym-miniwob-suite.py --miniwob-root $miniwobRoot --output $summary --seed $seed --max-actions 5 --timeout-seconds 45 --approve-synthetic-actions
+    if ($LASTEXITCODE -ne 0) { throw "BrowserGym run failed: $device / seed $seed" }
+    $reports[$device].Add($summary)
+  }
+}
+$cpuFiles = $reports['cpu'].ToArray()
+$dmlFiles = $reports['dml'].ToArray()
+$cpuAggregate = Join-Path $runDir 'cpu-aggregate.json'
+$dmlAggregate = Join-Path $runDir 'dml-aggregate.json'
+& $python benchmarks/aggregate-browsergym-suites.py --provider semantic-nli --requested-device cpu --reported-accelerator $env:AGENT_DECISION_BENCHMARK_ACCELERATOR --output $cpuAggregate @cpuFiles
+if ($LASTEXITCODE -ne 0) { throw 'CPU aggregation failed' }
+& $python benchmarks/aggregate-browsergym-suites.py --provider semantic-nli --requested-device dml --reported-accelerator $env:AGENT_DECISION_BENCHMARK_ACCELERATOR --output $dmlAggregate @dmlFiles
+if ($LASTEXITCODE -ne 0) { throw 'DirectML aggregation failed' }
+& $python benchmarks/compare-browsergym-runs.py --baseline $cpuAggregate --candidate $dmlAggregate --output (Join-Path $runDir 'comparison.json')
+if ($LASTEXITCODE -ne 0) { throw 'Paired BrowserGym comparison failed' }
+```
+
 The pinned Linux runner image matches BrowserGym 0.14.3's Python Playwright browser revision while retaining the repository's Node 24 Playwright runtime. Build it with `docker build -f benchmarks/Dockerfile.browsergym -t adk-browsergym-miniwob:0.14.3 .`; run a focused local integration set with:
 
 ```sh

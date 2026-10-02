@@ -34,6 +34,9 @@ import nliDmlRepeat3 from "../../../benchmarks/results/decisions-confirmation-nl
 import nliDmlRepeat4 from "../../../benchmarks/results/decisions-confirmation-nli-dml-repeat-20261002-4.json";
 import nliDmlRepeat5 from "../../../benchmarks/results/decisions-confirmation-nli-dml-repeat-20261002-5.json";
 import nliDmlNodeProfile from "../../../benchmarks/results/decisions-confirmation-nli-dml-node-profile-20261002.json";
+import nliBrowserCpuRun from "../../../benchmarks/results/miniwob-nli-device-20261002-cpu.json";
+import nliBrowserDmlRun from "../../../benchmarks/results/miniwob-nli-device-20261002-dml.json";
+import nliBrowserComparison from "../../../benchmarks/results/miniwob-nli-device-20261002-comparison.json";
 import verifiedNavigationPreviousRun from "../../../benchmarks/results/webarena-verified-docker-b-localhost-18-20261002-summary.json";
 import verifiedNavigationRun from "../../../benchmarks/results/webarena-verified-docker-b-page-settle-18-20261002-summary.json";
 import verifiedNavigationBaseline from "../../../benchmarks/results/webarena-verified-shopping-admin-initial-18-task-baseline.json";
@@ -294,6 +297,37 @@ const decisionRows = [
         <figcaption>Median of five per-process warm p95 values; whiskers show the five-run range. Each run handled the same 30 labels.</figcaption>
       </figure>
       <p class="comparison-note">CPU was faster in all five matched pairs. Its median warm p95 was {nliCpuSummary.p95} ms; with DirectML requested it was {nliDmlSummary.p95} ms, about {(nliDmlSummary.p95 / nliCpuSummary.p95).toFixed(1)}× slower. First calls include pipeline initialization. {nliCpuOutputsStable && nliDmlOutputsStable ? "CPU and DirectML outputs were stable across their five repeated processes" : "At least one device produced different outputs across repeated processes"}; the two device settings disagreed on {nliCrossDeviceDisagreements} of 30 predictions in the paired outputs. Choice was {nliDecisionRows[0]!.choice} on CPU and {nliDecisionRows[1]!.choice} with DirectML; yes/no was {nliDecisionRows[0]!.yesNo} for each, and Score MAE was {nliDecisionRows[0]!.scoreMae.toFixed(3)} vs {nliDecisionRows[1]!.scoreMae.toFixed(3)}. Repeating these same project-authored labels does not create independent quality examples; this is not a held-out quality estimate.</p>
+      <h3 id="nli-browser-loop-title">The same device pair in the MiniWoB browser loop</h3>
+      <p class="comparison-note">Five seeds repeated the same eight DOM tasks per device ({nliBrowserCpuRun.episodeCount} episodes each). Every episode earned full reward, there were no timeouts, and paired task outcomes disagreed on {nliBrowserComparison.outcomeDisagreements} of {nliBrowserComparison.pairedTaskSeedCount}. Only {nliBrowserCpuRun.decisionCallLatencyMs.sampleCount} of 40 episodes called NLI; the other episodes used exact local rules.</p>
+      <div class="decision-table-wrap">
+        <table>
+          <caption>Windows 10 · Ryzen 5 5600H · Node 22.14.0 · fresh bridge process per episode</caption>
+          <thead><tr><th scope="col">Requested device</th><th scope="col">Task success</th><th scope="col">NLI calls p50 / p95 (n)</th><th scope="col">Browser loop p50 / p95</th><th scope="col">End-to-end p50 / p95</th></tr></thead>
+          <tbody>
+            {[
+              { label: "CPU", report: nliBrowserCpuRun },
+              { label: "DirectML requested", report: nliBrowserDmlRun },
+            ].map(({ label, report }) => <tr>
+              <th scope="row">{label}</th>
+              <td>{report.successCount}/{report.episodeCount}</td>
+              <td>{report.decisionCallLatencyMs.p50} / {report.decisionCallLatencyMs.p95} ms (n={report.decisionCallLatencyMs.sampleCount})</td>
+              <td>{report.agentActionLatencyMs.p50} / {report.agentActionLatencyMs.p95} ms</td>
+              <td>{report.latencyMs.p50} / {report.latencyMs.p95} ms</td>
+            </tr>)}
+          </tbody>
+        </table>
+      </div>
+      <figure class="provider-chart">
+        <img src={`${siteBase}images/miniwob-nli-device-latency-20261002.svg`} alt="MiniWoB browser comparison over 40 episodes per device. CPU versus DirectML-requested p95 was 827 versus 1456 milliseconds for NLI calls, 1087 versus 1601 milliseconds for the browser loop, and 2405 versus 2916 milliseconds end to end." width="960" height="570" loading="lazy" />
+        <figcaption>Bars show p50; outlined bars show p95. End-to-end time includes environment reset; model calls include fresh-process initialization.</figcaption>
+      </figure>
+      <p class="comparison-note">DirectML-requested NLI calls had p95 {nliBrowserDmlRun.decisionCallLatencyMs.p95} ms versus {nliBrowserCpuRun.decisionCallLatencyMs.p95} ms on CPU. Browser-loop p95 was {nliBrowserDmlRun.agentActionLatencyMs.p95} ms versus {nliBrowserCpuRun.agentActionLatencyMs.p95} ms; end-to-end p95 including reset was {nliBrowserDmlRun.latencyMs.p95} ms versus {nliBrowserCpuRun.latencyMs.p95} ms. The paired median deltas were +{nliBrowserComparison.pairedAgentActionLatencyDelta.candidateMinusBaselineMs.median} ms for the browser loop and +{nliBrowserComparison.pairedEndToEndLatencyDelta.candidateMinusBaselineMs.median} ms end to end. This curated set does not show warm persistent-server latency or broad task quality; NLI remains an optional provider, and these runs do not validate the 500 ms decision-call target.</p>
+      <div class="decision-raw-links">
+        <a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/miniwob-nli-device-20261002-cpu.json">CPU aggregate and 40 raw episodes ↗</a>
+        <a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/miniwob-nli-device-20261002-dml.json">DirectML aggregate and 40 raw episodes ↗</a>
+        <a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/miniwob-nli-device-20261002-comparison.json">Paired browser comparison ↗</a>
+        <a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/aggregate-browsergym-suites.py">Reproducible suite aggregator ↗</a>
+      </div>
       <p class="comparison-note">A separate instrumented 30-example DirectML run recorded {nliDmlProviderCounts.DmlExecutionProvider.toLocaleString("en-US")} <code>DmlExecutionProvider</code> and {nliDmlProviderCounts.CPUExecutionProvider.toLocaleString("en-US")} <code>CPUExecutionProvider</code> node-execution events ({nliDmlProviderEventCount.toLocaleString("en-US")} total). That verifies mixed DirectML and CPU execution; event counts do not measure compute share. Profiling adds overhead and is excluded from the latency table. The run demonstrates neither a general GPU speed advantage nor performance parity across machines.</p>
       <div class="decision-raw-links">
         {nliCpuRuns.map((_, index) => <a href={`https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/decisions-confirmation-nli-cpu-repeat-20261002-${index + 1}.json`}>CPU repeat {index + 1} ↗</a>)}
