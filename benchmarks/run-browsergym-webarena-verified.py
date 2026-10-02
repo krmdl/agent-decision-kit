@@ -325,7 +325,7 @@ def main():
                 if args.debug_candidates:
                     print_debug_decision(step, result, retry_attempt)
                 action = result.get("action") or result.get("proposedAction") or {}
-                attempt_traces.append({
+                trace_item = {
                     "step": step,
                     "retryAttempt": retry_attempt,
                     "status": result.get("status"),
@@ -339,7 +339,10 @@ def main():
                     "confidenceSource": result.get("confidenceSource"),
                     "calibration": result.get("calibration"),
                     "taskTargetVisible": result.get("taskTargetVisible"),
-                })
+                }
+                if result.get("pageSettleWaitMs") is not None:
+                    trace_item["pageSettleWaitMs"] = result["pageSettleWaitMs"]
+                attempt_traces.append(trace_item)
                 if result.get("status") != "page-changed-during-decision" or retry_attempt >= args.stale_page_retries:
                     break
                 retry_attempt += 1

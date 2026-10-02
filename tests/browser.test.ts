@@ -98,6 +98,7 @@ describe("Playwright browser safety flow", () => {
   let dragAndDropHtml: Buffer;
   let adjacentLabelTableHtml: Buffer;
   let rowActionContextHtml: Buffer;
+  let asyncNavigationHtml: Buffer;
 
   beforeAll(async () => {
     const html = await readFile(path.resolve("examples/browser-demo.html"));
@@ -114,6 +115,7 @@ describe("Playwright browser safety flow", () => {
     dragAndDropHtml = await readFile(path.resolve("examples/browser-drag-demo.html"));
     adjacentLabelTableHtml = Buffer.from('<!doctype html><table><tr><td>Color</td><td>Blue</td></tr><tr><td>Year</td><td>2001</td></tr></table><form><div><label>Color:</label><input id="color" type="text"></div><div><label>Year:</label><input id="year" type="text"></div><div><label>Private field:</label><input id="private" type="text" value="hidden-current-value"></div></form>');
     rowActionContextHtml = Buffer.from('<!doctype html><table><thead><tr><th>Theme Title</th><th>Parent Theme</th><th>Theme Path</th><th>Action</th></tr></thead><tbody><tr><td>Magento Blank</td><td></td><td>Magento/blank</td><td><a href="/blank">View</a></td></tr><tr><td>Magento Luma</td><td>Magento Blank</td><td>Magento/luma</td><td><a href="/luma">View</a></td></tr></tbody></table>');
+    asyncNavigationHtml = Buffer.from('<!doctype html><h1>Themes</h1><p id="status">Loading theme list</p><script>setTimeout(()=>fetch("/async-navigation-data").then(response=>response.text()).then(html=>{document.querySelector("#status").outerHTML=html}),50)</script>');
     autocompleteHtml = Buffer.from('<!doctype html><style>.suggestion{cursor:pointer}</style><label>Tag <input id="tag" type="text"></label><div><span class="suggestion">Poland</span><span class="suggestion">Portugal</span></div>');
     multipleSelectHtml = Buffer.from('<!doctype html><label for="tags">Tags</label><select id="tags" multiple><option value="alpha" selected>Alpha</option><option value="beta">Beta</option><option value="gamma">Gamma</option></select><p id="status">Not submitted</p>');
     mixedPointerHtml = Buffer.from('<!doctype html><style>.faux-link { cursor: pointer }</style><button>Section</button><span id="target" class="faux-link">Ultrices</span><p id="status">Not clicked</p><script>document.querySelector("#target").addEventListener("click",()=>document.querySelector("#status").textContent="Clicked locally")</script>');
@@ -164,6 +166,14 @@ describe("Playwright browser safety flow", () => {
         }, 6_000);
         return;
       }
+      if (request.url === "/async-navigation-data") {
+        setTimeout(() => {
+          if (response.destroyed) return;
+          response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+          response.end('<p id="status">Async themes loaded</p><table><thead><tr><th>Theme Title</th><th>Action</th></tr></thead><tbody><tr><td>Magento Blank</td><td><a href="/blank">View</a></td></tr></tbody></table>');
+        }, 250);
+        return;
+      }
       response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
       if (request.url === "/drag-and-drop") {
         response.end(dragAndDropHtml);
@@ -173,7 +183,7 @@ describe("Playwright browser safety flow", () => {
         response.end(hierarchicalMenuHtml);
         return;
       }
-      response.end(request.url === "/visual-only" ? visualHtml : request.url === "/visual-gestures" ? visualGesturesHtml : request.url === "/visual-scroll" ? visualScrollHtml : request.url === "/pointer-text" ? pointerTextHtml : request.url === "/icon-pointer" ? iconPointerHtml : request.url === "/silent-pointer" ? silentPointerHtml : request.url === "/silent-input" ? silentInputHtml : request.url === "/mixed-pointer" ? mixedPointerHtml : request.url === "/checkbox" ? checkboxHtml : request.url === "/submit" ? submitHtml : request.url === "/checkbox-task" ? checkboxTaskHtml : request.url === "/tabs" ? tabHtml : request.url === "/expand" ? expandHtml : request.url === "/native-fields" ? nativeFieldsHtml : request.url === "/copy-fields" ? copyFieldsHtml : request.url === "/slider" ? sliderHtml : request.url === "/aria-slider" ? ariaSliderHtml : request.url === "/jquery-ui-slider" ? jqueryUiSliderHtml : request.url === "/autocomplete" ? autocompleteHtml : request.url === "/multi-select" ? multipleSelectHtml : request.url === "/ambiguous-labels" ? ambiguousLabelsHtml : request.url === "/navigation-label" ? navigationLabelHtml : request.url === "/slow-navigation" ? slowNavigationHtml : request.url === "/navigation-targeting" ? navigationTargetingHtml : request.url === "/navigation-orders" ? navigationOrdersHtml : request.url === "/hierarchical-navigation-orders" ? hierarchicalNavigationOrdersHtml : request.url === "/hierarchical-navigation-themes" ? hierarchicalNavigationThemesHtml : request.url === "/navigation-target" ? navigationTargetHtml : request.url === "/navigation-hidden-target" ? navigationHiddenTargetHtml : request.url === "/duplicate-navigation-labels" ? duplicateNavigationLabelsHtml : request.url === "/editable" ? editableContentHtml : request.url === "/silent-form" ? silentFormHtml : request.url === "/decision-race" ? decisionRaceHtml : request.url === "/replacement-action" ? replacementActionHtml : request.url === "/dynamic-refs" ? dynamicRefsHtml : request.url === "/menu" ? menuHtml : request.url === "/ordinal-fields" ? ordinalFieldsHtml : request.url === "/textareas" ? textareaWidgetsHtml : request.url === "/ordinal-button" ? ordinalButtonHtml : request.url === "/multi-disclosure" ? multiDisclosureHtml : request.url === "/adjacent-label-table" ? adjacentLabelTableHtml : request.url === "/row-action-context" ? rowActionContextHtml : html);
+      response.end(request.url === "/visual-only" ? visualHtml : request.url === "/visual-gestures" ? visualGesturesHtml : request.url === "/visual-scroll" ? visualScrollHtml : request.url === "/pointer-text" ? pointerTextHtml : request.url === "/icon-pointer" ? iconPointerHtml : request.url === "/silent-pointer" ? silentPointerHtml : request.url === "/silent-input" ? silentInputHtml : request.url === "/mixed-pointer" ? mixedPointerHtml : request.url === "/checkbox" ? checkboxHtml : request.url === "/submit" ? submitHtml : request.url === "/checkbox-task" ? checkboxTaskHtml : request.url === "/tabs" ? tabHtml : request.url === "/expand" ? expandHtml : request.url === "/native-fields" ? nativeFieldsHtml : request.url === "/copy-fields" ? copyFieldsHtml : request.url === "/slider" ? sliderHtml : request.url === "/aria-slider" ? ariaSliderHtml : request.url === "/jquery-ui-slider" ? jqueryUiSliderHtml : request.url === "/autocomplete" ? autocompleteHtml : request.url === "/multi-select" ? multipleSelectHtml : request.url === "/ambiguous-labels" ? ambiguousLabelsHtml : request.url === "/navigation-label" ? navigationLabelHtml : request.url === "/slow-navigation" ? slowNavigationHtml : request.url === "/navigation-targeting" ? navigationTargetingHtml : request.url === "/navigation-orders" ? navigationOrdersHtml : request.url === "/hierarchical-navigation-orders" ? hierarchicalNavigationOrdersHtml : request.url === "/hierarchical-navigation-themes" ? hierarchicalNavigationThemesHtml : request.url === "/navigation-target" ? navigationTargetHtml : request.url === "/navigation-hidden-target" ? navigationHiddenTargetHtml : request.url === "/duplicate-navigation-labels" ? duplicateNavigationLabelsHtml : request.url === "/editable" ? editableContentHtml : request.url === "/silent-form" ? silentFormHtml : request.url === "/async-navigation" ? asyncNavigationHtml : request.url === "/decision-race" ? decisionRaceHtml : request.url === "/replacement-action" ? replacementActionHtml : request.url === "/dynamic-refs" ? dynamicRefsHtml : request.url === "/menu" ? menuHtml : request.url === "/ordinal-fields" ? ordinalFieldsHtml : request.url === "/textareas" ? textareaWidgetsHtml : request.url === "/ordinal-button" ? ordinalButtonHtml : request.url === "/multi-disclosure" ? multiDisclosureHtml : request.url === "/adjacent-label-table" ? adjacentLabelTableHtml : request.url === "/row-action-context" ? rowActionContextHtml : html);
     });
     await new Promise<void>((resolve, reject) => {
       server.once("error", reject);
@@ -465,6 +475,34 @@ describe("Playwright browser safety flow", () => {
     const result = await browser.decideAndAct("Identify the most relevant control.", provider);
     expect(result.status).toBe("page-changed-during-decision");
     expect((await browser.inspect()).textExcerpt).toContain("Not executed");
+  }, 45_000);
+
+  it("waits briefly for asynchronous page content before returning refreshed stale-page candidates", async () => {
+    profile = await mkdtemp(path.join(os.tmpdir(), "adk-browser-async-navigation-test-"));
+    browser = new BrowserManager({ headless: true, profileDir: path.join(profile, "chromium") });
+    await browser.launch(`${baseUrl}decision-race`);
+    const provider: DecisionProvider = {
+      id: "semantic-local",
+      model: "fixture-model",
+      decide: async () => {
+        await browser.navigate(`${baseUrl}async-navigation`);
+        return {
+          provider: "semantic-local",
+          model: "fixture-model",
+          latencyMs: 1,
+          answers: {
+            action: { type: "choice", choice: "r1", probabilities: { r1: 1 }, confidence: 1, confidenceSource: "maximum-probability", calibration: "uncalibrated-estimate" },
+          },
+        };
+      },
+    };
+
+    const result = await browser.decideAndAct("Identify the most relevant control.", provider);
+
+    expect(result).toMatchObject({ status: "page-changed-during-decision" });
+    expect("pageSettleWaitMs" in result && result.pageSettleWaitMs).toBeGreaterThanOrEqual(0);
+    expect("candidates" in result && result.candidates.some((candidate) => candidate.label.includes("Magento Blank"))).toBe(true);
+    expect((await browser.inspect()).textExcerpt).toContain("Async themes loaded");
   }, 45_000);
 
   it("removes stale DOM refs before targeting a replacement control", async () => {
@@ -1135,7 +1173,12 @@ describe("Playwright browser safety flow", () => {
       id: "semantic-local",
       model: "ambiguous-test-provider",
       decide: async (request) => {
+        expect(request.state).not.toHaveProperty("candidates");
+        expect(request.state).not.toHaveProperty("textExcerpt");
+        expect(request.state).not.toHaveProperty("url");
         const refs = Object.keys(request.questions.action.criteria);
+        const criteria = Object.values(request.questions.action.criteria);
+        expect(criteria.every((criterion) => criterion.includes("risk="))).toBe(true);
         const probabilities = Object.fromEntries(refs.map((ref) => [ref, 1 / refs.length]));
         return {
           provider: "remote-test-provider",

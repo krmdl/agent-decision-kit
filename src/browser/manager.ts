@@ -28,6 +28,25 @@ async function withTimeout<T>(operation: Promise<T>, timeoutMs: number, message:
   }
 }
 
+async function waitForPageSettle(page: Page) {
+  const started = performance.now();
+  let domReady = false;
+  try {
+    await page.waitForLoadState("domcontentloaded", { timeout: 400 });
+    domReady = true;
+  } catch {
+    // A slow or partial navigation must not block the browser tool indefinitely.
+  }
+  if (domReady) {
+    try {
+      await page.waitForLoadState("networkidle", { timeout: 650 });
+    } catch {
+      // Dynamic pages may keep requests open; the bounded wait still gives pending UI work a chance to finish.
+    }
+  }
+  return Math.round(performance.now() - started);
+}
+
 type ViewportMetrics = { width: number; height: number; devicePixelRatio: number };
 type ScreenshotPixels = { width: number; height: number };
 type VisualMatchSource = "automatic" | "sparse-text-pass" | "sparse-text-fallback";
@@ -620,14 +639,35 @@ export class BrowserManager {
     if (!availableCandidates.length) return { status: "repeated-action-blocked", candidateCount: snapshot.candidates.length, note: "Every visible action in this page state has already run once without changing the inspected state. No automatic action was repeated." };
     const decisionContextFingerprint = this.lastInspectionFingerprint;
     browserDebug(`provider decision started with ${availableCandidates.length} candidates`);
+    const candidateCriteria = Object.fromEntries(availableCandidates.map((candidate) => {
+      const details = [
+        `${candidate.role} (${candidate.kind}): ${candidate.label}`,
+        `risk=${candidate.risk}`,
+        candidate.checked === undefined ? undefined : `checked=${candidate.checked}`,
+        candidate.expanded === undefined ? undefined : `expanded=${candidate.expanded}`,
+        candidate.selected === undefined ? undefined : `selected=${candidate.selected}`,
+        candidate.readOnly === undefined ? undefined : `readOnly=${candidate.readOnly}`,
+        candidate.optionLabels?.length ? `options=${candidate.optionLabels.slice(0, 8).join(" | ")}` : undefined,
+        candidate.selectedOptionLabels?.length ? `selectedOptions=${candidate.selectedOptionLabels.slice(0, 8).join(" | ")}` : undefined,
+        candidate.min === undefined ? undefined : `min=${candidate.min}`,
+        candidate.max === undefined ? undefined : `max=${candidate.max}`,
+        candidate.step === undefined ? undefined : `step=${candidate.step}`,
+      ].filter((part): part is string => part !== undefined);
+      return [candidate.ref, details.join("; ")];
+    }));
     const decision = await provider.decide({
-      state: { url: snapshot.url, title: snapshot.title, headings: snapshot.headings, textExcerpt: snapshot.textExcerpt, candidates: availableCandidates.map(({ ref, role, label, kind, risk, checked, expanded, selected, readOnly, optionLabels, selectedOptionLabels, min, max, step }) => ({ ref, role, label, kind, risk, ...(checked === undefined ? {} : { checked }), ...(expanded === undefined ? {} : { expanded }), ...(selected === undefined ? {} : { selected }), ...(readOnly === undefined ? {} : { readOnly }), ...(optionLabels === undefined ? {} : { optionLabels }), ...(selectedOptionLabels === undefined ? {} : { selectedOptionLabels }), ...(min === undefined ? {} : { min }), ...(max === undefined ? {} : { max }), ...(step === undefined ? {} : { step }) })) },
-      questions: { action: { type: "choice", instructions: task, criteria: Object.fromEntries(availableCandidates.map(({ ref, role, label, kind }) => [ref, `${role} (${kind}): ${label}`])) } },
+      state: {
+        title: snapshot.title.slice(0, 120),
+        headings: snapshot.headings.slice(0, 8).map((heading) => heading.slice(0, 100)),
+      },
+      questions: { action: { type: "choice", instructions: task, criteria: candidateCriteria } },
     });
     browserDebug("provider decision finished");
     const refreshed = await this.inspect();
     if (this.lastInspectionFingerprint !== decisionContextFingerprint) {
-      return { status: "page-changed-during-decision", candidateCount: refreshed.candidates.length, candidates: refreshed.candidates, note: "The page changed while the decision provider was working. No action was performed; inspect the current page and request a new decision." };
+      const pageSettleWaitMs = await waitForPageSettle(this.requirePage());
+      const settled = await this.inspect();
+      return { status: "page-changed-during-decision", candidateCount: settled.candidates.length, candidates: settled.candidates, pageSettleWaitMs, note: "The page changed while the decision provider was working. No action was performed; the new page was allowed a bounded load/network-idle window before returning fresh candidates." };
     }
     const selectedRef = decision.answers.action?.type === "choice" ? decision.answers.action.choice : "";
     const selected = availableCandidates.find((candidate) => candidate.ref === selectedRef);
