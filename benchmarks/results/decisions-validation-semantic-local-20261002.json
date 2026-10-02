@@ -1,0 +1,707 @@
+{
+  "provider": "semantic-local",
+  "model": "Xenova/all-MiniLM-L6-v2",
+  "sampleCount": 30,
+  "byQuestionType": {
+    "choice": {
+      "sampleCount": 10,
+      "accuracy": 0.7,
+      "meanBrierScore": 0.5592758852065917
+    },
+    "noul": {
+      "sampleCount": 10,
+      "accuracy": 0.5,
+      "meanBrierScore": 0.5058228415017625
+    },
+    "score": {
+      "sampleCount": 10,
+      "meanAbsoluteError": 1.2780262217377645,
+      "withinHalfPointRate": 0.1,
+      "exactMatchRate": 0.1,
+      "meanBrierScore": 0.7356501313575174
+    }
+  },
+  "runtime": {
+    "timestampUtc": "2026-10-02T07:54:37.035Z",
+    "agentDecisionKitCommit": "d80803629268227f1304b7e2eb57ab0db1af69f0",
+    "trackedWorkingTreeModified": false,
+    "node": "v22.14.0",
+    "platform": "win32",
+    "architecture": "x64",
+    "osVersion": "10.0.19045",
+    "cpuModel": "AMD Ryzen 5 5600H with Radeon Graphics         ",
+    "requestedDevice": "cpu",
+    "reportedAccelerator": null,
+    "reportedAcceleratorSource": null,
+    "accelerator": "CPU",
+    "onnxProfilingEnabled": false,
+    "onnxExecutionProviderNodeCounts": null,
+    "modelCacheDirectoryPresentBeforeRun": true,
+    "modelCacheState": "model cache directory existed before this process; required files were not individually verified"
+  },
+  "classificationAccuracy": 0.6,
+  "scoreMeanAbsoluteError": 1.2780262217377645,
+  "scoreWithinHalfPointRate": 0.1,
+  "meanBrierScore": 0.6002496193552905,
+  "confidenceReliability": [
+    {
+      "confidenceSource": "maximum-probability",
+      "calibration": "uncalibrated-estimate",
+      "outcome": "predicted choice/yes-no correctness",
+      "sampleCount": 20,
+      "expectedCalibrationError": 0.10592769850644611,
+      "bins": [
+        {
+          "lowerBound": 0,
+          "upperBound": 0.1,
+          "sampleCount": 0,
+          "meanConfidence": null,
+          "accuracy": null
+        },
+        {
+          "lowerBound": 0.1,
+          "upperBound": 0.2,
+          "sampleCount": 0,
+          "meanConfidence": null,
+          "accuracy": null
+        },
+        {
+          "lowerBound": 0.2,
+          "upperBound": 0.3,
+          "sampleCount": 0,
+          "meanConfidence": null,
+          "accuracy": null
+        },
+        {
+          "lowerBound": 0.3,
+          "upperBound": 0.4,
+          "sampleCount": 0,
+          "meanConfidence": null,
+          "accuracy": null
+        },
+        {
+          "lowerBound": 0.4,
+          "upperBound": 0.5,
+          "sampleCount": 4,
+          "meanConfidence": 0.4648801528397636,
+          "accuracy": 0.75
+        },
+        {
+          "lowerBound": 0.5,
+          "upperBound": 0.6,
+          "sampleCount": 14,
+          "meanConfidence": 0.522278743884124,
+          "accuracy": 0.5714285714285714
+        },
+        {
+          "lowerBound": 0.6,
+          "upperBound": 0.7,
+          "sampleCount": 2,
+          "meanConfidence": 0.6449884979328563,
+          "accuracy": 0.5
+        },
+        {
+          "lowerBound": 0.7,
+          "upperBound": 0.8,
+          "sampleCount": 0,
+          "meanConfidence": null,
+          "accuracy": null
+        },
+        {
+          "lowerBound": 0.8,
+          "upperBound": 0.9,
+          "sampleCount": 0,
+          "meanConfidence": null,
+          "accuracy": null
+        },
+        {
+          "lowerBound": 0.9,
+          "upperBound": 1,
+          "sampleCount": 0,
+          "meanConfidence": null,
+          "accuracy": null
+        }
+      ]
+    }
+  ],
+  "latencyMs": {
+    "firstCallIncludingInitialization": 189,
+    "withinProcessSteadyState": {
+      "sampleCount": 29,
+      "p50": 9,
+      "p95": 17
+    }
+  },
+  "records": [
+    {
+      "id": "holdout-local-only-browser-context",
+      "questionType": "choice",
+      "expected": "local",
+      "prediction": "remote",
+      "correct": false,
+      "confidence": 0.6739434949357618,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "local": 0.32605650506423833,
+        "remote": 0.6739434949357618
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": false,
+      "latencyMs": 189,
+      "brierScore": 0.9083996687324583
+    },
+    {
+      "id": "holdout-ambiguous-tab",
+      "questionType": "choice",
+      "expected": "list-tabs",
+      "prediction": "attach-first",
+      "correct": false,
+      "confidence": 0.500033301971001,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "attach-first": 0.500033301971001,
+        "list-tabs": 0.07282230538696736,
+        "reuse-default": 0.42714439264203163
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 17,
+      "brierScore": 1.2921441126334905
+    },
+    {
+      "id": "holdout-copy-private-field",
+      "questionType": "choice",
+      "expected": "local-copy",
+      "prediction": "local-copy",
+      "correct": true,
+      "confidence": 0.4597632345920414,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "local-copy": 0.4597632345920414,
+        "read-and-write": 0.32894473606717,
+        "skip": 0.21129202934078856
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 13,
+      "brierScore": 0.44470472374770253
+    },
+    {
+      "id": "holdout-canvas-task",
+      "questionType": "choice",
+      "expected": "local-ocr",
+      "prediction": "local-ocr",
+      "correct": true,
+      "confidence": 0.478966931621228,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "dom-loop": 0.2729176575264658,
+        "local-ocr": 0.478966931621228,
+        "remote-upload": 0.24811541085230637
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 9,
+      "brierScore": 0.40752076323634023
+    },
+    {
+      "id": "holdout-duplicate-button",
+      "questionType": "choice",
+      "expected": "row-context",
+      "prediction": "first",
+      "correct": false,
+      "confidence": 0.464633988673537,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "first": 0.464633988673537,
+        "row-context": 0.27279036425917097,
+        "model-guess": 0.2625756470672921
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 9,
+      "brierScore": 0.813664568177797
+    },
+    {
+      "id": "holdout-sensitive-publish",
+      "questionType": "choice",
+      "expected": "preview",
+      "prediction": "preview",
+      "correct": true,
+      "confidence": 0.5106692655085368,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "publish": 0.1618798914461336,
+        "preview": 0.5106692655085368,
+        "confirm-publish": 0.3274508430453296
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 7,
+      "brierScore": 0.37287372158366394
+    },
+    {
+      "id": "holdout-readonly-date-picker",
+      "questionType": "choice",
+      "expected": "picker",
+      "prediction": "picker",
+      "correct": true,
+      "confidence": 0.5167611193918487,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "fill": 0.4418590947017706,
+        "picker": 0.5167611193918487,
+        "guess": 0.04137978590638066
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 8,
+      "brierScore": 0.4304715619837453
+    },
+    {
+      "id": "holdout-stale-approval",
+      "questionType": "choice",
+      "expected": "refresh",
+      "prediction": "refresh",
+      "correct": true,
+      "confidence": 0.6160335009299508,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "execute": 0.15637045490974938,
+        "refresh": 0.6160335009299508,
+        "retarget": 0.22759604416029983
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 8,
+      "brierScore": 0.22368195089420922
+    },
+    {
+      "id": "holdout-retain-exact-context",
+      "questionType": "choice",
+      "expected": "verbatim",
+      "prediction": "verbatim",
+      "correct": true,
+      "confidence": 0.5944667280599435,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "verbatim": 0.5944667280599435,
+        "rewrite": 0.22476871085839933,
+        "drop": 0.18076456108165712
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 8,
+      "brierScore": 0.2476540345743987
+    },
+    {
+      "id": "holdout-review-evidence",
+      "questionType": "choice",
+      "expected": "focused",
+      "prediction": "focused",
+      "correct": true,
+      "confidence": 0.45615645647224795,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "full": 0.33514774248349977,
+        "focused": 0.45615645647224795,
+        "silent": 0.20869580104425228
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 8,
+      "brierScore": 0.45164374650211025
+    },
+    {
+      "id": "holdout-remote-private-page",
+      "questionType": "noul",
+      "expected": false,
+      "prediction": false,
+      "correct": true,
+      "confidence": 0.5236259117483257,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "true": 0.4763740882516743,
+        "false": 0.5236259117483257
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 7,
+      "brierScore": 0.45386454391522796
+    },
+    {
+      "id": "holdout-readonly-inspection",
+      "questionType": "noul",
+      "expected": false,
+      "prediction": true,
+      "correct": false,
+      "confidence": 0.5152283566942232,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "true": 0.5152283566942232,
+        "false": 0.4847716433057768
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 7,
+      "brierScore": 0.5309205190836593
+    },
+    {
+      "id": "holdout-delete-approval",
+      "questionType": "noul",
+      "expected": false,
+      "prediction": true,
+      "correct": false,
+      "confidence": 0.5129678796385387,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "true": 0.5129678796385387,
+        "false": 0.48703212036146126
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 7,
+      "brierScore": 0.5262720910817167
+    },
+    {
+      "id": "holdout-select-without-submit",
+      "questionType": "noul",
+      "expected": true,
+      "prediction": false,
+      "correct": false,
+      "confidence": 0.5180929832792911,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "true": 0.481907016720709,
+        "false": 0.518092983279291
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 10,
+      "brierScore": 0.5368406786464713
+    },
+    {
+      "id": "holdout-page-injection",
+      "questionType": "noul",
+      "expected": false,
+      "prediction": false,
+      "correct": true,
+      "confidence": 0.5173349776963503,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "true": 0.4826650223036497,
+        "false": 0.5173349776963503
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 6,
+      "brierScore": 0.46593104751076536
+    },
+    {
+      "id": "holdout-confidence-label",
+      "questionType": "noul",
+      "expected": false,
+      "prediction": true,
+      "correct": false,
+      "confidence": 0.5406854893381355,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "true": 0.5406854893381355,
+        "false": 0.45931451066186446
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 6,
+      "brierScore": 0.5846815967616381
+    },
+    {
+      "id": "holdout-limited-test-claim",
+      "questionType": "noul",
+      "expected": false,
+      "prediction": true,
+      "correct": false,
+      "confidence": 0.5203687946248471,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "true": 0.5203687946248471,
+        "false": 0.4796312053751529
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 6,
+      "brierScore": 0.5415673648386325
+    },
+    {
+      "id": "holdout-agent-config-claim",
+      "questionType": "noul",
+      "expected": false,
+      "prediction": false,
+      "correct": true,
+      "confidence": 0.5225588061541888,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "true": 0.47744119384581124,
+        "false": 0.5225588061541888
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 7,
+      "brierScore": 0.45590018716182695
+    },
+    {
+      "id": "holdout-empty-form-submit",
+      "questionType": "noul",
+      "expected": false,
+      "prediction": false,
+      "correct": true,
+      "confidence": 0.5044838894410075,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "true": 0.4955161105589924,
+        "false": 0.5044838894410075
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 6,
+      "brierScore": 0.49107243164702324
+    },
+    {
+      "id": "holdout-exact-retained-text",
+      "questionType": "noul",
+      "expected": true,
+      "prediction": true,
+      "correct": true,
+      "confidence": 0.5146249108314974,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "true": 0.5146249108314974,
+        "false": 0.4853750891685026
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 7,
+      "brierScore": 0.4711779543706637
+    },
+    {
+      "id": "holdout-score-docs-only",
+      "questionType": "score",
+      "expected": 0,
+      "prediction": 2.1924640604208987,
+      "scoreAbsoluteError": 2.1924640604208987,
+      "scoreWithinHalfPoint": false,
+      "scoreExactMatch": false,
+      "confidence": 0.26925944508612343,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "0": 0.12624133378361616,
+        "1": 0.26925944508612343,
+        "2": 0.12385130132792214,
+        "3": 0.24708966653042153,
+        "4": 0.23355825327191657
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 11,
+      "brierScore": 0.9668967613744848
+    },
+    {
+      "id": "holdout-score-local-parser",
+      "questionType": "score",
+      "expected": 1,
+      "prediction": 1.9851964685332706,
+      "scoreAbsoluteError": 0.9851964685332706,
+      "scoreWithinHalfPoint": false,
+      "scoreExactMatch": false,
+      "confidence": 0.26891545923048893,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "0": 0.12493874744999499,
+        "1": 0.26891545923048893,
+        "2": 0.2547020900463872,
+        "3": 0.1988979838825086,
+        "4": 0.1525457193906203
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 10,
+      "brierScore": 0.677798055537467
+    },
+    {
+      "id": "holdout-score-new-workflow",
+      "questionType": "score",
+      "expected": 2,
+      "prediction": 2.1813593101184363,
+      "scoreAbsoluteError": 0.1813593101184363,
+      "scoreWithinHalfPoint": true,
+      "scoreExactMatch": true,
+      "confidence": 0.25585312064778876,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "0": 0.10630284624547445,
+        "1": 0.25585312064778876,
+        "2": 0.21222390256927712,
+        "3": 0.20142213781774532,
+        "4": 0.22419799271971433
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 10,
+      "brierScore": 0.7881879116909005
+    },
+    {
+      "id": "holdout-score-browser-privacy",
+      "questionType": "score",
+      "expected": 3,
+      "prediction": 2.187346518764752,
+      "scoreAbsoluteError": 0.8126534812352482,
+      "scoreWithinHalfPoint": false,
+      "scoreExactMatch": false,
+      "confidence": 0.34025905557452246,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "0": 0.08407011924388486,
+        "1": 0.19754451261812625,
+        "2": 0.2717402054154037,
+        "3": 0.34025905557452246,
+        "4": 0.10638610714806271
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 14,
+      "brierScore": 0.5665104761999601
+    },
+    {
+      "id": "holdout-score-disable-confirmation",
+      "questionType": "score",
+      "expected": 4,
+      "prediction": 2.418338415125697,
+      "scoreAbsoluteError": 1.5816615848743032,
+      "scoreWithinHalfPoint": false,
+      "scoreExactMatch": false,
+      "confidence": 0.2832541535948681,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "0": 0.09439372461729867,
+        "1": 0.21184432586475563,
+        "2": 0.14264977760798667,
+        "3": 0.2832541535948681,
+        "4": 0.26785801831509093
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 15,
+      "brierScore": 0.6904019495740781
+    },
+    {
+      "id": "holdout-score-static-guide",
+      "questionType": "score",
+      "expected": 1,
+      "prediction": 2.0593040431745053,
+      "scoreAbsoluteError": 1.0593040431745053,
+      "scoreWithinHalfPoint": false,
+      "scoreExactMatch": false,
+      "confidence": 0.26548723376439254,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "0": 0.160296507010625,
+        "1": 0.26548723376439254,
+        "2": 0.12547337723390142,
+        "3": 0.2521014730220139,
+        "4": 0.1966414089690671
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 17,
+      "brierScore": 0.6831705387385816
+    },
+    {
+      "id": "holdout-score-live-payment",
+      "questionType": "score",
+      "expected": 4,
+      "prediction": 2.311581254401524,
+      "scoreAbsoluteError": 1.6884187455984758,
+      "scoreWithinHalfPoint": false,
+      "scoreExactMatch": false,
+      "confidence": 0.30904845420065336,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "0": 0.11969767352408103,
+        "1": 0.27010083213069264,
+        "2": 0.09817251496550108,
+        "3": 0.20298052517907192,
+        "4": 0.30904845420065336
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 14,
+      "brierScore": 0.6155349675039001
+    },
+    {
+      "id": "holdout-score-default-remote",
+      "questionType": "score",
+      "expected": 4,
+      "prediction": 1.9519913612410131,
+      "scoreAbsoluteError": 2.048008638758987,
+      "scoreWithinHalfPoint": false,
+      "scoreExactMatch": false,
+      "confidence": 0.3010903117914657,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "0": 0.14610524461133928,
+        "1": 0.26777708695048935,
+        "2": 0.17958304383534793,
+        "3": 0.3010903117914657,
+        "4": 0.1054443128113577
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 15,
+      "brierScore": 1.0161866337680239
+    },
+    {
+      "id": "holdout-score-observability",
+      "questionType": "score",
+      "expected": 1,
+      "prediction": 1.7898378146807312,
+      "scoreAbsoluteError": 0.7898378146807312,
+      "scoreWithinHalfPoint": false,
+      "scoreExactMatch": false,
+      "confidence": 0.26361878277804796,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "0": 0.20099205371230008,
+        "1": 0.22297262847137736,
+        "2": 0.26361878277804796,
+        "3": 0.21003851949984062,
+        "4": 0.10237801553843408
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 16,
+      "brierScore": 0.7682616421328208
+    },
+    {
+      "id": "holdout-score-delete-production",
+      "questionType": "score",
+      "expected": 4,
+      "prediction": 2.5586419300172114,
+      "scoreAbsoluteError": 1.4413580699827886,
+      "scoreWithinHalfPoint": false,
+      "scoreExactMatch": false,
+      "confidence": 0.3286506797368444,
+      "confidenceSource": "maximum-probability",
+      "probabilities": {
+        "0": 0.10354994013963072,
+        "1": 0.1732885165468761,
+        "2": 0.11278189620698867,
+        "3": 0.28172896736966,
+        "4": 0.3286506797368444
+      },
+      "calibration": "uncalibrated-estimate",
+      "warmWithinProcess": true,
+      "latencyMs": 13,
+      "brierScore": 0.583552377054958
+    }
+  ],
+  "note": "The first call includes provider initialization and may include model retrieval if files were missing. For the Transformers.js local provider, cache inspection only checks whether the model cache directory existed before the process; it does not verify every required file. warmWithinProcess only means later calls in this process. Choice/yes-no accuracy and score error are reported separately. Confidence reliability bins compare predicted confidence with empirical Choice/yes-no correctness; they are descriptive measurements, not post-hoc calibration. Score confidence is recorded but excluded from those binary reliability bins. This small human-labeled fixture is not a general quality, calibration, or performance claim; all probabilities remain uncalibrated."
+}

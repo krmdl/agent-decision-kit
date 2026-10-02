@@ -1,0 +1,298 @@
+{
+  "schemaVersion": 1,
+  "comparedCaseCount": 30,
+  "questionTypeCounts": {
+    "choice": 10,
+    "noul": 10,
+    "score": 10
+  },
+  "baseline": {
+    "provider": "semantic-local",
+    "model": "Xenova/all-MiniLM-L6-v2",
+    "runtime": {
+      "node": "v22.14.0",
+      "platform": "win32",
+      "architecture": "x64",
+      "osVersion": "10.0.19045",
+      "cpuModel": "AMD Ryzen 5 5600H with Radeon Graphics",
+      "requestedDevice": "cpu",
+      "modelCacheState": "model cache directory existed before this process; required files were not individually verified"
+    },
+    "byQuestionType": {
+      "choice": {
+        "sampleCount": 10,
+        "answeredCount": 10,
+        "accuracy": 0.7,
+        "meanBrierScore": 0.5592758852065917,
+        "brierSampleCount": 10
+      },
+      "noul": {
+        "sampleCount": 10,
+        "answeredCount": 10,
+        "accuracy": 0.5,
+        "meanBrierScore": 0.5058228415017625,
+        "brierSampleCount": 10
+      },
+      "score": {
+        "sampleCount": 10,
+        "answeredCount": 10,
+        "meanAbsoluteError": 1.2780262217377645,
+        "withinHalfPointRate": 0.1,
+        "exactMatchRate": 0.1,
+        "meanBrierScore": 0.7356501313575174,
+        "brierSampleCount": 10
+      }
+    },
+    "confidenceReliability": {
+      "sampleCount": 20,
+      "expectedCalibrationError": 0.1059276985064461,
+      "groups": [
+        {
+          "confidenceSource": "maximum-probability",
+          "calibration": "uncalibrated-estimate",
+          "outcome": "predicted choice/yes-no correctness",
+          "sampleCount": 20,
+          "expectedCalibrationError": 0.10592769850644611,
+          "bins": [
+            {
+              "lowerBound": 0,
+              "upperBound": 0.1,
+              "sampleCount": 0,
+              "meanConfidence": null,
+              "accuracy": null
+            },
+            {
+              "lowerBound": 0.1,
+              "upperBound": 0.2,
+              "sampleCount": 0,
+              "meanConfidence": null,
+              "accuracy": null
+            },
+            {
+              "lowerBound": 0.2,
+              "upperBound": 0.3,
+              "sampleCount": 0,
+              "meanConfidence": null,
+              "accuracy": null
+            },
+            {
+              "lowerBound": 0.3,
+              "upperBound": 0.4,
+              "sampleCount": 0,
+              "meanConfidence": null,
+              "accuracy": null
+            },
+            {
+              "lowerBound": 0.4,
+              "upperBound": 0.5,
+              "sampleCount": 4,
+              "meanConfidence": 0.4648801528397636,
+              "accuracy": 0.75
+            },
+            {
+              "lowerBound": 0.5,
+              "upperBound": 0.6,
+              "sampleCount": 14,
+              "meanConfidence": 0.522278743884124,
+              "accuracy": 0.5714285714285714
+            },
+            {
+              "lowerBound": 0.6,
+              "upperBound": 0.7,
+              "sampleCount": 2,
+              "meanConfidence": 0.6449884979328563,
+              "accuracy": 0.5
+            },
+            {
+              "lowerBound": 0.7,
+              "upperBound": 0.8,
+              "sampleCount": 0,
+              "meanConfidence": null,
+              "accuracy": null
+            },
+            {
+              "lowerBound": 0.8,
+              "upperBound": 0.9,
+              "sampleCount": 0,
+              "meanConfidence": null,
+              "accuracy": null
+            },
+            {
+              "lowerBound": 0.9,
+              "upperBound": 1,
+              "sampleCount": 0,
+              "meanConfidence": null,
+              "accuracy": null
+            }
+          ]
+        }
+      ]
+    },
+    "latency": {
+      "firstCallIncludingInitializationMs": 189,
+      "warmCallCount": 29,
+      "warmP50Ms": 9,
+      "warmP95Ms": 17
+    }
+  },
+  "candidate": {
+    "provider": "semantic-nli",
+    "model": "Xenova/nli-deberta-v3-small",
+    "runtime": {
+      "node": "v22.14.0",
+      "platform": "win32",
+      "architecture": "x64",
+      "osVersion": "10.0.19045",
+      "cpuModel": "AMD Ryzen 5 5600H with Radeon Graphics",
+      "requestedDevice": "cpu",
+      "modelCacheState": "model cache directory existed before this process; required files were not individually verified"
+    },
+    "byQuestionType": {
+      "choice": {
+        "sampleCount": 10,
+        "answeredCount": 10,
+        "accuracy": 0.7,
+        "meanBrierScore": 0.4984448477684329,
+        "brierSampleCount": 10
+      },
+      "noul": {
+        "sampleCount": 10,
+        "answeredCount": 10,
+        "accuracy": 0.8,
+        "meanBrierScore": 0.3586529737211882,
+        "brierSampleCount": 10
+      },
+      "score": {
+        "sampleCount": 10,
+        "answeredCount": 10,
+        "meanAbsoluteError": 1.1671782454317576,
+        "withinHalfPointRate": 0.2,
+        "exactMatchRate": 0.2,
+        "meanBrierScore": 0.7581448689289803,
+        "brierSampleCount": 10
+      }
+    },
+    "confidenceReliability": {
+      "sampleCount": 20,
+      "expectedCalibrationError": 0.16338748991718893,
+      "groups": [
+        {
+          "confidenceSource": "maximum-probability",
+          "calibration": "uncalibrated-estimate",
+          "outcome": "predicted choice/yes-no correctness",
+          "sampleCount": 20,
+          "expectedCalibrationError": 0.16338748991718893,
+          "bins": [
+            {
+              "lowerBound": 0,
+              "upperBound": 0.1,
+              "sampleCount": 0,
+              "meanConfidence": null,
+              "accuracy": null
+            },
+            {
+              "lowerBound": 0.1,
+              "upperBound": 0.2,
+              "sampleCount": 0,
+              "meanConfidence": null,
+              "accuracy": null
+            },
+            {
+              "lowerBound": 0.2,
+              "upperBound": 0.3,
+              "sampleCount": 0,
+              "meanConfidence": null,
+              "accuracy": null
+            },
+            {
+              "lowerBound": 0.3,
+              "upperBound": 0.4,
+              "sampleCount": 0,
+              "meanConfidence": null,
+              "accuracy": null
+            },
+            {
+              "lowerBound": 0.4,
+              "upperBound": 0.5,
+              "sampleCount": 2,
+              "meanConfidence": 0.4323294984008227,
+              "accuracy": 0.5
+            },
+            {
+              "lowerBound": 0.5,
+              "upperBound": 0.6,
+              "sampleCount": 9,
+              "meanConfidence": 0.5574874462030827,
+              "accuracy": 0.7777777777777778
+            },
+            {
+              "lowerBound": 0.6,
+              "upperBound": 0.7,
+              "sampleCount": 4,
+              "meanConfidence": 0.6387430277674739,
+              "accuracy": 0.75
+            },
+            {
+              "lowerBound": 0.7,
+              "upperBound": 0.8,
+              "sampleCount": 2,
+              "meanConfidence": 0.780745248384912,
+              "accuracy": 0.5
+            },
+            {
+              "lowerBound": 0.8,
+              "upperBound": 0.9,
+              "sampleCount": 0,
+              "meanConfidence": null,
+              "accuracy": null
+            },
+            {
+              "lowerBound": 0.9,
+              "upperBound": 1,
+              "sampleCount": 3,
+              "meanConfidence": 0.9522408582422536,
+              "accuracy": 1
+            }
+          ]
+        }
+      ]
+    },
+    "latency": {
+      "firstCallIncludingInitializationMs": 860,
+      "warmCallCount": 29,
+      "warmP50Ms": 42,
+      "warmP95Ms": 79
+    }
+  },
+  "deltas": {
+    "accuracyPercentagePoints": {
+      "choice": 0,
+      "yesNo": 30.000000000000004
+    },
+    "scoreMeanAbsoluteError": -0.11084797630600685,
+    "meanBrierScore": {
+      "choice": -0.060831037438158764,
+      "noul": -0.14716986778057428,
+      "score": 0.02249473757146281
+    },
+    "expectedCalibrationError": 0.05745979141074284,
+    "latencyMs": {
+      "firstCallIncludingInitialization": 671,
+      "warmP50": 33,
+      "warmP95": 62
+    }
+  },
+  "comparability": {
+    "sameLabeledCases": true,
+    "sameHost": true,
+    "fieldsComparedForHost": [
+      "node",
+      "platform",
+      "architecture",
+      "osVersion",
+      "cpuModel"
+    ],
+    "providerCostsIncluded": false,
+    "note": "This summarizes two completed runs; it does not call either provider. Positive accuracy deltas favor the candidate; lower score error, Brier, ECE, and latency values favor the candidate. A paired result on one fixture is not a parity or general performance claim."
+  }
+}

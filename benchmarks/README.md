@@ -37,9 +37,9 @@ These reports were run on Windows 10, Node.js 22.14.0, and an AMD Ryzen 5 5600H 
 
 | 30-case fixture | Choice accuracy (MiniLM → NLI) | Yes/no accuracy (MiniLM → NLI) | Score MAE (MiniLM → NLI) | First call ms (MiniLM → NLI) | Warm p95 ms (MiniLM → NLI) |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Original | 70% → 90% | 50% → 70% | 1.042 → 1.032 | 191 → 858 | 11 → 76 |
-| Validation | 70% → 70% | 50% → 80% | 1.278 → 1.167 | 188 → 874 | 13 → 89 |
-| Confirmation | 70% → 60% | 60% → 80% | 1.104 → 1.146 | 204 → 892 | 14 → 79 |
+| Original | 70% → 90% | 50% → 70% | 1.042 → 1.032 | 184 → 869 | 11 → 82 |
+| Validation | 70% → 70% | 50% → 80% | 1.278 → 1.167 | 189 → 860 | 17 → 79 |
+| Confirmation | 70% → 60% | 60% → 80% | 1.104 → 1.146 | 192 → 885 | 14 → 84 |
 
 The results are mixed: NLI's yes/no accuracy was higher on each small fixture, while confirmation Choice accuracy and Score MAE were worse. This is not a pooled quality estimate, a Jev comparison, or a guarantee for other tasks. Raw per-case records and paired summaries are committed below; the comparator reports metrics and deltas without publishing the case IDs or states.
 
