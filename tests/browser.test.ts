@@ -659,6 +659,102 @@ describe("Playwright browser safety flow", () => {
     expect(provider.decide).not.toHaveBeenCalled();
   }, 45_000);
 
+  it("ignores occluded tiny menu labels until the visible expansion control is opened", async () => {
+    profile = await mkdtemp(path.join(os.tmpdir(), "adk-browser-occluded-menu-test-"));
+    browser = new BrowserManager({ headless: true, profileDir: path.join(profile, "chromium") });
+    await browser.launch();
+    const page = (browser as unknown as { page: Page }).page;
+    await page.setContent(`<!doctype html>
+      <style>
+        #stage { position: relative; width: 120px; height: 80px; }
+        #tiny { position: absolute; left: 29px; top: 29px; width: 2px; height: 2px; overflow: hidden; cursor: pointer; z-index: 1; }
+        #expand { position: absolute; left: 20px; top: 20px; width: 20px; height: 20px; cursor: pointer; z-index: 2; }
+        #expanded { position: absolute; left: 60px; top: 30px; width: 24px; height: 24px; cursor: pointer; display: none; }
+      </style>
+      <div id="stage"><span id="tiny">0</span><span id="expand">+</span><span id="expanded">0</span></div>
+      <p id="status">Menu collapsed</p>
+      <script>
+        const status = document.querySelector("#status");
+        document.querySelector("#expand").addEventListener("click", () => {
+          document.querySelector("#tiny").hidden = true;
+          document.querySelector("#expand").hidden = true;
+          document.querySelector("#expanded").style.display = "block";
+          status.textContent = "Menu expanded";
+        });
+        document.querySelector("#expanded").addEventListener("click", () => { status.textContent = "Selected target"; });
+      </script>`);
+    const provider: DecisionProvider = {
+      id: "semantic-local",
+      model: "fixture-model",
+      decide: vi.fn(async () => ({ provider: "semantic-local", model: "fixture-model", latencyMs: 1, answers: { action: { type: "choice" as const, choice: "r1", probabilities: { r1: 1 }, confidence: 1, confidenceSource: "maximum-probability" as const, calibration: "uncalibrated-estimate" as const } } })),
+    };
+    const task = 'Expand the pie menu and click on the item labeled "0".';
+
+    expect((await browser.inspect()).candidates.map(({ label }) => label)).toEqual(["+"]);
+    const expand = await browser.decideAndAct(task, provider);
+    expect(expand).toMatchObject({ status: "awaiting-user-approval", proposedAction: { label: "+", risk: "approval-required" } });
+    const expandToken = "approvalToken" in expand ? expand.approvalToken : "";
+    expect(await browser.confirm(expandToken, true)).toMatchObject({ status: "action-executed-after-approval" });
+
+    expect((await browser.inspect()).candidates.map(({ label }) => label)).toEqual(["0"]);
+    const staleSelect = await browser.decideAndAct(task, provider);
+    expect(staleSelect).toMatchObject({ status: "awaiting-user-approval", selectionRule: "unique-exact-quoted-label", proposedAction: { label: "0", risk: "approval-required" } });
+    const staleToken = "approvalToken" in staleSelect ? staleSelect.approvalToken : "";
+    await page.locator("#expanded").evaluate((element) => { (element as HTMLElement).style.left = "80px"; });
+    await expect(browser.confirm(staleToken, true)).rejects.toThrow("page changed after the action was proposed");
+
+    const select = await browser.decideAndAct(task, provider);
+    const selectToken = "approvalToken" in select ? select.approvalToken : "";
+    expect(select).toMatchObject({ status: "awaiting-user-approval", selectionRule: "unique-exact-quoted-label", proposedAction: { label: "0", risk: "approval-required" } });
+    expect(await browser.confirm(selectToken, true)).toMatchObject({ status: "action-executed-after-approval" });
+    expect((await browser.inspect()).textExcerpt).toContain("Selected target");
+    expect(provider.decide).not.toHaveBeenCalled();
+  }, 45_000);
+
+  it("waits for an explicitly quoted pointer target to finish moving before proposing it", async () => {
+    profile = await mkdtemp(path.join(os.tmpdir(), "adk-browser-moving-menu-test-"));
+    browser = new BrowserManager({ headless: true, profileDir: path.join(profile, "chromium") });
+    await browser.launch();
+    const page = (browser as unknown as { page: Page }).page;
+    await page.setContent(`<!doctype html>
+      <style>
+        #stage { position: relative; width: 150px; height: 90px; }
+        #plus { position: absolute; left: 25px; top: 25px; width: 24px; height: 24px; cursor: pointer; z-index: 2; }
+        #item { position: absolute; left: 28px; top: 28px; width: 24px; height: 24px; overflow: hidden; cursor: pointer; transform: translateX(0) scale(.1); transform-origin: top left; transition: transform 450ms linear; display: none; }
+        #item.open { transform: translateX(75px) scale(1); }
+      </style>
+      <div id="stage"><span id="plus">+</span><span id="item">0</span></div>
+      <p id="status">Menu collapsed</p>
+      <script>
+        document.querySelector("#plus").addEventListener("click", () => {
+          const item = document.querySelector("#item");
+          item.style.display = "block";
+          item.getBoundingClientRect();
+          requestAnimationFrame(() => item.classList.add("open"));
+          document.querySelector("#status").textContent = "Menu expanding";
+        });
+        document.querySelector("#item").addEventListener("click", () => { document.querySelector("#status").textContent = "Selected target"; });
+      </script>`);
+    const provider: DecisionProvider = {
+      id: "semantic-local",
+      model: "fixture-model",
+      decide: vi.fn(async () => ({ provider: "semantic-local", model: "fixture-model", latencyMs: 1, answers: { action: { type: "choice" as const, choice: "r1", probabilities: { r1: 1 }, confidence: 1, confidenceSource: "maximum-probability" as const, calibration: "uncalibrated-estimate" as const } } })),
+    };
+    const task = 'Expand the pie menu below and click on the item labeled "0".';
+
+    const expand = await browser.decideAndAct(task, provider);
+    expect(expand).toMatchObject({ status: "awaiting-user-approval", proposedAction: { label: "+", risk: "approval-required" } });
+    const expandToken = "approvalToken" in expand ? expand.approvalToken : "";
+    expect(await browser.confirm(expandToken, true)).toMatchObject({ status: "action-executed-after-approval" });
+
+    const select = await browser.decideAndAct(task, provider);
+    expect(select).toMatchObject({ status: "awaiting-user-approval", selectionRule: "unique-exact-quoted-label", proposedAction: { label: "0", risk: "approval-required" } });
+    const selectToken = "approvalToken" in select ? select.approvalToken : "";
+    expect(await browser.confirm(selectToken, true)).toMatchObject({ status: "action-executed-after-approval" });
+    expect((await browser.inspect()).textExcerpt).toContain("Selected target");
+    expect(provider.decide).not.toHaveBeenCalled();
+  }, 45_000);
+
   it("labels icon-only actions and splits distinct nested pointer targets", async () => {
     profile = await mkdtemp(path.join(os.tmpdir(), "adk-browser-icon-pointer-test-"));
     browser = new BrowserManager({ headless: true, profileDir: path.join(profile, "chromium") });

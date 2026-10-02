@@ -180,6 +180,24 @@ foreach ($device in @('cpu', 'dml')) {
 
 `results/miniwob-smoke-suite.json` contains a reproducible eight-task MiniWoB smoke suite with one raw JSON episode file per task. The runner attaches the real Agent Decision Kit `BrowserManager` to BrowserGym's live Chromium page through loopback CDP, calls the task validator after each bounded decision/action round, and confirms that detaching does not close BrowserGym's browser. The suite keeps failures, ambiguous choices, and visual-only pages as results instead of omitting them. It is a small smoke suite, not a representative BrowserGym benchmark, model-quality estimate, or speed claim. `latencyMs` includes environment reset; `agentActionLatencyMs` measures the bounded browser decision/action loop; `decisionCallLatencyMs` aggregates model-call latency separately. Synthetic approvals are allowed only for the exact local MiniWoB `file://` task URL.
 
+### Full registered MiniWoB task sweep
+
+[`results/miniwob-all-125-catalog-sweep-20261002.json`](results/miniwob-all-125-catalog-sweep-20261002.json) records one seed across the 125 task IDs registered by BrowserGym MiniWoB 0.14.3, using the pinned MiniWoB++ checkout `7fd85d71a4b60325c6585396ec4f48377d049838`. The Windows 10 CPU run used Node 22.14.0, Python 3.12.13, seed 7, at most 12 bounded decision/action rounds per task, and the existing local semantic provider. It reached full raw reward on 34/125 tasks (27.2%) with no harness timeouts. BrowserManager action-loop p50/p95 was 266/994 ms; the 55 semantic model calls had p50/p95 of 175/217 ms; end-to-end latency including each environment reset was 1,559/2,293 ms. Exact local rules handled many steps, so the 55 model calls are a subset of the 125 episodes.
+
+This is a bounded BrowserManager integration sweep from one seed and one modified working tree, not a full agent, a held-out quality estimate, or a general WebArena result. It exercises only `browser_connect`, `browser_decide_and_act`, and `browser_confirm`; the other browser tools, OCR/vision fallback, and other agents are not covered by this run. The JSON summary embeds every episode record, including task failures, partial reward information, action traces, latencies, and environment metadata. The exact 125 task IDs are versioned in [`miniwob-browsergym-0.14.3-tasks.txt`](miniwob-browsergym-0.14.3-tasks.txt).
+
+Reproduce the same one-seed sweep with BrowserGym 0.14.3 and the pinned MiniWoB++ assets:
+
+```powershell
+npm run build
+$python = 'C:\path\to\BrowserGym\Scripts\python.exe'
+$miniwobRoot = 'C:\path\to\miniwob-plusplus\miniwob\html\miniwob'
+$tasks = Get-Content -LiteralPath 'benchmarks/miniwob-browsergym-0.14.3-tasks.txt'
+$output = Join-Path $env:TEMP 'miniwob-all-125.json'
+& $python benchmarks/run-browsergym-miniwob-suite.py --miniwob-root $miniwobRoot --output $output --tasks $tasks --seed 7 --max-actions 12 --timeout-seconds 120 --approve-synthetic-actions
+if ($LASTEXITCODE -ne 0) { throw 'MiniWoB catalog sweep failed' }
+```
+
 ### Paired local-provider browser run
 
 The [MiniLM report](results/miniwob-local-provider-paired-20261002-semantic.json), [NLI report](results/miniwob-local-provider-paired-20261002-nli.json), and [paired comparison](results/miniwob-local-provider-paired-comparison-20261002.json) contain 40 raw episodes per provider: the same eight DOM tasks across seeds 7–11. Both providers completed all 40 episodes without harness timeouts or outcome disagreements. Every record identifies the `fb1399aa3673451962525b8aa27655c8143f9731` source commit and includes its seed.

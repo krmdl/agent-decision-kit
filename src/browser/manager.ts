@@ -245,6 +245,13 @@ export class BrowserManager {
         visibility.set(element, isVisible);
         return isVisible;
       };
+      const pointerTargetable = (element: Element) => {
+        if (!visible(element)) return false;
+        const rect = element.getBoundingClientRect();
+        if (rect.width < 8 || rect.height < 8) return false;
+        const hit = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+        return hit === element || Boolean(hit && element.contains(hit));
+      };
       const iconLabelFor = (element: Element) => {
         const sources = [
           styleFor(element).content,
@@ -363,11 +370,13 @@ export class BrowserManager {
           if (semanticSet.has(element) || dragNodeSet.has(element) || semanticAncestors.has(element) || element.closest(semanticSelector) || element.closest(`${semanticSelector}, [contenteditable]:not([contenteditable=\"false\"])`)) return false;
           const style = styleFor(element);
           if (style.cursor !== "pointer") return false;
-          if (!visible(element)) return false;
+          // Ignore decorative labels and targets covered at their center point.
+          // Playwright's normal click would wait on these indefinitely.
+          if (!pointerTargetable(element)) return false;
           const label = labelFor(element);
           if (!label || label.length > 240) return false;
           const pointerChildren = (parent: Element) => Array.from(parent.children)
-            .filter((child) => styleFor(child).cursor === "pointer" && visible(child) && labelFor(child).length > 0);
+            .filter((child) => styleFor(child).cursor === "pointer" && pointerTargetable(child) && labelFor(child).length > 0);
           // Split pointer containers when their separately labeled children are
           // distinct controls. This keeps a row or toolbar from becoming one
           // large target while avoiding candidates for every nested text node.
@@ -512,6 +521,16 @@ export class BrowserManager {
         const disabled = element instanceof HTMLButtonElement || element instanceof HTMLInputElement || element instanceof HTMLSelectElement || element instanceof HTMLTextAreaElement
           ? element.disabled
           : element.getAttribute("aria-disabled") === "true";
+        const pointerGeometry = customPointerSet.has(element)
+          ? (() => {
+            const rect = element.getBoundingClientRect();
+            const hit = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+            return {
+              bounds: [rect.x, rect.y, rect.width, rect.height].map((value) => Math.round(value)),
+              hitTarget: hit ? [hit.tagName, hit.id, hit.getAttribute(referenceAttributeName) ?? ""] : null,
+            };
+          })()
+          : {};
         return {
           tag: element.tagName,
           href: element instanceof HTMLAnchorElement ? element.href : "",
@@ -520,6 +539,7 @@ export class BrowserManager {
           disabled,
           cursor: getComputedStyle(element).cursor,
           form: form ? { action: form.action, method: form.method, target: form.target, enctype: form.enctype } : null,
+          ...pointerGeometry,
         };
       });
       markStage("complete");
@@ -553,9 +573,101 @@ export class BrowserManager {
     return { ...safeSnapshot, url: redactBrowserUrl(snapshot.url), candidates: candidates.map(({ ref, role, label, kind, risk, checked, expanded, selected, readOnly, dragSource, dropTarget, optionLabels, selectedOptionLabels, min, max, step }) => ({ ref, role, label, kind, risk, ...(checked === undefined ? {} : { checked }), ...(expanded === undefined ? {} : { expanded }), ...(selected === undefined ? {} : { selected }), ...(readOnly === undefined ? {} : { readOnly }), ...(dragSource === undefined ? {} : { dragSource }), ...(dropTarget === undefined ? {} : { dropTarget }), ...(optionLabels === undefined ? {} : { optionLabels }), ...(selectedOptionLabels === undefined ? {} : { selectedOptionLabels }), ...(min === undefined ? {} : { min }), ...(max === undefined ? {} : { max }), ...(step === undefined ? {} : { step }) })), inspectMs: Math.round(performance.now() - before), candidateLimit: 80, note: "Bounded visible DOM/accessibility snapshot. It includes up to three visible HTML tables with six rows and six cells each; visible table actions also include a bounded label of their non-action row cells. It includes adjacent explicit labels for otherwise unassociated form fields. Alongside semantic controls, it scans keyboard-operated jQuery UI slider handles with a linked visible numeric readout, native drag sources and declared drop targets, and clear CSS pointer-only text or icon targets within the same 80-candidate limit. Distinct labeled child targets are exposed separately; CSS image filenames may provide a fallback label for icon-only controls. Custom targets have no semantic role and always require a separate approval. Native select options are limited to 12 enabled labels; current editable values, passwords, cookies and storage are not returned. Editable values, slider readings and action destinations are hashed locally for stale-approval and explicit-task checks; raw values are never returned. URL credentials, query, hash, and long opaque path tokens are redacted." };
   }
 
+  private async waitForQuotedPointerTarget(target: string, ref?: string): Promise<"ready" | "static-unavailable" | "moving" | "missing" | "ambiguous"> {
+    return this.requirePage().evaluate(async ({ targetLabel, referenceAttributeName, referenceRef }) => {
+      const normalize = (value: string) => value.normalize("NFKC").toLocaleLowerCase("en-US").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+      const requested = normalize(targetLabel);
+      const isVisiblePointer = (element: Element) => {
+        const style = getComputedStyle(element);
+        const rect = element.getBoundingClientRect();
+        return style.cursor === "pointer" && style.visibility !== "hidden" && style.display !== "none" && Number(style.opacity) > 0 && rect.width > 0 && rect.height > 0;
+      };
+      let targetElement: Element | null = referenceRef
+        ? document.querySelector(`[${referenceAttributeName}="${referenceRef}"]`)
+        : null;
+      if (!referenceRef) {
+        const semanticSelector = "button, a[href], input, textarea, select, [role=button], [role=link], [role=tab], [role=menuitem], [contenteditable]:not([contenteditable='false'])";
+        const matching = Array.from(document.querySelectorAll("body *")).filter((element) => {
+          if (!isVisiblePointer(element) || element.closest(semanticSelector)) return false;
+          const label = element.getAttribute("aria-label") || element.getAttribute("title") || element.textContent || "";
+          return normalize(label) === requested;
+        });
+        const outermost = matching.filter((element) => !matching.some((other) => other !== element && other.contains(element)));
+        if (outermost.length > 1) return "ambiguous" as const;
+        targetElement = outermost[0] ?? null;
+      }
+      if (!targetElement || !targetElement.isConnected || !isVisiblePointer(targetElement)) return "missing" as const;
+
+      const readBounds = () => {
+        if (!targetElement?.isConnected) return null;
+        const rect = targetElement.getBoundingClientRect();
+        return [rect.x, rect.y, rect.width, rect.height];
+      };
+      const sameBounds = (left: number[] | null, right: number[] | null) => Boolean(left && right && left.every((value, index) => Math.abs(value - right[index]!) <= 0.01));
+      const targetable = (bounds: number[] | null) => {
+        if (!bounds || bounds[2]! < 8 || bounds[3]! < 8) return false;
+        const x = bounds[0]! + bounds[2]! / 2;
+        const y = bounds[1]! + bounds[3]! / 2;
+        if (x < 0 || y < 0 || x >= innerWidth || y >= innerHeight) return false;
+        const hit = document.elementFromPoint(x, y);
+        return hit === targetElement || Boolean(hit && targetElement?.contains(hit));
+      };
+      const nextFrame = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      let previous = readBounds();
+      let moved = false;
+      let stableFrames = 0;
+      for (let frame = 0; frame < 4; frame++) {
+        await nextFrame();
+        const current = readBounds();
+        if (!current) return "missing" as const;
+        if (sameBounds(previous, current)) stableFrames++;
+        else { moved = true; stableFrames = 0; }
+        previous = current;
+      }
+      if (!moved) return targetable(previous) ? "ready" as const : "static-unavailable" as const;
+
+      const deadline = performance.now() + 2_500;
+      stableFrames = 0;
+      while (performance.now() < deadline) {
+        await nextFrame();
+        const current = readBounds();
+        if (!current) return "missing" as const;
+        if (sameBounds(previous, current)) stableFrames++;
+        else stableFrames = 0;
+        previous = current;
+        if (stableFrames >= 4 && targetable(current)) return "ready" as const;
+        if (stableFrames >= 12 && !targetable(current)) return "static-unavailable" as const;
+      }
+      return "moving" as const;
+    }, { targetLabel: target, referenceAttributeName: this.referenceAttributeName, referenceRef: ref });
+  }
+
   async decideAndAct(task: string, provider: DecisionProvider) {
     browserDebug("decide-and-act started");
-    const snapshot = await this.inspect();
+    let snapshot = await this.inspect();
+    let quotedTargetExpansionMatch: DeterministicBrowserMatch | undefined;
+    const quotedTarget = uniqueQuotedTaskLabel(task);
+    if (quotedTarget) {
+      const quotedCandidate = findUniqueQuotedLabel(task, snapshot.candidates);
+      if ((quotedCandidate && isPointerTarget(quotedCandidate)) || (!quotedCandidate && isTaskMenuExpansionRequest(task))) {
+        const targetState = await this.waitForQuotedPointerTarget(quotedTarget, quotedCandidate?.ref);
+        if (targetState === "ready") {
+          snapshot = await this.inspect();
+          if (!findUniqueQuotedLabel(task, snapshot.candidates)) {
+            return { status: "quoted-target-not-actionable", candidateCount: snapshot.candidates.length, candidates: snapshot.candidates, note: "The quoted pointer target changed before it could be exposed as a stable page action. No different control was selected; inspect the current page and request the target again." };
+          }
+        } else if (targetState === "static-unavailable") {
+          const expandControl = findUniqueTaskExpandCandidate(task, snapshot.candidates);
+          if (expandControl) quotedTargetExpansionMatch = { candidate: expandControl, rule: "explicit-menu-expansion-before-quoted-target", note: "The requested quoted pointer target is currently too small or covered. One unique visible menu expansion control matches the task, so only that prerequisite step is proposed; the quoted item will be reconsidered after the menu changes." };
+          else return { status: "quoted-target-not-actionable", candidateCount: snapshot.candidates.length, candidates: snapshot.candidates, note: "The quoted pointer target is present but too small, covered, or outside the viewport. No other action was selected." };
+        } else if (targetState === "missing" && !quotedCandidate) {
+          const expandControl = findUniqueTaskExpandCandidate(task, snapshot.candidates);
+          if (expandControl) quotedTargetExpansionMatch = { candidate: expandControl, rule: "explicit-menu-expansion-before-quoted-target", note: "The quoted target is not visible yet. One unique visible menu expansion control matches the task, so only that prerequisite step is proposed; the quoted item will be reconsidered after the menu changes." };
+        } else if (targetState === "moving" || targetState === "ambiguous" || (quotedCandidate && targetState === "missing")) {
+          return { status: "quoted-target-not-actionable", candidateCount: snapshot.candidates.length, candidates: snapshot.candidates, note: "The quoted pointer target is moving, ambiguous, or no longer attached to the page. No different control was selected; inspect again after the page settles." };
+        }
+      }
+    }
     const reportActionTaskKey = normalizeLabel(task);
     const previousReportAction = this.completedReportActionsByTask.get(reportActionTaskKey);
     if (parseExplicitReportDateRange(task) && previousReportAction) {
@@ -627,7 +739,7 @@ export class BrowserManager {
     } else if (this.hierarchicalMenuIntent) {
       this.hierarchicalMenuIntent = undefined;
     }
-    let localMatch: ReturnType<typeof findDeterministicMatch> = menuPathMatch;
+    let localMatch: ReturnType<typeof findDeterministicMatch> = menuPathMatch ?? quotedTargetExpansionMatch;
     const searchIntent = this.disclosureSearchIntent;
     const searchIsActive = !menuPathMatch && searchIntent
       && searchIntent.url === pageIdentity(this.requirePage().url())
@@ -2121,6 +2233,29 @@ function findUniqueQuotedLabel(task: string, candidates: BrowserCandidate[]) {
   }
   if (!phrases.length) return undefined;
   const matches = candidates.filter((candidate) => phrases.some((phrase) => labelParts(candidate).includes(phrase)));
+  return matches.length === 1 ? matches[0] : undefined;
+}
+
+function uniqueQuotedTaskLabel(task: string) {
+  const labeledTarget = task.match(/\b(?:item|button|link|tab|control)\s+(?:with\s+(?:the\s+)?label|labeled|labelled|named|called)\s+(?:"([^"\r\n]{1,100})"|“([^”\r\n]{1,100})”)/iu);
+  if (labeledTarget) return (labeledTarget[1] ?? labeledTarget[2] ?? "").trim() || undefined;
+  const phrases = [...task.matchAll(/"([^"\r\n]{1,100})"|“([^”\r\n]{1,100})”/gu)]
+    .map((match) => (match[1] ?? match[2] ?? "").trim())
+    .filter(Boolean);
+  return phrases.length === 1 ? phrases[0] : undefined;
+}
+
+function isTaskMenuExpansionRequest(task: string) {
+  return /\b(?:expand|open|show|reveal)\b/iu.test(task) && /\b(?:menus?|pie|options|more)\b/iu.test(task);
+}
+
+function findUniqueTaskExpandCandidate(task: string, candidates: BrowserCandidate[]) {
+  if (!isTaskMenuExpansionRequest(task)) return undefined;
+  const matches = candidates.filter((candidate) => {
+    if (["button", "tab"].includes(candidate.role) && candidate.expanded === false) return true;
+    if (candidate.role === "pointer-target" && candidate.label.trim() === "+") return true;
+    return labelParts(candidate).some((label) => /^(?:expand|open menu|show menu|menu|more options|options)$/iu.test(label));
+  });
   return matches.length === 1 ? matches[0] : undefined;
 }
 
