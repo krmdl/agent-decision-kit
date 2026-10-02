@@ -3,6 +3,7 @@
 import argparse
 import importlib.util
 import json
+import os
 import platform
 import subprocess
 import sys
@@ -58,8 +59,12 @@ def attach_runner_diagnostics(record, return_code, stderr):
     return record
 
 
-def attach_run_seed(record, seed):
+def attach_run_context(record, seed):
     record["runSeed"] = seed
+    record["requestedDevice"] = os.environ.get("AGENT_DECISION_DEVICE", "cpu").strip().lower() or "cpu"
+    reported_accelerator = os.environ.get("AGENT_DECISION_BENCHMARK_ACCELERATOR", "").strip()
+    if reported_accelerator:
+        record["reportedAccelerator"] = reported_accelerator
     return record
 
 
@@ -164,7 +169,7 @@ def main():
             record = attach_runner_diagnostics(record, completed.returncode, completed.stderr)
             record = attach_runtime_metadata(record, suite_environment)
             episode_path.write_text(json.dumps(sanitize_record(record), indent=2) + "\n", encoding="utf-8")
-        record = attach_run_seed(record, args.seed)
+        record = attach_run_context(record, args.seed)
         records.append(record)
         print(f"{task}: {'PASS' if record['success'] else 'FAIL'}; actions={record['actions']}; timeout={record.get('timeout', False)}; latencyMs={record['latencyMs']}")
 

@@ -35,10 +35,23 @@ class RunnerDiagnosticTests(unittest.TestCase):
 
 
 class RunSeedTests(unittest.TestCase):
-    def test_attaches_suite_seed_to_each_episode_record(self):
-        record = SUITE.attach_run_seed({"task": "click-test"}, 11)
+    def test_attaches_seed_device_and_reported_accelerator_to_each_episode(self):
+        with patch.dict(SUITE.os.environ, {
+            "AGENT_DECISION_DEVICE": "dml",
+            "AGENT_DECISION_BENCHMARK_ACCELERATOR": "GTX 1650 (operator reported)",
+        }, clear=True):
+            record = SUITE.attach_run_context({"task": "click-test"}, 11)
 
         self.assertEqual(record["runSeed"], 11)
+        self.assertEqual(record["requestedDevice"], "dml")
+        self.assertEqual(record["reportedAccelerator"], "GTX 1650 (operator reported)")
+
+    def test_defaults_device_metadata_to_cpu(self):
+        with patch.dict(SUITE.os.environ, {}, clear=True):
+            record = SUITE.attach_run_context({"task": "click-test"}, 7)
+
+        self.assertEqual(record["requestedDevice"], "cpu")
+        self.assertNotIn("reportedAccelerator", record)
 
 
 class NodeBridgeProviderEnvironmentTests(unittest.TestCase):
