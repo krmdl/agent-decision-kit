@@ -104,9 +104,10 @@ const cases = (await readFile(fixtureSource, "utf8"))
   .split(/\r?\n/).filter(Boolean).map((line) => JSON.parse(line));
 if (cases.length === 0) throw new Error("The decision fixture file must contain at least one JSONL record");
 const provider = createProvider();
+const isLocalProvider = provider.id === "semantic-local" || provider.id === "semantic-nli";
 if (profileOnnx && provider.id !== "semantic-local") throw new Error("--profile-onnx is supported only with the semantic-local provider");
 const reportedAccelerator = process.env.AGENT_DECISION_BENCHMARK_ACCELERATOR?.trim() || null;
-const modelCacheDirectoryPresentBeforeRun = provider.id === "semantic-local"
+const modelCacheDirectoryPresentBeforeRun = isLocalProvider
   ? await modelCacheDirectoryExists(provider.model)
   : null;
 const records = [];
@@ -185,12 +186,12 @@ const report = `${JSON.stringify({
     architecture: process.arch,
     osVersion: os.release(),
     cpuModel: os.cpus()[0]?.model ?? "not reported",
-    requestedDevice: provider.id === "semantic-local" ? provider.device : null,
+    requestedDevice: isLocalProvider ? provider.device : null,
     reportedAccelerator,
     reportedAcceleratorSource: reportedAccelerator
       ? "provided by the benchmark operator; this script does not independently detect GPU hardware"
       : null,
-    accelerator: provider.id !== "semantic-local"
+    accelerator: !isLocalProvider
       ? "provider-specific; not inspected"
       : provider.device === "cpu"
         ? "CPU"
@@ -200,7 +201,7 @@ const report = `${JSON.stringify({
     onnxProfilingEnabled: profileOnnx,
     onnxExecutionProviderNodeCounts: onnxExecutionProviderProfile?.nodeCounts ?? null,
     modelCacheDirectoryPresentBeforeRun,
-    modelCacheState: provider.id !== "semantic-local"
+    modelCacheState: !isLocalProvider
       ? "not applicable; provider does not use the Transformers.js model cache"
       : modelCacheDirectoryPresentBeforeRun === true
         ? "model cache directory existed before this process; required files were not individually verified"

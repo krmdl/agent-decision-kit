@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DecisionRequestSchema } from "../src/core/types.js";
+import { DecisionRequestSchema, validateProbabilities } from "../src/core/types.js";
 import { extractFromCandidates, pruneContext, pruneContextWithProvider, routeModel, reviewDiff, screenText, verifyCompletion } from "../src/workflows.js";
 import type { DecisionProvider, DecisionRequest, DecisionResult } from "../src/core/types.js";
 
@@ -20,6 +20,15 @@ describe("decision request schema", () => {
     const tooMany = Object.fromEntries(Array.from({ length: 9 }, (_, index) => [`q${index}`, { type: "noul", instructions: "Check" }]));
     expect(() => DecisionRequestSchema.parse({ state: "x", questions: tooMany })).toThrow();
     expect(() => DecisionRequestSchema.parse({ state: "x", questions: { q: { type: "choice", instructions: "Pick", criteria: { only: "one" } } } })).toThrow();
+  });
+});
+
+describe("probability normalization", () => {
+  it("preserves an own __proto__ option key safely", () => {
+    const probabilities = validateProbabilities(JSON.parse('{"__proto__":9,"other":1}') as Record<string, number>);
+    expect(Object.hasOwn(probabilities, "__proto__")).toBe(true);
+    expect(probabilities["__proto__"]).toBe(0.9);
+    expect(probabilities.other).toBe(0.1);
   });
 });
 

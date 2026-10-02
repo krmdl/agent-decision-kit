@@ -29,6 +29,54 @@ The comparison reports only metrics and metadata; it does not establish Jev pari
 
 The starter fixtures are public and tiny. They are useful for verifying the harness, not for proving broad quality, calibration or performance. `fixtures/decision-cases-independent.jsonl` adds 30 human-authored examples (10 of each question type). Labels were written from the documented product behavior without consulting provider output. This small project-specific fixture is still not held out from the codebase or pretraining corpus and does not establish general quality. Keep future evaluation cases held out and source labels independently from both tested providers.
 
+### Optional local NLI provider
+
+`semantic-nli` is an optional local zero-shot classifier based on the Transformers.js export of [`Xenova/nli-deberta-v3-small`](https://huggingface.co/Xenova/nli-deberta-v3-small); the upstream [`cross-encoder/nli-deberta-v3-small` model card](https://huggingface.co/cross-encoder/nli-deberta-v3-small) lists Apache-2.0. Its model files total about 181 MB in the tested cache. The default remains `semantic-local` with `Xenova/all-MiniLM-L6-v2`. To try NLI, set `AGENT_DECISION_PROVIDER=semantic-nli`. One request may include up to 24 candidate labels across its questions; wider requests fall back to `semantic-local`, which is reflected in the result's provider field.
+
+These reports were run on Windows 10, Node.js 22.14.0, and an AMD Ryzen 5 5600H CPU with model cache directories present. The first measured NLI call includes pipeline initialization but did not include a model download. Warm p95 is per-provider decision latency after the first case in that process. The 30-case original and validation fixtures informed model selection; the 30-case confirmation fixture was authored after the provider setup was frozen and was run once. These project-authored cases are not a blind external evaluation. Each row has ten examples per type; probabilities remain uncalibrated.
+
+| 30-case fixture | Choice accuracy (MiniLM → NLI) | Yes/no accuracy (MiniLM → NLI) | Score MAE (MiniLM → NLI) | First call ms (MiniLM → NLI) | Warm p95 ms (MiniLM → NLI) |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Original | 70% → 90% | 50% → 70% | 1.042 → 1.032 | 191 → 858 | 11 → 76 |
+| Validation | 70% → 70% | 50% → 80% | 1.278 → 1.167 | 188 → 874 | 13 → 89 |
+| Confirmation | 70% → 60% | 60% → 80% | 1.104 → 1.146 | 204 → 892 | 14 → 79 |
+
+The results are mixed: NLI's yes/no accuracy was higher on each small fixture, while confirmation Choice accuracy and Score MAE were worse. This is not a pooled quality estimate, a Jev comparison, or a guarantee for other tasks. Raw per-case records and paired summaries are committed below; the comparator reports metrics and deltas without publishing the case IDs or states.
+
+| Fixture | Raw reports | Paired summary |
+| --- | --- | --- |
+| Original | [MiniLM](results/decisions-independent-semantic-local-20261002.json) · [NLI](results/decisions-independent-semantic-nli-20261002.json) | [Comparison](results/decision-comparison-independent-20261002.json) |
+| Validation | [MiniLM](results/decisions-validation-semantic-local-20261002.json) · [NLI](results/decisions-validation-semantic-nli-20261002.json) | [Comparison](results/decision-comparison-validation-20261002.json) |
+| Confirmation | [MiniLM](results/decisions-confirmation-semantic-local-20261002.json) · [NLI](results/decisions-confirmation-semantic-nli-20261002.json) | [Comparison](results/decision-comparison-confirmation-20261002.json) |
+
+Reproduce all six reports and the paired comparisons on Windows PowerShell (the `semantic` alias selects `semantic-local`):
+
+```powershell
+npm run build
+$sets = @(
+  @{ name = 'independent'; path = 'benchmarks/fixtures/decision-cases-independent.jsonl' },
+  @{ name = 'validation'; path = 'benchmarks/fixtures/decision-cases-validation-20261002.jsonl' },
+  @{ name = 'confirmation'; path = 'benchmarks/fixtures/decision-cases-confirmation-20261002.jsonl' }
+)
+foreach ($set in $sets) {
+  foreach ($provider in @('semantic', 'semantic-nli')) {
+    $providerName = if ($provider -eq 'semantic') { 'semantic-local' } else { 'semantic-nli' }
+    $report = Join-Path $env:TEMP "adk-$($set.name)-$providerName.json"
+    $env:AGENT_DECISION_PROVIDER = $provider
+    node benchmarks/run-decisions.mjs --fixtures $set.path --output $report | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw "Benchmark failed: $($set.name) / $provider" }
+  }
+}
+foreach ($setName in @('independent', 'validation', 'confirmation')) {
+  $baseline = Join-Path $env:TEMP "adk-$setName-semantic-local.json"
+  $candidate = Join-Path $env:TEMP "adk-$setName-semantic-nli.json"
+  node benchmarks/compare-decision-runs.mjs --baseline $baseline --candidate $candidate
+  if ($LASTEXITCODE -ne 0) { throw "Comparison failed: $setName" }
+}
+```
+
+Do not put these uncalibrated probabilities behind consequential thresholds without collecting independent labels and validating the decision rule.
+
 ### Browser-style large-choice CPU microbenchmark
 
 `fixtures/browser-choice-latency-57.jsonl` repeats one synthetic link-selection question ten times with 57 short candidates and a compact title/headings state. The local `Xenova/all-MiniLM-L6-v2` provider chose the exact target on all ten repetitions. On one Windows 10 Ryzen 5 5600H CPU run, the first call took 317 ms; nine warm calls were p50 135 ms / p95 146 ms. The model-cache directory existed before the run, but required files were not individually verified. The question is repeated, so the ten predictions are not independent quality examples; confidence was low (0.115) and uncalibrated, with a descriptive Brier score of 0.797. This microbenchmark measures provider decision latency only; it excludes page inspection, browser actions, dynamic page waits, and task resets. It is not an end-to-end browser claim or evidence for GPU performance. Reproduce with:

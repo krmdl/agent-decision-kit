@@ -41,7 +41,7 @@ export class OpenAICompatibleProvider implements DecisionProvider {
 
   async decide(request: DecisionRequest): Promise<DecisionResult> {
     const start = performance.now();
-    const expected: Record<string, string> = {};
+    const expected = Object.create(null) as Record<string, string>;
     for (const [name, question] of Object.entries(request.questions)) {
       expected[name] = question.type;
     }
@@ -81,7 +81,7 @@ export class OpenAICompatibleProvider implements DecisionProvider {
       const parsed = JSON.parse(content) as { answers?: Record<string, RawAnswer> };
       if (!parsed.answers || typeof parsed.answers !== "object") throw new Error("Response must include an answers object");
 
-      const answers: Record<string, DecisionAnswer> = {};
+      const answers = Object.create(null) as Record<string, DecisionAnswer>;
       for (const [name, question] of Object.entries(request.questions)) {
         const raw = parsed.answers[name];
         if (!raw || raw.type !== question.type) throw new Error(`Missing or invalid answer for question '${name}'`);
@@ -91,7 +91,7 @@ export class OpenAICompatibleProvider implements DecisionProvider {
         const confidence = providerConfidence(raw.confidence, name);
         if (question.type === "choice") {
           const choice = String(raw.choice ?? "");
-          if (!(choice in question.criteria)) throw new Error(`Provider chose unknown option '${choice}' for '${name}'`);
+          if (!Object.hasOwn(question.criteria, choice)) throw new Error(`Provider chose unknown option '${choice}' for '${name}'`);
           const probabilities = sourceProbabilities
             ? validateProbabilities(Object.fromEntries(Object.keys(question.criteria).map((key) => [key, Number(sourceProbabilities[key] ?? 0)])))
             : undefined;

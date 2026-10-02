@@ -96,7 +96,7 @@ export function serializeState(state: DecisionRequest["state"]): string {
 }
 
 export function validateProbabilities(values: Record<string, number>): Record<string, number> {
-  const clean: Record<string, number> = {};
+  const clean = Object.create(null) as Record<string, number>;
   let total = 0;
   for (const [key, raw] of Object.entries(values)) {
     const value = Number.isFinite(raw) ? Math.max(0, raw) : 0;

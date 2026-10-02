@@ -13,7 +13,7 @@ type ProfiledEmbeddingPipeline = EmbeddingPipeline & {
 const sharedPipelines = new Map<string, Promise<EmbeddingPipeline>>();
 const supportedDevices = ["auto", "gpu", "cpu", "wasm", "webgpu", "cuda", "dml", "coreml"] as const satisfies readonly DeviceType[];
 
-function resolveDevice(device: string): DeviceType {
+export function resolveDevice(device: string): DeviceType {
   const normalized = device.trim().toLowerCase();
   if (!supportedDevices.includes(normalized as (typeof supportedDevices)[number])) {
     throw new Error(`Unsupported AGENT_DECISION_DEVICE '${device}'. Choose one of: ${supportedDevices.join(", ")}`);
@@ -105,7 +105,7 @@ export class SemanticLocalProvider implements DecisionProvider {
 
     const embedded = vectorize(await extractor(inputs, { pooling: "mean", normalize: true }));
     let cursor = 0;
-    const answers: Record<string, DecisionAnswer> = {};
+    const answers = Object.create(null) as Record<string, DecisionAnswer>;
     for (const item of plan) {
       const query = embedded[cursor++] ?? [];
       const optionVectors = item.options.map(() => embedded[cursor++] ?? []);
