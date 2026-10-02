@@ -41,6 +41,16 @@ function validateReport(report, label) {
   return records;
 }
 
+function canonicalJson(value) {
+  if (Array.isArray(value)) return value.map(canonicalJson);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(Object.entries(value)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, item]) => [key, canonicalJson(item)]));
+  }
+  return value;
+}
+
 function normalizedAnswer(value, questionType) {
   if (questionType === "noul") return String(value).trim().toLowerCase();
   return String(value).trim().toLowerCase();
@@ -160,6 +170,9 @@ function finiteDelta(candidate, baseline) {
 export function compareDecisionRuns(baseline, candidate) {
   const baselineRecords = validateReport(baseline, "Baseline");
   const candidateRecords = validateReport(candidate, "Candidate");
+  if (JSON.stringify(canonicalJson(baseline.sourceDataset ?? null)) !== JSON.stringify(canonicalJson(candidate.sourceDataset ?? null))) {
+    throw new Error("Reports use different source dataset metadata");
+  }
   if (baselineRecords.size !== candidateRecords.size) throw new Error("Reports use different case counts");
   for (const [id, baselineRecord] of baselineRecords) {
     const candidateRecord = candidateRecords.get(id);
@@ -172,6 +185,22 @@ export function compareDecisionRuns(baseline, candidate) {
   const alignedIds = [...baselineRecords.keys()];
   const baselineCases = alignedIds.map((id) => baselineRecords.get(id));
   const candidateCases = alignedIds.map((id) => candidateRecords.get(id));
+  const pairedOutcomes = Object.fromEntries(QUESTION_TYPES.map((type) => {
+    const pairs = alignedIds
+      .map((id, index) => [baselineRecords.get(id), candidateRecords.get(id)])
+      .filter(([baselineRecord]) => baselineRecord.questionType === type);
+    return [type, {
+      sampleCount: pairs.length,
+      predictionAgreementCount: pairs.filter(([baselineRecord, candidateRecord]) =>
+        normalizedAnswer(baselineRecord.prediction, type) === normalizedAnswer(candidateRecord.prediction, type)).length,
+      predictionDisagreementCount: pairs.filter(([baselineRecord, candidateRecord]) =>
+        normalizedAnswer(baselineRecord.prediction, type) !== normalizedAnswer(candidateRecord.prediction, type)).length,
+      bothCorrectCount: pairs.filter(([baselineRecord, candidateRecord]) => isCorrect(baselineRecord) && isCorrect(candidateRecord)).length,
+      baselineOnlyCorrectCount: pairs.filter(([baselineRecord, candidateRecord]) => isCorrect(baselineRecord) && !isCorrect(candidateRecord)).length,
+      candidateOnlyCorrectCount: pairs.filter(([baselineRecord, candidateRecord]) => !isCorrect(baselineRecord) && isCorrect(candidateRecord)).length,
+      bothIncorrectCount: pairs.filter(([baselineRecord, candidateRecord]) => !isCorrect(baselineRecord) && !isCorrect(candidateRecord)).length,
+    }];
+  }));
   const baselineMetrics = Object.fromEntries(QUESTION_TYPES.map((type) => [type, summarizeType(baselineCases, type)]));
   const candidateMetrics = Object.fromEntries(QUESTION_TYPES.map((type) => [type, summarizeType(candidateCases, type)]));
   const baselineReliability = reliability(baselineCases);
@@ -187,6 +216,8 @@ export function compareDecisionRuns(baseline, candidate) {
     schemaVersion: 1,
     comparedCaseCount: alignedIds.length,
     questionTypeCounts: Object.fromEntries(QUESTION_TYPES.map((type) => [type, baselineCases.filter((record) => record.questionType === type).length])),
+    sourceDataset: baseline.sourceDataset ?? null,
+    pairedOutcomes,
     baseline: {
       provider: baseline.provider,
       model: baseline.model,
@@ -219,10 +250,11 @@ export function compareDecisionRuns(baseline, candidate) {
     },
     comparability: {
       sameLabeledCases: true,
+      sourceDatasetMetadataMatches: true,
       sameHost,
       fieldsComparedForHost: hostFields,
       providerCostsIncluded: false,
-      note: "This summarizes two completed runs; it does not call either provider. Positive accuracy deltas favor the candidate; lower score error, Brier, ECE, and latency values favor the candidate. A paired result on one fixture is not a parity or general performance claim.",
+      note: "This summarizes two completed runs; it does not call either provider. Paired outcomes count prediction agreement and which device-only answers are correct, but do not estimate statistical significance. Positive accuracy deltas favor the candidate; lower score error, Brier, ECE, and latency values favor the candidate. A paired result on one fixture is not a parity or general performance claim.",
     },
   };
 }

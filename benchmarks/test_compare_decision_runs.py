@@ -98,7 +98,10 @@ class CompareDecisionRunsTests(unittest.TestCase):
         comparison = json.loads(result.stdout)
         self.assertEqual(comparison["comparedCaseCount"], 3)
         self.assertTrue(comparison["comparability"]["sameLabeledCases"])
+        self.assertTrue(comparison["comparability"]["sourceDatasetMetadataMatches"])
         self.assertTrue(comparison["comparability"]["sameHost"])
+        self.assertEqual(comparison["pairedOutcomes"]["choice"]["predictionDisagreementCount"], 1)
+        self.assertEqual(comparison["pairedOutcomes"]["choice"]["candidateOnlyCorrectCount"], 1)
         self.assertEqual(comparison["deltas"]["accuracyPercentagePoints"]["choice"], 100)
         self.assertEqual(comparison["deltas"]["accuracyPercentagePoints"]["yesNo"], 100)
         self.assertAlmostEqual(comparison["deltas"]["scoreMeanAbsoluteError"], -0.75)
@@ -116,6 +119,29 @@ class CompareDecisionRunsTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("expected label", result.stderr)
         self.assertNotIn("private-choice-case", result.stderr)
+
+    def test_rejects_reports_with_different_source_dataset_metadata(self):
+        baseline = report("semantic-local", ["target", False, 2.0])
+        candidate = report("jev", ["target", False, 2.0])
+        baseline["sourceDataset"] = {"id": "dataset-a"}
+        candidate["sourceDataset"] = {"id": "dataset-b"}
+
+        result = self.run_comparison(baseline, candidate)
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("different source dataset metadata", result.stderr)
+
+    def test_accepts_equivalent_source_metadata_with_different_key_order(self):
+        baseline = report("semantic-local", ["target", False, 2.0])
+        candidate = report("jev", ["target", False, 2.0])
+        baseline["sourceDataset"] = {"id": "boolq", "details": {"revision": "v1", "split": "validation"}}
+        candidate["sourceDataset"] = {"details": {"split": "validation", "revision": "v1"}, "id": "boolq"}
+
+        result = self.run_comparison(baseline, candidate)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        comparison = json.loads(result.stdout)
+        self.assertTrue(comparison["comparability"]["sourceDatasetMetadataMatches"])
 
 
 if __name__ == "__main__":

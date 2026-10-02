@@ -47,6 +47,9 @@ import verifiedNavigationRun from "../../../benchmarks/results/webarena-verified
 import verifiedNavigationBaseline from "../../../benchmarks/results/webarena-verified-shopping-admin-initial-18-task-baseline.json";
 import remoteVerifiedNavigationRun from "../../../benchmarks/results/webarena-verified-docker-b-18-summary.json";
 import catalogSweep from "../../../benchmarks/results/miniwob-all-125-catalog-sweep-a83586d-20261002.json";
+import boolqCpuRun from "../../../benchmarks/results/decision-boolq-validation-minilm-cpu-ed1cbf7-20261002.json";
+import boolqDmlRun from "../../../benchmarks/results/decision-boolq-validation-minilm-dml-ed1cbf7-20261002.json";
+import boolqComparison from "../../../benchmarks/results/decision-boolq-validation-minilm-cpu-vs-dml-ed1cbf7-20261002.json";
 
 const episodeCount = latestRun.episodeCount;
 const successCount = latestRun.successCount;
@@ -104,6 +107,24 @@ const allWarmP95Under500 = [...cpuDecisionRuns, ...dmlDecisionRuns]
   .every((report) => report.latencyMs.withinProcessSteadyState.p95 < 500);
 const dmlProviderCounts = dmlNodeProfile.runtime.onnxExecutionProviderNodeCounts;
 const dmlProviderCallCount = dmlNodeProfile.sampleCount;
+const boolqMajorityBaseline = boolqCpuRun.classificationMajorityBaselineAccuracy;
+const boolqPredictionDisagreements = boolqComparison.pairedOutcomes.noul.predictionDisagreementCount;
+const boolqRows = [
+  { label: "CPU", report: boolqCpuRun },
+  { label: "DirectML requested", report: boolqDmlRun },
+].map(({ label, report }) => ({
+  label,
+  correct: Math.round(report.byQuestionType.noul.accuracy * report.byQuestionType.noul.sampleCount),
+  total: report.byQuestionType.noul.sampleCount,
+  accuracy: report.byQuestionType.noul.accuracy,
+  brier: report.byQuestionType.noul.meanBrierScore,
+  ece: report.confidenceReliability[0]?.expectedCalibrationError ?? null,
+  firstCall: report.latencyMs.firstCallIncludingInitialization,
+  warmP50: report.latencyMs.withinProcessSteadyState.p50,
+  warmP95: report.latencyMs.withinProcessSteadyState.p95,
+}));
+const boolqCpuRow = boolqRows[0]!;
+const boolqDmlRow = boolqRows[1]!;
 const nliDmlProviderCounts = nliDmlNodeProfile.runtime.onnxExecutionProviderNodeCounts;
 const nliDmlProviderEventCount = Object.values(nliDmlProviderCounts).reduce((total, count) => total + count, 0);
 const nliCpuOutputsStable = nliCpuRuns.every((report) => report.records.every((record, index) =>
@@ -280,6 +301,39 @@ const decisionRows = [
         <a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/miniwob-local-provider-paired-20261002-nli.json">NLI raw episodes ↗</a>
         <a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/miniwob-local-provider-paired-comparison-20261002.json">Paired metric report ↗</a>
         <a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/compare-browsergym-runs.py">Comparison code ↗</a>
+      </div>
+    </section>
+
+    <section class="decision-runs" aria-labelledby="boolq-title">
+      <p class="eyebrow">EXTERNAL YES/NO VALIDATION · FULL 3,270-ROW SPLIT</p>
+      <h2 id="boolq-title">MiniLM did not beat the majority-label baseline.</h2>
+      <p class="comparison-note">We ran the default local <code>Xenova/all-MiniLM-L6-v2</code> provider on every example in the pinned Google BoolQ validation split. Each item combines a passage with a human-annotated yes/no question. This is one run per device on Windows 10, Node 22.14.0, AMD Ryzen 5 5600H; all 3,270 examples are paired. The split's majority answer is “yes” (2,033/3,270, or {(boolqMajorityBaseline * 100).toFixed(1)}%).</p>
+      <div class="decision-table-wrap">
+        <table>
+          <caption>One local process per requested device · same pinned labels and host · warm latency excludes initialization</caption>
+          <thead><tr><th scope="col">Requested device</th><th scope="col">Correct</th><th scope="col">Accuracy</th><th scope="col">Brier score</th><th scope="col">ECE</th><th scope="col">First call</th><th scope="col">Warm p50 / p95</th></tr></thead>
+          <tbody>{boolqRows.map((row) => <tr>
+            <th scope="row">{row.label}</th>
+            <td>{row.correct.toLocaleString("en-US")}/{row.total.toLocaleString("en-US")}</td>
+            <td>{(row.accuracy * 100).toFixed(1)}%</td>
+            <td>{row.brier.toFixed(3)}</td>
+            <td>{row.ece?.toFixed(3) ?? "not reported"}</td>
+            <td>{row.firstCall} ms</td>
+            <td>{row.warmP50} / {row.warmP95} ms</td>
+          </tr>)}</tbody>
+        </table>
+      </div>
+      <figure class="provider-chart">
+        <img src={`${siteBase}images/boolq-minilm-cpu-dml-20261002.svg`} alt="On the 3,270-example BoolQ validation split, CPU accuracy was 57.0% and DirectML-requested accuracy was 57.2%, both below the 62.2% majority baseline. Warm p95 latency was 49 milliseconds on CPU and 149 milliseconds with DirectML requested." width="1000" height="500" loading="lazy" />
+        <figcaption>Accuracy and decision-call latency on the same labeled split. DirectML was requested, but this run did not profile per-node ONNX execution.</figcaption>
+      </figure>
+      <p class="comparison-note">Both device settings fell below the 62.2% majority baseline (CPU {(boolqCpuRow.accuracy * 100 - boolqMajorityBaseline * 100).toFixed(1)} percentage points; DirectML {(boolqDmlRow.accuracy * 100 - boolqMajorityBaseline * 100).toFixed(1)} points). DirectML returned six more correct answers, while the two settings disagreed on {boolqPredictionDisagreements.toLocaleString("en-US")} predictions; one run per setting does not establish a quality difference. Its warm p95 was {boolqDmlRow.warmP95} ms versus {boolqCpuRow.warmP95} ms on CPU. The DirectML device was requested, but this result does not confirm GPU placement. The confidence values are marked uncalibrated; Brier and ECE are descriptive. This external benchmark exposes a current limitation, not a general quality or performance claim.</p>
+      <p class="comparison-note">Dataset: <a href="https://huggingface.co/datasets/google/boolq">Google BoolQ validation split</a>, pinned revision <code>{boolqCpuRun.sourceDataset.revision}</code>, licensed CC BY-SA 3.0; see the <a href="https://aclanthology.org/N19-1300/">BoolQ paper</a> and <a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/DATA_LICENSES.md">data license notice</a>. Dataset passages and questions were used locally and are not included in the reports. Model overlap with pretraining data is unknown. Reports were recorded at commit <code>{boolqCpuRun.runtime.agentDecisionKitCommit.slice(0, 7)}</code>; the model-cache directory existed before each run, but individual files were not checked.</p>
+      <div class="decision-raw-links">
+        <a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/decision-boolq-validation-minilm-cpu-ed1cbf7-20261002.json">CPU raw report ↗</a>
+        <a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/decision-boolq-validation-minilm-dml-ed1cbf7-20261002.json">DirectML raw report ↗</a>
+        <a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/results/decision-boolq-validation-minilm-cpu-vs-dml-ed1cbf7-20261002.json">Paired metrics ↗</a>
+        <a href="https://github.com/krmdl/agent-decision-kit/blob/main/benchmarks/prepare-boolq-evaluation.py">Pinned data adapter ↗</a>
       </div>
     </section>
 

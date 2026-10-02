@@ -13,7 +13,7 @@ node benchmarks/run-decisions.mjs > decision-report.json
 
 The script reports per-case labels, probabilities, confidence source, calibration labels and latency. It separates choice/yes-no accuracy from ordinal Score mean absolute error, within-half-point rate, and rounded exact-match rate. Brier score is reported by question type. For Choice and yes/no, it also reports ten-bin confidence reliability and expected calibration error (ECE), grouped by confidence source and calibration label; Score confidence is retained in raw records but excluded from this binary correctness analysis. ECE is descriptive and does not fit a post-hoc calibration. The script records the first call including pipeline initialization and within-process warm p50/p95 separately. Before timing, it records whether the model's cache directory exists; this does not prove that every required file is present. The first call may include model retrieval, and the warm label only means later calls in the same process. Record hardware, accelerator, cache state, and provider setup. Run each provider as a separate explicit condition; don't mix results. For a fair Jev comparison, use the same cases, request batching, network conditions, and label rubric. Never use provider responses as training data or to tune an imitation.
 
-`compare-decision-runs.mjs` compares two completed JSON reports from this runner. It refuses mismatched case IDs, question types, or expected labels; outputs aggregate quality, calibration, and latency deltas; and never calls a provider. The reports contain per-case predictions, so keep them local when the fixture or provider output is private. To make an optional Jev comparison, run each command deliberately: the Jev call can incur TypeSafe charges. For comparable latency, run both on the same host and record cache and network conditions.
+`compare-decision-runs.mjs` compares two completed JSON reports from this runner. It refuses mismatched case IDs, question types, expected labels, or source dataset metadata; reports aggregate quality, calibration, latency deltas, and per-question-type prediction agreement / which run-only answers were correct; and never calls a provider. The comparison reports counts without publishing case IDs or states. Keep raw per-case reports local when the fixture or provider output is private. To make an optional Jev comparison, run each command deliberately: the Jev call can incur TypeSafe charges. For comparable latency, run both on the same host and record cache and network conditions.
 
 ```powershell
 npm run build
@@ -28,6 +28,35 @@ node benchmarks/compare-decision-runs.mjs --baseline $env:TEMP/adk-local.json --
 The comparison reports only metrics and metadata; it does not establish Jev parity from a small fixture and does not estimate provider cost.
 
 The starter fixtures are public and tiny. They are useful for verifying the harness, not for proving broad quality, calibration or performance. `fixtures/decision-cases-independent.jsonl` adds 30 human-authored examples (10 of each question type). Labels were written from the documented product behavior without consulting provider output. This small project-specific fixture is still not held out from the codebase or pretraining corpus and does not establish general quality. Keep future evaluation cases held out and source labels independently from both tested providers.
+
+### External BoolQ yes/no evaluation
+
+`prepare-boolq-evaluation.py` downloads the full 3,270-row validation split from the public [`google/boolq` dataset card](https://huggingface.co/datasets/google/boolq), pins revision `35b264d03638db9f4ce671b711558bf7ff0f80d5` and verifies the parquet SHA-256 before producing a temporary local fixture. The benchmark asks the local `semantic-local` MiniLM provider to answer each question using only its passage. The passage and question are used locally and are not copied into result files; reports contain ordinal row IDs, expected labels, predictions, probabilities, and latencies. Dataset and paper attribution and the derived-results license are in [`DATA_LICENSES.md`](DATA_LICENSES.md). BoolQ is CC BY-SA 3.0. The model's possible pretraining overlap with BoolQ is unknown.
+
+One CPU process and one DirectML-requested process ran all 3,270 labels on the same Windows 10 / Node 22.14.0 / AMD Ryzen 5 5600H host at clean commit `ed1cbf7`. CPU answered 1,864/3,270 correctly (57.0%); DirectML answered 1,870/3,270 (57.2%). The majority-label baseline is 2,033/3,270 (62.2%), so both runs fell below it. The two settings disagreed on 302 predictions. Their mean Brier scores were 0.492 and 0.491, and descriptive ECE was 0.043 and 0.044 respectively; confidence is explicitly uncalibrated. CPU first-call / warm p50 / warm p95 latency was 242 / 16 / 49 ms. With DirectML requested it was 550 / 104 / 149 ms. The cache directory existed before both runs, but individual files were not checked. This is one run per device, not a statistically tested device-quality difference. DirectML was requested but this evaluation did not record per-node ONNX placement, so it does not establish GPU execution. Accuracy below a majority baseline is a current limitation, not a broad model-quality estimate.
+
+Reproduce the two local runs and paired summary on Windows PowerShell. Python needs `pyarrow` only for reading the pinned parquet; inference uses the local Transformers.js model and does not call a paid provider.
+
+```powershell
+npm run build
+python -m pip install pyarrow
+$fixture = Join-Path $env:TEMP 'adk-boolq-validation-full.jsonl'
+python benchmarks/prepare-boolq-evaluation.py --output $fixture
+if ($LASTEXITCODE -ne 0) { throw 'BoolQ fixture preparation failed' }
+$env:AGENT_DECISION_PROVIDER = 'semantic'
+foreach ($device in @('cpu', 'dml')) {
+  $env:AGENT_DECISION_DEVICE = $device
+  $output = Join-Path $env:TEMP "adk-boolq-$device.json"
+  node benchmarks/run-decisions.mjs --fixtures $fixture --output $output
+  if ($LASTEXITCODE -ne 0) { throw "BoolQ inference failed: $device" }
+}
+node benchmarks/compare-decision-runs.mjs `
+  --baseline (Join-Path $env:TEMP 'adk-boolq-cpu.json') `
+  --candidate (Join-Path $env:TEMP 'adk-boolq-dml.json') `
+  --output (Join-Path $env:TEMP 'adk-boolq-comparison.json')
+```
+
+Committed [CPU](results/decision-boolq-validation-minilm-cpu-ed1cbf7-20261002.json), [DirectML-requested](results/decision-boolq-validation-minilm-dml-ed1cbf7-20261002.json), and [paired summary](results/decision-boolq-validation-minilm-cpu-vs-dml-ed1cbf7-20261002.json) reports retain per-row prediction metrics but no source text. One paired run does not provide repeated-run confidence intervals or show that a six-example accuracy difference is meaningful.
 
 ### Optional local NLI provider
 
