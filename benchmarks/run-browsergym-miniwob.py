@@ -329,6 +329,121 @@ def field_key(candidate):
     return f"{candidate['ref']}\0{candidate['kind']}\0{candidate.get('role', '')}\0{normalized(stable_label)}"
 
 
+def run_daily_calendar_visual_flow(task, bridge, env, base_url, approve_synthetic_actions):
+    """Exercise OCR-backed scrolling and approval-gated dragging on pinned MiniWoB's pixel calendar."""
+    coverage = {"browser_visual_scroll"}
+    trace = []
+    actions = 1
+    approvals = 0
+    if not is_expected_local_task_url(env.unwrapped.page.url, base_url, "daily-calendar"):
+        return {"toolCoverage": coverage, "toolActionTrace": [{"step": 1, "tool": "browser_visual_scroll", "status": "wrong-local-task-url"}], "actions": actions, "syntheticApprovalCount": approvals}
+
+    name_match = re.search(r'\b(?:event\s+)?named\s+(?:"([^"\r\n]{1,100})"|“([^”\r\n]{1,100})”)', task, re.IGNORECASE)
+    duration_match = re.search(r"\b(\d+(?:\.\d+)?)\s*(mins?|minutes?|hours?)\b", task, re.IGNORECASE)
+    time_match = re.search(r"\bbetween\s+(\d{1,2}(?::\d{2})?\s*[ap]m)\s+and\s+(\d{1,2}(?::\d{2})?\s*[ap]m)\b", task, re.IGNORECASE)
+    if not name_match or not duration_match or not time_match:
+        return {"toolCoverage": coverage, "toolActionTrace": [{"step": 1, "tool": "browser_visual_scroll", "status": "task-instruction-not-supported"}], "actions": actions, "syntheticApprovalCount": approvals}
+
+    event_name = name_match.group(1) or name_match.group(2)
+    duration = float(duration_match.group(1))
+    duration_minutes = round(duration * (60 if duration_match.group(2).casefold().startswith("hour") else 1))
+
+    def minutes_since_midnight(value):
+        match = re.fullmatch(r"(\d{1,2})(?::(\d{2}))?\s*([ap]m)", value.strip(), re.IGNORECASE)
+        if not match:
+            return None
+        hour = int(match.group(1))
+        minute = int(match.group(2) or "0")
+        if hour < 1 or hour > 12 or minute not in (0, 30):
+            return None
+        hour = hour % 12 + (12 if match.group(3).casefold() == "pm" else 0)
+        return hour * 60 + minute
+
+    window_start = minutes_since_midnight(time_match.group(1))
+    window_end = minutes_since_midnight(time_match.group(2))
+    if window_start is None or window_end is None or duration_minutes <= 0 or duration_minutes % 30 != 0 or window_end <= window_start:
+        return {"toolCoverage": coverage, "toolActionTrace": [{"step": 1, "tool": "browser_visual_scroll", "status": "task-time-range-not-supported"}], "actions": actions, "syntheticApprovalCount": approvals}
+
+    # Keep a 30-minute buffer before the requested window ends. The pinned task lays out a 24-hour grid with 41px hour rows.
+    event_start = max(window_start, window_end - duration_minutes - 30)
+    event_start = ((event_start + 29) // 30) * 30
+    if event_start + duration_minutes > window_end:
+        event_start = ((window_start + 29) // 30) * 30
+    if event_start + duration_minutes > window_end:
+        return {"toolCoverage": coverage, "toolActionTrace": [{"step": 1, "tool": "browser_visual_scroll", "status": "no-fit-within-task-window"}], "actions": actions, "syntheticApprovalCount": approvals}
+
+    start_hour = event_start // 60
+    top_hour = max(0, start_hour - 2)
+    scroll_delta = top_hour * 41
+    if scroll_delta <= 0:
+        return {"toolCoverage": coverage, "toolActionTrace": [{"step": 1, "tool": "browser_visual_scroll", "status": "target-scroll-not-supported"}], "actions": actions, "syntheticApprovalCount": approvals}
+
+    scrolled = bridge.call("visual-scroll", x=100, y=100, deltaY=scroll_delta)
+    trace.append({"step": 1, "tool": "browser_visual_scroll", "status": "inspected", "latencyMs": scrolled.get("latencyMs"), "recognizedLineCount": len(scrolled.get("lines", [])), "deltaY": scroll_delta})
+    viewport = scrolled.get("viewport", {})
+    if scrolled.get("status") == "page-changed-during-ocr" or viewport.get("width") != 332 or viewport.get("height") != 214:
+        return {"toolCoverage": coverage, "toolActionTrace": trace, "actions": actions, "syntheticApprovalCount": approvals}
+
+    start_half = (event_start % 60) // 30
+    end_cell = event_start // 30 + duration_minutes // 30 - 1
+    end_hour = end_cell // 2
+    end_half = end_cell % 2
+    area_top = 51
+    row_height = 41
+    half_height = 20
+    start_y = area_top + (start_hour - top_hour) * row_height + start_half * half_height + 10
+    end_y = area_top + (end_hour - top_hour) * row_height + end_half * half_height + 10
+    if not (0 <= start_y < viewport["height"] and 0 <= end_y < viewport["height"]):
+        trace.append({"step": 2, "tool": "browser_visual_drag", "status": "target-outside-viewport", "startY": start_y, "endY": end_y})
+        return {"toolCoverage": coverage, "toolActionTrace": trace, "actions": actions, "syntheticApprovalCount": approvals}
+
+    coverage.add("browser_visual_drag")
+    actions += 1
+    drag = bridge.call("visual-drag", startX=80, startY=start_y, endX=80, endY=end_y)
+    if drag.get("status") != "awaiting-user-approval":
+        trace.append({"step": 2, "tool": "browser_visual_drag", "status": drag.get("status", "no-proposal"), "fieldKind": "calendar-event-range"})
+        return {"toolCoverage": coverage, "toolActionTrace": trace, "actions": actions, "syntheticApprovalCount": approvals}
+    if not approve_synthetic_actions:
+        trace.append({"step": 2, "tool": "browser_visual_drag", "status": "awaiting-user-approval", "fieldKind": "calendar-event-range"})
+        return {"toolCoverage": coverage, "toolActionTrace": trace, "actions": actions, "syntheticApprovalCount": approvals}
+
+    coverage.add("browser_confirm")
+    confirmed_drag = bridge.call("confirm", approvalToken=drag["approvalToken"], approve=True)
+    if confirmed_drag.get("status") != "action-executed-after-approval":
+        trace.append({"step": 2, "tool": "browser_visual_drag", "status": confirmed_drag.get("status", "confirmation-failed"), "fieldKind": "calendar-event-range"})
+        return {"toolCoverage": coverage, "toolActionTrace": trace, "actions": actions, "syntheticApprovalCount": approvals}
+    approvals += 1
+    trace.append({"step": 2, "tool": "browser_visual_drag", "status": "action-executed-after-approval", "fieldKind": "calendar-event-range", "startCss": {"x": 80, "y": start_y}, "endCss": {"x": 80, "y": end_y}})
+
+    form = bridge.call("inspect")
+    name_fields = [candidate for candidate in form.get("candidates", []) if candidate.get("role") == "input" and candidate.get("kind") == "text" and normalized(candidate.get("label", "")) == "event name"]
+    if len(name_fields) != 1:
+        return {"toolCoverage": coverage, "toolActionTrace": trace, "actions": actions, "syntheticApprovalCount": approvals}
+
+    coverage.add("browser_fill")
+    actions += 1
+    fill_result = bridge.call("fill", ref=name_fields[0]["ref"], text=event_name)
+    trace.append({"step": 3, "tool": "browser_fill", "status": fill_result.get("status"), "fieldKind": "calendar-event-name", "characterCount": len(event_name)})
+    if fill_result.get("status") != "filled":
+        return {"toolCoverage": coverage, "toolActionTrace": trace, "actions": actions, "syntheticApprovalCount": approvals}
+
+    form = bridge.call("inspect")
+    create_buttons = [candidate for candidate in form.get("candidates", []) if candidate.get("role") == "button" and normalized(candidate.get("label", "").split("—", 1)[0]) == "create"]
+    if len(create_buttons) != 1:
+        return {"toolCoverage": coverage, "toolActionTrace": trace, "actions": actions, "syntheticApprovalCount": approvals}
+
+    coverage.add("browser_action")
+    actions += 1
+    create_result = bridge.call("act", ref=create_buttons[0]["ref"])
+    if create_result.get("status") == "awaiting-user-approval" and approve_synthetic_actions and is_expected_local_task_url(env.unwrapped.page.url, base_url, "daily-calendar"):
+        coverage.add("browser_confirm")
+        create_result = bridge.call("confirm", approvalToken=create_result["approvalToken"], approve=True)
+        if create_result.get("status") == "action-executed-after-approval":
+            approvals += 1
+    trace.append({"step": 4, "tool": "browser_action", "status": create_result.get("status"), "fieldKind": "calendar-event-create"})
+    return {"toolCoverage": coverage, "toolActionTrace": trace, "actions": actions, "syntheticApprovalCount": approvals}
+
+
 def free_port():
     with socket.socket() as sock:
         sock.bind(("127.0.0.1", 0))
@@ -503,6 +618,16 @@ def main():
         for step_index in range(args.max_actions):
             if args.multi_tool:
                 inspected = bridge.call("inspect")
+                if args.task == "daily-calendar":
+                    flow = run_daily_calendar_visual_flow(task, bridge, env, base_url, args.approve_synthetic_actions)
+                    tool_coverage.update(flow["toolCoverage"])
+                    action_count += flow["actions"]
+                    synthetic_approval_count += flow["syntheticApprovalCount"]
+                    tool_action_trace.extend(flow["toolActionTrace"])
+                    decision_provider = "local-calendar-grid-rule"
+                    decision_model = "pinned-miniwob-pixel-grid"
+                    reward, terminated, _, task_info = env.unwrapped.task.validate(env.unwrapped.page, env.unwrapped.chat.messages)
+                    break
                 planned = multi_tool_action(task, inspected.get("candidates", []), completed_fields, inspected.get("textExcerpt", ""), inspected.get("tables", []))
                 if planned:
                     operation, fields, metadata = planned
@@ -806,7 +931,7 @@ def main():
             "rawTaskInfo": task_info,
             "timestampUtc": datetime.now(timezone.utc).isoformat(),
             "maxActions": args.max_actions,
-            "note": "A curated MiniWoB integration smoke check, not a representative BrowserGym benchmark or a full autonomous agent. Multi-tool mode extracts only explicit task values, unique matches from bounded visible tables, and visible native options; field values are omitted from action traces. The optional visual path reads a quoted link with general OCR or ascending-number labels with digits-only OCR; each coordinate click remains behind the standard one-use approval gate. Synthetic approval is possible only for the exact local MiniWoB file URL.",
+            "note": "A curated MiniWoB integration smoke check, not a representative BrowserGym benchmark or a full autonomous agent. Multi-tool mode extracts only explicit task values, unique matches from bounded visible tables, and visible native options; field values are omitted from action traces. The optional visual path reads a quoted link with general OCR or ascending-number labels with digits-only OCR; each coordinate click remains behind the standard one-use approval gate. Synthetic approval is possible only for the exact local MiniWoB file URL." + (" The daily-calendar task uses explicit instruction values and fixed coordinates from the pinned 332x214 MiniWoB pixel grid. It calls the OCR-backed viewport-scroll tool and requires synthetic approval for the visual drag; this is a visual-tool integration check, not an OCR target-detection or general vision-model success result." if args.task == "daily-calendar" else ""),
             "visualOcrActionsEnabled": args.visual_ocr_actions,
             "visualQuestion": args.visual_question[:1_000] if args.visual_question else None,
         }

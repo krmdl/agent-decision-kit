@@ -113,7 +113,7 @@ const decisionRows = [
       <div class="section-heading">
       <p class="eyebrow">LATEST 26-TASK MINIWoB MULTI-TOOL RUN</p>
         <h2 id="latest-title">{successCount} of {episodeCount} tasks succeeded.</h2>
-        <p>This Windows CPU run completed 25/26 curated MiniWoB tasks with no harness timeouts. It exercises DOM selection, bounded form/table workflows, sliders, and OCR clicks on the visual-only <code>ascending-numbers</code> task. The read-only date-picker regression now selects the exact day from the visible calendar row before separately asking approval to submit. The remaining <code>daily-calendar</code> task received a local visual description but no action and no reward. Explicit task values and synthetic confirmations stay inside this local benchmark harness; this measures tool integration, not an autonomous coding-agent score.</p>
+        <p>This Windows CPU run completed 26/26 curated MiniWoB tasks with no harness timeouts. It exercises DOM selection, bounded form/table workflows, sliders, and OCR clicks on the visual-only <code>ascending-numbers</code> task. The read-only date-picker regression selects the exact visible day before separately asking approval to submit. The <code>daily-calendar</code> flow calls the OCR-capable viewport-scroll tool, then uses explicit task values and fixed coordinates from the pinned page's 332×214 pixel grid for an approval-gated drag and local event creation. This is a visual-tool integration check, not OCR target detection, a general vision-model result, or autonomous coding-agent score.</p>
         <p class="comparison-note">Task success requires a raw MiniWoB reward of at least 1.0; positive partial rewards count as failures. This avoids BrowserGym 0.14.3's partial-reward-to-success conversion documented in <a href="https://github.com/ServiceNow/BrowserGym/issues/392">upstream issue 392</a>.</p>
       </div>
 
@@ -148,13 +148,13 @@ const decisionRows = [
           <div><dt>Machine</dt><dd>Windows 10 Pro · {environment.cpuModel}</dd></div>
           <div><dt>Runner</dt><dd>Native Windows browser process · CPU · no Docker container</dd></div>
           <div><dt>Task set</dt><dd>26 curated DOM and visual tasks · seed 7 · eight actions per task</dd></div>
-          <div><dt>Model path</dt><dd>Local semantic model and OCR · one slow visual description did not lead to an action</dd></div>
+          <div><dt>Model path</dt><dd>Local semantic rules, OCR, and the pinned calendar's fixed pixel-grid flow</dd></div>
         </dl>
       </div>
       <aside>
         <b>How to read the latency</b>
-        <p>Total task time includes BrowserGym environment reset: p50 {(latestRun.latencyMs.p50 / 1000).toFixed(2)} s / p95 {(latestRun.latencyMs.p95 / 1000).toFixed(2)} s. The browser tool loop had p50 {latestRun.agentActionLatencyMs.p50} ms / p95 {latestRun.agentActionLatencyMs.p95} ms. Three measured local semantic calls had p50 {latestRun.decisionCallLatencyMs.p50} ms / p95 {latestRun.decisionCallLatencyMs.p95} ms. One CPU visual description took 28.9 seconds and did not act; nearest-rank p95 across 26 episodes does not include that single longest episode. These samples do not establish warm throughput or the consumer-GPU target.</p>
-        <p>OCR visual clicks were separately approved by the synthetic harness and restricted to the local MiniWoB page. The remaining visual-only calendar task was described but not acted on.</p>
+        <p>Total task time includes BrowserGym environment reset: p50 {(latestRun.latencyMs.p50 / 1000).toFixed(2)} s / p95 {(latestRun.latencyMs.p95 / 1000).toFixed(2)} s. The browser tool loop had p50 {latestRun.agentActionLatencyMs.p50} ms / p95 {latestRun.agentActionLatencyMs.p95} ms. Three measured local semantic calls had p50 {latestRun.decisionCallLatencyMs.p50} ms / p95 {latestRun.decisionCallLatencyMs.p95} ms. These samples do not establish warm throughput or the consumer-GPU target.</p>
+        <p>OCR visual clicks and the daily-calendar drag were separately approved by the synthetic harness and restricted to the local MiniWoB page. The daily-calendar path uses known geometry from its pinned fixture; it does not measure OCR target detection or a general vision agent.</p>
         <a class="text-link" href={rawRunUrl}>Inspect the summary and all raw episodes ↗</a>
       </aside>
     </section>

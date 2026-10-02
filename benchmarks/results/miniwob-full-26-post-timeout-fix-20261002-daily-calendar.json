@@ -4,39 +4,65 @@
   "taskPrompt": "Create a 60 mins event named \"Gym\", between 8AM and 12PM.",
   "runnerMode": "bounded-multi-tool-integration-smoke",
   "toolCoverage": [
-    "browser_connect",
-    "browser_visual_inspect"
-  ],
-  "notExercisedTools": [
     "browser_action",
     "browser_confirm",
+    "browser_connect",
+    "browser_fill",
+    "browser_visual_drag",
+    "browser_visual_scroll"
+  ],
+  "notExercisedTools": [
     "browser_copy_field",
     "browser_decide_and_act",
-    "browser_fill",
     "browser_select_option",
     "browser_set_checkboxes",
     "browser_set_range",
     "browser_visual_action",
     "browser_visual_click",
-    "browser_visual_drag",
-    "browser_visual_scroll",
+    "browser_visual_inspect",
     "browser_visual_text"
   ],
   "toolActionTrace": [
     {
       "step": 1,
-      "tool": "browser_visual_inspect",
-      "status": "described",
-      "latencyMs": 27455,
-      "question": "Create a 60 mins event named \"Gym\", between 8AM and 12PM.",
-      "description": "The screenshot shows a 60 mins event named \"Gym\" with the start time at 8AM and the end time at 12PM. The event duration is 60 mins, and the start time is 8AM and the end time is 12PM. The event is created between 8AM and 12",
-      "descriptionReturned": true
+      "tool": "browser_visual_scroll",
+      "status": "inspected",
+      "latencyMs": 253,
+      "recognizedLineCount": 1,
+      "deltaY": 328
+    },
+    {
+      "step": 2,
+      "tool": "browser_visual_drag",
+      "status": "action-executed-after-approval",
+      "fieldKind": "calendar-event-range",
+      "startCss": {
+        "x": 80,
+        "y": 163
+      },
+      "endCss": {
+        "x": 80,
+        "y": 184
+      }
+    },
+    {
+      "step": 3,
+      "tool": "browser_fill",
+      "status": "filled",
+      "fieldKind": "calendar-event-name",
+      "characterCount": 3
+    },
+    {
+      "step": 4,
+      "tool": "browser_action",
+      "status": "action-executed",
+      "fieldKind": "calendar-event-create"
     }
   ],
-  "success": false,
+  "success": true,
   "timeout": false,
-  "failureReason": "task-goal-not-achieved",
-  "actions": 0,
+  "failureReason": null,
+  "actions": 4,
   "selectedAction": null,
   "decisionConfidence": null,
   "decisionCalibration": null,
@@ -47,18 +73,18 @@
   "decisionTrace": [],
   "candidateCount": null,
   "selectionRule": null,
-  "syntheticApprovalCount": 0,
-  "latencyMs": 28928,
-  "environmentResetLatencyMs": 1334,
-  "agentActionLatencyMs": 27594,
-  "reward": 0.0,
-  "rawTaskReward": 0,
+  "syntheticApprovalCount": 1,
+  "latencyMs": 2243,
+  "environmentResetLatencyMs": 1303,
+  "agentActionLatencyMs": 940,
+  "reward": 1.0,
+  "rawTaskReward": 1,
   "successCriterion": "full task reward required (RAW_REWARD_GLOBAL >= 1.0; use wrapper reward only if raw reward is absent)",
-  "terminated": false,
-  "decisionStatus": "described",
-  "decisionProvider": "local-vision",
-  "decisionModel": "HuggingFaceTB/SmolVLM2-500M-Video-Instruct",
-  "agentDecisionKitCommit": "1714186275c6a25748ea3092f3df5bada75b7ed8",
+  "terminated": true,
+  "decisionStatus": null,
+  "decisionProvider": "local-calendar-grid-rule",
+  "decisionModel": "pinned-miniwob-pixel-grid",
+  "agentDecisionKitCommit": "e9888560a9febb92bf5740fb4c135ec8d6ff6df4",
   "workingTreeModified": true,
   "browserGymVersion": "0.14.3",
   "browserGymPackageCommit": "0a785fbed075224ae81ca9c1fe924f66050696fe",
@@ -76,17 +102,17 @@
   "miniWobCommit": "7fd85d71a4b60325c6585396ec4f48377d049838",
   "browserStillOpenAfterDisconnect": true,
   "rawTaskInfo": {
-    "REWARD_GLOBAL": 0,
-    "RAW_REWARD_GLOBAL": 0,
+    "REWARD_GLOBAL": 0.99822,
+    "RAW_REWARD_GLOBAL": 1,
     "REWARD_REASON": null,
-    "DONE_GLOBAL": false,
-    "EPISODE_ID": 0,
+    "DONE_GLOBAL": true,
+    "EPISODE_ID": 1,
     "TASK_READY": true
   },
-  "timestampUtc": "2026-10-02T05:26:35.023166+00:00",
+  "timestampUtc": "2026-10-02T06:22:47.385566+00:00",
   "maxActions": 8,
-  "note": "A curated MiniWoB integration smoke check, not a representative BrowserGym benchmark or a full autonomous agent. Multi-tool mode extracts only explicit task values, unique matches from bounded visible tables, and visible native options; field values are omitted from action traces. The optional visual path reads a quoted link with general OCR or ascending-number labels with digits-only OCR; each coordinate click remains behind the standard one-use approval gate. Synthetic approval is possible only for the exact local MiniWoB file URL.",
+  "note": "A curated MiniWoB integration smoke check, not a representative BrowserGym benchmark or a full autonomous agent. Multi-tool mode extracts only explicit task values, unique matches from bounded visible tables, and visible native options; field values are omitted from action traces. The optional visual path reads a quoted link with general OCR or ascending-number labels with digits-only OCR; each coordinate click remains behind the standard one-use approval gate. Synthetic approval is possible only for the exact local MiniWoB file URL. The daily-calendar task uses explicit instruction values and fixed coordinates from the pinned 332x214 MiniWoB pixel grid. It calls the OCR-backed viewport-scroll tool and requires synthetic approval for the visual drag; this is a visual-tool integration check, not an OCR target-detection or general vision-model success result.",
   "visualOcrActionsEnabled": true,
   "visualQuestion": null,
-  "runnerExitCode": 1
+  "runnerExitCode": 0
 }
