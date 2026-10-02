@@ -36,7 +36,18 @@ def summarize(records):
     ]
     decision_episode_latencies = [item["decisionLatencyMs"] for item in records if isinstance(item.get("decisionLatencyMs"), (int, float))]
     action_counts = [item["actions"] for item in records]
-    rewards = [item["reward"] for item in records if isinstance(item.get("reward"), (int, float)) and not isinstance(item.get("reward"), bool)]
+    rewards = []
+    reward_fields = set()
+    for item in records:
+        raw_reward = item.get("rawTaskReward")
+        if isinstance(raw_reward, (int, float)) and not isinstance(raw_reward, bool):
+            rewards.append(raw_reward)
+            reward_fields.add("rawTaskReward")
+            continue
+        reward = item.get("reward")
+        if isinstance(reward, (int, float)) and not isinstance(reward, bool):
+            rewards.append(reward)
+            reward_fields.add("reward")
     timeouts = [bool(item.get("timeout", False)) for item in records]
     failure_reasons = {}
     decision_statuses = {}
@@ -57,6 +68,8 @@ def summarize(records):
         "episodeCount": len(records),
         "successCount": sum(item["success"] for item in records),
         "taskSuccessRate": sum(item["success"] for item in records) / len(records),
+        "rewardField": next(iter(reward_fields)) if len(reward_fields) == 1 else ("mixed" if reward_fields else None),
+        "rewardSampleCount": len(rewards),
         "partialRewardCount": sum(0 < reward < 1 for reward in rewards),
         "meanReward": statistics.mean(rewards) if rewards else None,
         "timeoutRate": sum(timeouts) / len(records),

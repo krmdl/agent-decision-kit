@@ -2,8 +2,10 @@
   "episodeCount": 40,
   "successCount": 40,
   "taskSuccessRate": 1.0,
+  "rewardField": "rawTaskReward",
+  "rewardSampleCount": 40,
   "partialRewardCount": 0,
-  "meanReward": 1.0,
+  "meanReward": 1,
   "timeoutRate": 0.0,
   "failureReasons": {},
   "decisionStatuses": {

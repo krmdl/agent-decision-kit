@@ -186,6 +186,8 @@ foreach ($device in @('cpu', 'dml')) {
 
 This is a bounded BrowserManager integration sweep from one seed and one modified working tree, not a full agent, a held-out quality estimate, or a general WebArena result. It exercises only `browser_connect`, `browser_decide_and_act`, and `browser_confirm`; the other browser tools, OCR/vision fallback, and other agents are not covered by this run. The JSON summary embeds every episode record, including task failures, partial reward information, action traces, latencies, and environment metadata. The exact 125 task IDs are versioned in [`miniwob-browsergym-0.14.3-tasks.txt`](miniwob-browsergym-0.14.3-tasks.txt).
 
+Aggregates now use `rawTaskReward` when a record provides it and fall back to the wrapper `reward` only when raw task reward is absent; `rewardField` and `rewardSampleCount` identify that summary source. This matters for BrowserGym MiniWoB because the wrapper can mark an episode terminated even when the raw task score is partial. The corrected catalog aggregate has 34 full raw rewards, 2 positive partial raw rewards, and 89 zero or negative raw rewards. Its 34/125 full-reward count is unchanged.
+
 Reproduce the same one-seed sweep with BrowserGym 0.14.3 and the pinned MiniWoB++ assets:
 
 ```powershell

@@ -168,7 +168,7 @@ const decisionRows = [
         <p class="eyebrow">125-TASK MINIWOB CATALOG SWEEP · ONE SEED</p>
         <h2 id="catalog-sweep-title">{catalogSweep.successCount} of {catalogSweep.episodeCount} tasks reached full reward.</h2>
         <p>This Windows CPU run covers the 125 tasks registered in the pinned BrowserGym MiniWoB package, using seed 7 and at most 12 bounded BrowserManager action rounds per task. It measures a tool integration path with the local semantic provider and exact local rules; it is not a full autonomous agent or a general web task score. The failures remain in the report so the limits are visible.</p>
-        <p class="comparison-note">Every task requires raw reward ≥ 1.0. The run had {catalogSweep.timeoutRate * 100}% harness timeouts. Only <code>browser_connect</code>, <code>browser_decide_and_act</code>, and <code>browser_confirm</code> were exercised. This is one seed from one host, not a held-out quality estimate.</p>
+        <p class="comparison-note">Every task requires raw reward ≥ 1.0. {catalogSweep.partialRewardCount} other tasks earned positive partial raw reward; the remaining {catalogSweep.episodeCount - catalogSweep.successCount - catalogSweep.partialRewardCount} had zero or negative raw reward. The run had {catalogSweep.timeoutRate * 100}% harness timeouts. Only <code>browser_connect</code>, <code>browser_decide_and_act</code>, and <code>browser_confirm</code> were exercised. This is one seed from one host, not a held-out quality estimate.</p>
       </div>
 
       <figure class="success-chart">

@@ -2,8 +2,10 @@
   "episodeCount": 125,
   "successCount": 34,
   "taskSuccessRate": 0.272,
-  "partialRewardCount": 0,
-  "meanReward": 0.288,
+  "rewardField": "rawTaskReward",
+  "rewardSampleCount": 125,
+  "partialRewardCount": 2,
+  "meanReward": -0.11404967320261437,
   "timeoutRate": 0.0,
   "failureReasons": {
     "task-goal-not-achieved": 91
