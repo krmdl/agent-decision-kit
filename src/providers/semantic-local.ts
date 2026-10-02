@@ -134,7 +134,10 @@ export class SemanticLocalProvider implements DecisionProvider {
 
   async endProfiling() {
     if (!this.profilePrefix) return;
-    const extractor = await getPipeline(this.model, this.device, this.profilePrefix);
+    const key = `${this.model}\u0000${this.device}\u0000${this.profilePrefix}`;
+    const existing = sharedPipelines.get(key);
+    if (!existing) return;
+    const extractor = await existing as ProfiledEmbeddingPipeline;
     for (const session of Object.values(extractor.model?.sessions ?? {})) session.endProfiling?.();
   }
 }

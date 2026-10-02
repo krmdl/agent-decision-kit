@@ -105,7 +105,7 @@ const cases = (await readFile(fixtureSource, "utf8"))
 if (cases.length === 0) throw new Error("The decision fixture file must contain at least one JSONL record");
 const provider = createProvider();
 const isLocalProvider = provider.id === "semantic-local" || provider.id === "semantic-nli";
-if (profileOnnx && provider.id !== "semantic-local") throw new Error("--profile-onnx is supported only with the semantic-local provider");
+if (profileOnnx && !isLocalProvider) throw new Error("--profile-onnx is supported only with local Transformers.js providers");
 const reportedAccelerator = process.env.AGENT_DECISION_BENCHMARK_ACCELERATOR?.trim() || null;
 const modelCacheDirectoryPresentBeforeRun = isLocalProvider
   ? await modelCacheDirectoryExists(provider.model)

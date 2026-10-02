@@ -13,8 +13,11 @@ type ZeroShotPipeline = (
   candidateLabels: string[],
   options: { hypothesis_template: string },
 ) => Promise<ZeroShotResult>;
+type ProfiledZeroShotPipeline = ZeroShotPipeline & {
+  model?: { sessions?: Record<string, { endProfiling?: () => void }> };
+};
 
-const sharedPipelines = new Map<string, Promise<ZeroShotPipeline>>();
+const sharedPipelines = new Map<string, Promise<ProfiledZeroShotPipeline>>();
 const MAX_NLI_HYPOTHESES_PER_REQUEST = 24;
 
 interface QuestionPlan {
@@ -25,13 +28,16 @@ interface QuestionPlan {
   hypothesisTemplate: string;
 }
 
-async function getPipeline(model: string, device: DeviceType): Promise<ZeroShotPipeline> {
-  const key = `${model}\u0000${device}`;
+async function getPipeline(model: string, device: DeviceType, profilePrefix?: string): Promise<ProfiledZeroShotPipeline> {
+  const key = `${model}\u0000${device}\u0000${profilePrefix ?? ""}`;
   const existing = sharedPipelines.get(key);
   if (existing) return existing;
 
-  const pending = pipeline("zero-shot-classification", model, { dtype: "q8", device })
-    .then((value) => value as unknown as ZeroShotPipeline);
+  const pending = pipeline("zero-shot-classification", model, {
+    dtype: "q8",
+    device,
+    ...(profilePrefix ? { session_options: { enableProfiling: true, profileFilePrefix: profilePrefix } } : {}),
+  }).then((value) => value as unknown as ProfiledZeroShotPipeline);
   sharedPipelines.set(key, pending);
   void pending.catch(() => {
     if (sharedPipelines.get(key) === pending) sharedPipelines.delete(key);
@@ -114,20 +120,23 @@ export class SemanticNliProvider implements DecisionProvider {
   readonly model: string;
   readonly device: DeviceType;
   private readonly fastModel: SemanticLocalProvider;
+  private readonly profilePrefix: string | undefined;
 
   constructor(
     model = process.env.AGENT_DECISION_NLI_MODEL ?? "Xenova/nli-deberta-v3-small",
     device = process.env.AGENT_DECISION_DEVICE ?? "cpu",
     fastModel = process.env.AGENT_DECISION_FAST_MODEL ?? process.env.AGENT_DECISION_MODEL ?? "Xenova/all-MiniLM-L6-v2",
+    profilePrefix = process.env.AGENT_DECISION_ONNX_PROFILE_PREFIX?.trim() || undefined,
   ) {
     this.model = model;
     this.device = resolveDevice(device);
-    this.fastModel = new SemanticLocalProvider(fastModel, this.device);
+    this.fastModel = new SemanticLocalProvider(fastModel, this.device, profilePrefix);
+    this.profilePrefix = profilePrefix;
   }
 
   async warmup() {
     const start = performance.now();
-    const classifier = await getPipeline(this.model, this.device);
+    const classifier = await getPipeline(this.model, this.device, this.profilePrefix);
     await classifier("Question: Is local inference enabled? Context: This warm-up uses synthetic text.", ["yes", "no"], {
       hypothesis_template: "The correct answer is {}.",
     });
@@ -142,7 +151,7 @@ export class SemanticNliProvider implements DecisionProvider {
     }
 
     const start = performance.now();
-    const classifier = await getPipeline(this.model, this.device);
+    const classifier = await getPipeline(this.model, this.device, this.profilePrefix);
     const state = serializeState(request.state).slice(0, 8_000);
     const answers = Object.create(null) as Record<string, DecisionAnswer>;
     for (const plan of plans) {
@@ -155,6 +164,17 @@ export class SemanticNliProvider implements DecisionProvider {
     const latencyMs = performance.now() - start;
     for (const answer of Object.values(answers)) answer.latencyMs = latencyMs;
     return { provider: this.id, model: this.model, latencyMs, answers };
+  }
+
+  async endProfiling() {
+    if (!this.profilePrefix) return;
+    const key = `${this.model}\u0000${this.device}\u0000${this.profilePrefix}`;
+    const existing = sharedPipelines.get(key);
+    if (existing) {
+      const classifier = await existing;
+      for (const session of Object.values(classifier.model?.sessions ?? {})) session.endProfiling?.();
+    }
+    await this.fastModel.endProfiling();
   }
 }
 

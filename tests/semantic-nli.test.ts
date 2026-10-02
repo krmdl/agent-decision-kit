@@ -124,6 +124,30 @@ describe("SemanticNliProvider", () => {
     ]);
   });
 
+  it("enables ONNX Runtime profiling and ends every NLI session when requested", async () => {
+    vi.stubEnv("AGENT_DECISION_ONNX_PROFILE_PREFIX", "C:/tmp/nli-profile");
+    const endProfiling = vi.fn();
+    const classifier = Object.assign(
+      vi.fn(async (_sequence: string, labels: string[]) => ({ labels, scores: [0.7, 0.3] })),
+      { model: { sessions: { classifier: { endProfiling } } } },
+    );
+    mockPipeline.mockResolvedValue(classifier);
+    const provider = new SemanticNliProvider("nli-profile-fixture");
+
+    await provider.decide({
+      state: "synthetic profile request",
+      questions: { answer: { type: "noul", instructions: "Is the local provider enabled?" } },
+    });
+    await provider.endProfiling();
+
+    expect(mockPipeline).toHaveBeenCalledWith("zero-shot-classification", "nli-profile-fixture", {
+      dtype: "q8",
+      device: "cpu",
+      session_options: { enableProfiling: true, profileFilePrefix: "C:/tmp/nli-profile" },
+    });
+    expect(endProfiling).toHaveBeenCalledOnce();
+  });
+
   it("retries model initialization after a transient failure", async () => {
     mockPipeline
       .mockRejectedValueOnce(new Error("temporary model download failure"))
