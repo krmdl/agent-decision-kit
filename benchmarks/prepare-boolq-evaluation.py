@@ -50,7 +50,7 @@ def load_validation_rows():
     return rows
 
 
-def fixture_records(rows):
+def fixture_records(rows, selection, row_indices):
     source_dataset = {
         "id": DATASET_ID,
         "revision": DATASET_REVISION,
@@ -61,10 +61,12 @@ def fixture_records(rows):
         "parquetUrl": DATASET_FILE_URL,
         "parquetSha256": DATASET_FILE_SHA256,
         "citation": "Clark et al. (2019), BoolQ: Exploring the Surprising Difficulty of Natural Yes/No Questions, NAACL.",
-        "selection": "Every row in the pinned validation split; no resampling or dropped examples.",
+        "selection": selection,
         "textHandling": "Passage/question text is used only in the local temporary fixture and is not written to the benchmark result.",
     }
-    for row_index, row in enumerate(rows):
+    if len(row_indices) != len(rows):
+        raise ValueError("row_indices must have the same length as rows")
+    for row_index, row in zip(row_indices, rows):
         yield {
             "id": f"boolq-validation-{row_index:04d}",
             "state": f"Passage:\n{row['passage']}",
@@ -77,15 +79,43 @@ def fixture_records(rows):
         }
 
 
+def select_rows(rows, sample_size):
+    if not rows or not 1 <= sample_size <= len(rows):
+        raise ValueError(f"sample_size must be between 1 and {len(rows)}")
+    if sample_size == len(rows):
+        return rows, "Every row in the pinned validation split; no resampling or dropped examples.", list(range(len(rows)))
+    indexes = [
+        0 if sample_size == 1 else round(index * (len(rows) - 1) / (sample_size - 1))
+        for index in range(sample_size)
+    ]
+    selected_rows = [rows[index] for index in indexes]
+    selection = (
+        f"{sample_size} evenly spaced row indices from the pinned {len(rows)}-row validation split, "
+        "selected for instrumentation."
+    )
+    return selected_rows, selection, indexes
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", required=True, type=Path, help="Temporary JSONL fixture output path")
+    parser.add_argument(
+        "--sample-size",
+        type=int,
+        default=EXPECTED_ROWS,
+        help="Use every validation row by default; optionally select this many evenly spaced rows for instrumentation",
+    )
     args = parser.parse_args()
-
+    if not 1 <= args.sample_size <= EXPECTED_ROWS:
+        parser.error(f"--sample-size must be between 1 and {EXPECTED_ROWS}")
     rows = load_validation_rows()
+    try:
+        rows, selection, row_indices = select_rows(rows, args.sample_size)
+    except ValueError as error:
+        parser.error(str(error))
     args.output.parent.mkdir(parents=True, exist_ok=True)
     with args.output.open("w", encoding="utf-8", newline="\n") as output:
-        for record in fixture_records(rows):
+        for record in fixture_records(rows, selection, row_indices):
             output.write(json.dumps(record, ensure_ascii=False, separators=(",", ":")) + "\n")
     print(f"Prepared {len(rows)} pinned BoolQ validation examples at {args.output}; source text was not printed.")
 
